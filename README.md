@@ -119,11 +119,12 @@ src/
     InkTrail.js        Ping-pong fluid trail that follows the cursor
     Media.js           Creates and owns every image plane
     MediaMesh.js       One WebGL plane locked to one DOM element
-    shaders/           GLSL — noise, media, ink, composite
+    shaders/           GLSL — noise, media, ink, composite, sky, stars
   fx/                  Landing page effects (2D canvas + SVG filters)
     FxLayer.js         Full-screen effects canvas; only ticks while busy
     Duo.js             The two sketches, the four floating rocks, throws and reactions
     SpaceRocks.js      The tumbling 3D rocks that drift around the sketches
+    Scatter.js         The rocks' fragments, scattered across the page by scroll
     asteroid.js        Procedural 3D asteroid mesh + per-pixel rock material
     RockStage.js       3D layer for the thrown rock and its fragments
     Rock.js            Throw path + impact dust, grit and blood mist

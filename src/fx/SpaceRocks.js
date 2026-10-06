@@ -8,8 +8,8 @@ import { rand } from './particles.js';
 /**
  * The four free-floating space rocks around the sketches. Each is a real
  * 3D asteroid, slowly tumbling, drawn into its button's own canvas by one
- * shared offscreen renderer. Hovering spins a rock up; pressing gives it
- * a kick. Only runs while the rocks are on screen.
+ * shared offscreen renderer. Hovering spins a rock up. Only runs while
+ * the rocks are on screen.
  */
 export default class SpaceRocks {
   constructor(buttons) {
@@ -21,9 +21,10 @@ export default class SpaceRocks {
       rot: new Vector3(rand(0, 6.28), rand(0, 6.28), rand(0, 6.28)),
       spin: new Vector3(rand(0.15, 0.35), rand(0.3, 0.6), rand(-0.15, 0.15)),
       boost: 0,
-      kick: 0,
       hovered: false
     })).filter((it) => it.canvas);
+    /* 0 → 1 as the rocks rush into each other: they spin up hard. */
+    this.frenzy = 0;
 
     this.renderer = new WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'low-power' });
     this.renderer.setClearColor(0x000000, 0);
@@ -68,10 +69,10 @@ export default class SpaceRocks {
     if (host) this.io.observe(host);
   }
 
-  /** A sharp burst of spin that decays — the press feedback. */
-  kick(btn) {
+  /** The shape, current pose and surface seed of a rock — so the same rock can be thrown. */
+  pose(btn) {
     const it = this.items.find((x) => x.btn === btn);
-    if (it) it.kick = 1;
+    return it ? { geo: it.geo, rot: it.rot.clone(), seed: it.i * 4.3 } : {};
   }
 
   resize() {
@@ -92,8 +93,7 @@ export default class SpaceRocks {
     const dt = Math.min(deltaMs / 1000, 1 / 30);
     for (const it of this.items) {
       it.boost += ((it.hovered ? 1 : 0) - it.boost) * Math.min(1, dt * 4);
-      it.kick *= Math.pow(0.04, dt);
-      const speed = 1 + it.boost * 4 + it.kick * 14;
+      const speed = 1 + it.boost * 4 + this.frenzy * 16;
       it.rot.addScaledVector(it.spin, dt * speed);
 
       this.mesh.geometry = it.geo;

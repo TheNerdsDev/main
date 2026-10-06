@@ -11,6 +11,8 @@ import { hexToRgb, clamp } from './particles.js';
 const VIEW_W = 400;
 /* The flash of shock on impact: eyes widen by this fraction of their radius. */
 const SHOCK = 0.55;
+/* How far (radians) the rocks swirl round each other as they close in. */
+const SWIRL = 1.1;
 
 const XLINK = 'http://www.w3.org/1999/xlink';
 const setHref = (node, url) => {
@@ -19,11 +21,11 @@ const setHref = (node, url) => {
 };
 
 /**
- * The two neon sketches and the four space rocks drifting around them.
+ * The two neon sketches and the space rocks drifting around them.
  *
  *  - Click a sketch: it winds up and throws a space rock at the other.
- *  - "Throw space rocks": they trade throws.
- *  - The other three are placeholders that just acknowledge the press.
+ *  - Click a floating rock: whoever it is drifting nearest grabs that very
+ *    rock and flings it at the other one; it drifts back in afterwards.
  *
  * A hit bursts the rock, sprays blood, knocks the sketch back and makes
  * its neon stutter. The face reacts in three beats: a flash of shock
@@ -85,6 +87,9 @@ export default class Duo {
       btn, i, hovered: false, pace: 1, angle: (i / all.length) * Math.PI * 2 + 0.4
     }));
     this.rocks = new SpaceRocks(this.actions.map((a) => a.btn));
+    this.actionsEl = el.querySelector('.duo-actions');
+    this.f = 0;
+    this.k = 0;
 
     this.bind();
     this.idle();
@@ -118,17 +123,122 @@ export default class Duo {
       on(a.btn, 'pointerleave', () => { a.hovered = false; });
       on(a.btn, 'focus', () => { a.hovered = true; });
       on(a.btn, 'blur', () => { a.hovered = false; });
-      on(a.btn, 'click', () => this.act(a));
+      on(a.btn, 'click', () => this.fling(a));
     });
   }
 
-  /** Each rock's own behaviour. */
-  act(a) {
-    a.btn.classList.remove('is-ping');
-    void a.btn.offsetWidth;
-    a.btn.classList.add('is-ping');
-    this.rocks.kick(a.btn);
-    if (a.btn.dataset.action === 'meteor') this.exchange();
+  /**
+   * The rocks' trip alongside the viewer, set by the page every frame.
+   *   f     0 = orbiting the sketches; 1 = travelling with the viewer, in a
+   *         loose ring around the middle of the screen
+   *   k     0 → 1: drawn together into the centre until their surfaces meet
+   *   gone  broken apart — the fragments have taken over
+   */
+  setJourney(f, k, gone) {
+    if (f > 0 && this.f === 0) {
+      /* Anything mid-throw-and-respawn snaps back so all four come along. */
+      this.actions.forEach((a) => {
+        if (!a.away) return;
+        a.back?.kill();
+        const c = a.btn.querySelector('.duo-action-rock');
+        gsap.killTweensOf(c);
+        gsap.set(c, { opacity: 1, clearProps: 'transform' });
+        a.away = false;
+        a.btn.classList.remove('is-away');
+      });
+      this.assignSlots();
+    }
+    this.f = f;
+    this.k = k;
+    this.rocks.frenzy = k * k;
+    if (this.actionsEl) {
+      this.actionsEl.style.pointerEvents = f > 0 ? 'none' : '';
+      this.actionsEl.style.visibility = gone ? 'hidden' : '';
+    }
+  }
+
+  /**
+   * Give each rock the place in the travelling ring closest to where it is
+   * now, so none of them cross paths on the way.
+   */
+  assignSlots() {
+    const mx = window.innerWidth / 2;
+    const my = window.innerHeight / 2;
+    const slots = [-3, -1, 1, 3].map((n) => (n * Math.PI) / 4);
+    const angles = this.actions.map((a) => {
+      const c = this.rockCentre(a);
+      return Math.atan2(c.y - my, c.x - mx);
+    });
+    const order = this.actions.map((_, i) => i).sort((p, q) => angles[p] - angles[q]);
+    const gap = (a, b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
+    let best = 0;
+    let bestCost = Infinity;
+    for (let shift = 0; shift < slots.length; shift++) {
+      const cost = order.reduce((sum, ai, j) => sum + gap(angles[ai], slots[(j + shift) % slots.length]), 0);
+      if (cost < bestCost) { bestCost = cost; best = shift; }
+    }
+    order.forEach((ai, j) => { this.actions[ai].slot = slots[(j + best) % slots.length]; });
+  }
+
+  /** Where the rocks meet (viewport px), and each one's direction from there at contact. */
+  meeting() {
+    return {
+      at: { x: window.innerWidth / 2, y: window.innerHeight / 2 },
+      dirs: this.actions.map((a) => {
+        const ang = (a.slot ?? 0) + SWIRL;
+        return { x: Math.cos(ang), y: Math.sin(ang) };
+      })
+    };
+  }
+
+  /** Size of a floating rock at the moment of impact, px. */
+  rockRadius() { return (this.orb || 60) * 0.42 * 1.4; }
+
+  /** Centre of a floating rock, in viewport px. */
+  rockCentre(a) {
+    const r = a.btn.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  }
+
+  /**
+   * A floating rock was clicked: the sketch it is closest to winds up and
+   * flings that rock at the other one. The rock leaves its orbit for the
+   * flight and drifts back in a moment after the hit.
+   */
+  fling(a) {
+    if (a.away) return;
+    const c = this.rockCentre(a);
+    const [p, q] = this.members;
+    const near = (m) => {
+      const o = this.point(m, [0.5, 0.5]);
+      return Math.hypot(o.x - c.x, o.y - c.y);
+    };
+    const from = near(p) <= near(q) ? p : q;
+    if (from.throwing) return;
+
+    a.away = true;
+    a.hovered = false;
+    a.btn.classList.add('is-away');
+    const canvas = a.btn.querySelector('.duo-action-rock');
+
+    this.throw(from, {
+      origin: () => this.rockCentre(a),
+      /* Read at the moment of release, so it leaves exactly as it looks. */
+      rock: () => this.rocks.pose(a.btn),
+      radius: a.btn.offsetWidth * 0.42,
+      onLaunch: () => gsap.to(canvas, { opacity: 0, duration: 0.06, overwrite: 'auto' }),
+      then: () => {
+        a.back = gsap.delayedCall(1.1, () => {
+          gsap.fromTo(canvas, { opacity: 0, scale: 0.3 }, {
+            opacity: 1, scale: 1, duration: 1.2, ease: 'expo.out', clearProps: 'transform',
+            onComplete: () => {
+              a.away = false;
+              a.btn.classList.remove('is-away');
+            }
+          });
+        });
+      }
+    });
   }
 
   /* -------------------------------------------------------------- idle */
@@ -153,7 +263,11 @@ export default class Duo {
 
   /* ------------------------------------------------------------ throws */
 
-  throw(from, then) {
+  /**
+   * `origin` / `rock` / `radius` let a floating rock be the one thrown;
+   * by default a rock appears at the thrower's hand.
+   */
+  throw(from, { then, origin, rock, radius: size, onLaunch } = {}) {
     if (from.throwing) return;
     from.throwing = true;
     const to = this.other(from);
@@ -165,12 +279,14 @@ export default class Duo {
     const b = this.point(to, [0.5, 0.5]);
     const len = Math.hypot(b.x - a.x, b.y - a.y) || 1;
     const v = { x: (b.x - a.x) / len, y: (b.y - a.y) / len };
-    const radius = clamp(from.body.offsetWidth * 0.1, 15, 34);
+    const radius = size || clamp(from.body.offsetWidth * 0.1, 15, 34);
 
     const launch = () => {
+      onLaunch?.();
       this.fx.add(new RockThrow({
         stage: this.stage,
-        from: () => this.point(from, from.hand),
+        from: origin || (() => this.point(from, from.hand)),
+        rock: typeof rock === 'function' ? rock() : rock,
         to: () => this.point(to, to.hit),
         tint: from.rgb,
         radius,
@@ -267,18 +383,6 @@ export default class Duo {
 
   /* -------------------------------------------------------------- loop */
 
-  /** Trade throws: one fires, the other answers once it lands. */
-  exchange() {
-    if (this.exchanging) return;
-    this.exchanging = true;
-    const [first, second] = this.members;
-    this.throw(first, () => {
-      this.answer = gsap.delayedCall(0.75, () => {
-        this.throw(second, () => { this.exchanging = false; });
-      });
-    });
-  }
-
   /* -------------------------------------------------------------- loop */
 
   measure() {
@@ -310,8 +414,8 @@ export default class Duo {
       }
     }
 
-    /* The rocks wander an ellipse wrapped around both sketches, each with
-       its own wobble; hovering one slows it to a stop so it can be clicked. */
+    /* Orbit: the rocks wander an ellipse wrapped around both sketches,
+       each with its own wobble; hovering one slows it so it can be clicked. */
     const [a, b] = this.members;
     if (!a.size) return;
     const cx = (a.cx + b.cx) / 2;
@@ -323,6 +427,21 @@ export default class Duo {
     const ca = Math.cos(ang);
     const sa = Math.sin(ang);
     const o = this.orb;
+    /* The orbit lives in the sketches' box; the rocks' layer is the viewport. */
+    const box = this.el.getBoundingClientRect();
+
+    /* Journey: a loose ring round the middle of the screen, then the
+       collision — a slow drift inwards that becomes a rush, swirling as
+       they close, until their surfaces meet. */
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const mx = vw / 2;
+    const my = vh / 2;
+    const rx = Math.min(vw * 0.3, 460);
+    const ry = Math.min(vh * 0.3, 250);
+    const e = this.k * this.k * this.k;
+    const cs = Math.cos(e * SWIRL);
+    const sn = Math.sin(e * SWIRL);
 
     for (const act of this.actions) {
       act.pace += ((act.hovered ? 0 : 1) - act.pace) * Math.min(1, dt * 6);
@@ -331,11 +450,33 @@ export default class Duo {
       const wr = 1 + 0.07 * Math.sin(t * 1.3 + i * 2.1);
       const ex = Math.cos(act.angle) * ra * wr;
       const ey = Math.sin(act.angle) * rb * wr;
-      let x = cx + ex * ca - ey * sa + Math.sin(t * 2.3 + i * 1.7) * 7;
-      let y = cy + ex * sa + ey * ca + Math.cos(t * 1.9 + i * 1.1) * 7;
-      x = clamp(x, o * 0.6, this.W - o * 0.6);
-      y = clamp(y, o * 0.6, this.H - o * 0.6);
-      act.btn.style.transform = `translate3d(${(x - o / 2).toFixed(1)}px, ${(y - o / 2).toFixed(1)}px, 0)`;
+      let lx = cx + ex * ca - ey * sa + Math.sin(t * 2.3 + i * 1.7) * 7;
+      let ly = cy + ex * sa + ey * ca + Math.cos(t * 1.9 + i * 1.1) * 7;
+      lx = clamp(lx, o * 0.6, this.W - o * 0.6);
+      ly = clamp(ly, o * 0.6, this.H - o * 0.6);
+      let x = box.left + lx;
+      let y = box.top + ly;
+      let s = 1;
+
+      if (this.f > 0) {
+        const slot = act.slot ?? 0;
+        let px = mx + Math.cos(slot) * rx + Math.sin(t * 0.9 + i * 1.7) * 6;
+        let py = my + Math.sin(slot) * ry + Math.cos(t * 0.8 + i * 1.3) * 6;
+        if (e > 0) {
+          s = 1 + 0.4 * e;
+          const dx = px - mx;
+          const dy = py - my;
+          const len = Math.hypot(dx, dy) || 1;
+          const contact = o * 0.36 * s;
+          const r = contact + (len - contact) * (1 - e);
+          px = mx + (dx / len) * r * cs - (dy / len) * r * sn;
+          py = my + (dx / len) * r * sn + (dy / len) * r * cs;
+        }
+        x += (px - x) * this.f;
+        y += (py - y) * this.f;
+      }
+
+      act.btn.style.transform = `translate3d(${(x - o / 2).toFixed(1)}px, ${(y - o / 2).toFixed(1)}px, 0) scale(${s.toFixed(3)})`;
     }
   };
 
@@ -348,7 +489,7 @@ export default class Duo {
   destroy() {
     gsap.ticker.remove(this.loop);
     this.handlers.forEach((off) => off());
-    this.answer?.kill();
+    this.actions.forEach((a) => a.back?.kill());
     this.rocks.destroy();
     this.members.forEach((m) => {
       m.humCall?.kill();

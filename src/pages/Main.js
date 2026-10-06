@@ -5,19 +5,35 @@ import Page from './Page.js';
 import FxLayer from '../fx/FxLayer.js';
 import Duo from '../fx/Duo.js';
 import RockStage from '../fx/RockStage.js';
+import Scatter from '../fx/Scatter.js';
 import { PALETTE } from '../gl/World.js';
 import { clamp } from '../fx/particles.js';
 
-/* The About sequence is scrubbed by scroll. It starts while the section is
-   still this far (in viewport heights) below the top of the screen, and
-   finishes as the pinned stage is released. */
-const ABOUT_LEAD = 0.6;
-/* How closely the sequence follows the scroll position (per 60fps frame).
+/*
+ * Two "pages", joined by a guided move rather than a free scroll:
+ *
+ *   Home → About   the first scroll takes over: the heading and subtext
+ *                  fade away on their own, the page glides down to About,
+ *                  and the four rocks come along with you — they let go of
+ *                  the sketches and settle in a ring around the screen.
+ *   About          now your scroll drives everything, both ways: the
+ *                  photos and text unfold, and over the very same scroll
+ *                  the rocks are drawn together, collide in the centre and
+ *                  scatter in pieces across the page.
+ *   About → Home   scroll back above About and it glides you home again.
+ */
+const GLIDE = 1.6;
+const glideEase = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+
+/* The scroll through About (0 → 1), in order: the waiting rocks are
+   drawn together and meet at COLLIDE, their pieces scatter and have
+   spread across the page by SCATTERED, and only then does the About
+   brief (photos, text, button) play out over the rest. */
+const COLLIDE = 0.2;
+const SCATTERED = 0.42;
+/* How closely the scrubbed sequences follow the scroll (per 60fps frame).
    Lenis already smooths the scroll; this only takes the edge off. */
-const ABOUT_FOLLOW = 0.16;
-/* The scroll cue fades once you're this far down (× viewport height) and
-   only comes back when you're right at the top again. */
-const CUE_HIDE_AT = 0.12;
+const FOLLOW = 0.16;
 
 /** Each photo cuts in from a different edge. */
 const CUTS = ['inset(100% 0% 0% 0%)', 'inset(0% 0% 0% 100%)', 'inset(0% 0% 100% 0%)'];
@@ -40,27 +56,94 @@ export default class Main extends Page {
     this.fx = new FxLayer();
     this.stage = new RockStage();
     this.duo = this.duoEl ? new Duo(this.duoEl, this.fx, this.stage) : null;
+    this.scatter = new Scatter(this.stage);
 
     /* Split here rather than through Page, so the About copy follows the
        scroll instead of revealing with the hero. */
     this.aboutSplit = this.aboutText ? new SplitText(this.aboutText) : null;
     this.aboutP = 0;
+    this.rockP = 0;
     this.buildAbout();
+
+    /* Where we are: 'home' | 'toAbout' | 'about' | 'toHome'. */
+    this.state = 'home';
+    this.journey = { f: 0 };
 
     /* Hidden until the page enters — they power on in onEnter(). */
     gsap.set(this.el.querySelectorAll('.sketch-svg, .sketch-name'), { opacity: 0 });
     gsap.set(this.el.querySelectorAll('.duo-action-rock'), { opacity: 0, scale: 0.3 });
     gsap.set(this.el.querySelectorAll('.scroll-cue-track'), { scaleY: 0 });
     gsap.set(this.el.querySelectorAll('.scroll-cue-head, .scroll-cue-label'), { opacity: 0 });
-    this.cueShown = true;
 
     this.onCue = (e) => {
       e.preventDefault();
-      this.app?.scroll?.lenis.scrollTo(this.about, { duration: 1.8, easing: (t) => 1 - Math.pow(1 - t, 4) });
+      if (this.state === 'home') this.goAbout();
     };
     this.cue?.addEventListener('click', this.onCue);
 
     this.measure();
+  }
+
+  get lenis() { return this.app?.scroll?.lenis; }
+
+  /* ------------------------------------------------------ the glides */
+
+  heroLines() {
+    return [...this.el.querySelectorAll('.hero .title .line, .hero-intro .line')];
+  }
+
+  /** First scroll down: take the wheel and carry the viewer to About. */
+  goAbout() {
+    if (!this.lenis) return;
+    this.state = 'toAbout';
+    this.lenis.stop();
+
+    /* The heading and subtext drift up, blur and fade — on their own time. */
+    gsap.to(this.heroLines(), {
+      y: -70, opacity: 0, filter: 'blur(12px)',
+      duration: 0.85, ease: 'power2.in', stagger: 0.06, overwrite: 'auto'
+    });
+    if (this.cue) gsap.to(this.cue, { opacity: 0, y: 14, duration: 0.5, ease: 'power2.in', overwrite: 'auto' });
+
+    /* The rocks let go of the sketches and come along with the viewer. */
+    gsap.to(this.journey, { f: 1, duration: GLIDE * 0.95, delay: 0.08, ease: 'power2.inOut', overwrite: 'auto' });
+
+    this.lenis.scrollTo(this.aboutTop, {
+      duration: GLIDE,
+      easing: glideEase,
+      force: true,
+      onComplete: () => {
+        this.state = 'about';
+        this.lenis.start();
+      }
+    });
+  }
+
+  /** Scrolled back above About: carry the viewer home. */
+  goHome() {
+    if (!this.lenis) return;
+    this.state = 'toHome';
+    this.lenis.stop();
+
+    /* The rocks return to orbit as the sketches come back into view. */
+    gsap.to(this.journey, { f: 0, duration: GLIDE * 0.95, ease: 'power2.inOut', overwrite: 'auto' });
+
+    /* The heading settles back in as the page arrives. */
+    gsap.to(this.heroLines(), {
+      y: 0, opacity: 1, filter: 'blur(0px)',
+      duration: 1, ease: 'power3.out', stagger: 0.07, delay: GLIDE * 0.55, overwrite: 'auto'
+    });
+    if (this.cue) gsap.to(this.cue, { opacity: 1, y: 0, duration: 0.9, ease: 'power2.out', delay: GLIDE * 0.8, overwrite: 'auto' });
+
+    this.lenis.scrollTo(0, {
+      duration: GLIDE,
+      easing: glideEase,
+      force: true,
+      onComplete: () => {
+        this.state = 'home';
+        this.lenis.start();
+      }
+    });
   }
 
   /* ---------------------------------------------------------- about */
@@ -131,31 +214,38 @@ export default class Main extends Page {
   /* ----------------------------------------------------------- loop */
 
   loop() {
+    if (!this.aboutH) return;
     const vh = store.height;
     const scroll = store.scroll;
+    const follow = 1 - Math.pow(1 - FOLLOW, gsap.ticker.deltaRatio(60));
+    const ease = (from, to) => (Math.abs(to - from) < 0.0005 ? to : from + (to - from) * follow);
 
-    /* About: map the scroll position onto the timeline. */
-    if (this.aboutTl && this.aboutH) {
-      const start = this.aboutTop - vh * ABOUT_LEAD;
-      const end = this.aboutTop + this.aboutH - vh;
-      const target = clamp((scroll - start) / Math.max(1, end - start), 0, 1);
-      const k = 1 - Math.pow(1 - ABOUT_FOLLOW, gsap.ticker.deltaRatio(60));
-      const next = Math.abs(target - this.aboutP) < 0.0005 ? target : this.aboutP + (target - this.aboutP) * k;
-      if (next !== this.aboutP) {
-        this.aboutP = next;
-        this.aboutTl.progress(next);
-      }
+    /* The guided moves between the two pages. */
+    if (this.state === 'home' && scroll > 3) this.goAbout();
+    else if (this.state === 'about' && scroll < this.aboutTop - 3) this.goHome();
+
+    const end = this.aboutTop + this.aboutH - vh;
+
+    /* One progress for the whole scroll through About. */
+    this.rockP = ease(this.rockP, clamp((scroll - this.aboutTop) / Math.max(1, end - this.aboutTop), 0, 1));
+
+    /* About brief: only once the rocks have scattered. */
+    const aboutNext = clamp((this.rockP - SCATTERED) / (1 - SCATTERED), 0, 1);
+    if (aboutNext !== this.aboutP) {
+      this.aboutP = aboutNext;
+      this.aboutTl.progress(aboutNext);
     }
 
-    /* Scroll cue: fade out once you've scrolled down, back only at the very top. */
-    if (this.cue) {
-      if (this.cueShown && scroll > vh * CUE_HIDE_AT) {
-        this.cueShown = false;
-        gsap.to(this.cue, { opacity: 0, y: 12, duration: 0.9, ease: 'power2.out', overwrite: 'auto' });
-      } else if (!this.cueShown && scroll < 2) {
-        this.cueShown = true;
-        gsap.to(this.cue, { opacity: 1, y: 0, duration: 1, ease: 'power2.out', overwrite: 'auto' });
-      }
+    /* The rocks: drawn together, collide, scatter across the page. */
+    if (this.duo) {
+      const k = clamp(this.rockP / COLLIDE, 0, 1);
+      const broken = this.rockP >= COLLIDE;
+      this.duo.setJourney(this.journey.f, k, broken);
+
+      const { at, dirs } = this.duo.meeting();
+      /* Once About is released the debris scrolls away with it. */
+      const release = Math.max(0, scroll - end);
+      this.scatter.update(clamp((this.rockP - COLLIDE) / (SCATTERED - COLLIDE), 0, 1), at, dirs, this.duo.rockRadius(), -release);
     }
   }
 
@@ -166,6 +256,10 @@ export default class Main extends Page {
       this.buildAbout();
     }
     this.measure();
+    /* Keep the viewer on About if a resize moved where it starts. */
+    if (this.state === 'about' && store.scroll < this.aboutTop) {
+      this.lenis?.scrollTo(this.aboutTop, { immediate: true, force: true });
+    }
     this.fx.resize();
     this.stage.resize();
     this.duo?.resize();
@@ -207,9 +301,12 @@ export default class Main extends Page {
 
   destroy() {
     super.destroy();
+    /* Never leave the scroll locked behind us. */
+    if (this.state === 'toAbout' || this.state === 'toHome') this.lenis?.start();
     this.cue?.removeEventListener('click', this.onCue);
-    gsap.killTweensOf(this.cue);
+    gsap.killTweensOf([this.cue, this.journey, ...this.heroLines()]);
     this.aboutTl?.kill();
+    this.scatter.destroy();
     this.duo?.destroy();
     this.fx.destroy();
     this.stage.destroy();

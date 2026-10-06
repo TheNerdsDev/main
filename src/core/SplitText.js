@@ -11,28 +11,39 @@ export default class SplitText {
   }
 
   split() {
-    const text = this.el.textContent.replace(/\s+/g, ' ').trim();
-    if (!text) return;
+    /* Words keep their inline markup (e.g. <strong>), so emphasis survives the split. */
+    const words = [];
+    this.el.childNodes.forEach((n) => {
+      if (n.nodeType === 3) {
+        n.textContent.split(/\s+/).filter(Boolean).forEach((w) => words.push(w.replace(/&/g, '&amp;').replace(/</g, '&lt;')));
+      } else if (n.nodeType === 1) {
+        n.textContent.split(/\s+/).filter(Boolean).forEach((w) => {
+          const el = n.cloneNode(false);
+          el.textContent = w;
+          words.push(el.outerHTML);
+        });
+      }
+    });
+    if (!words.length) return;
 
     /* 1 — wrap every word so we can measure where it lands */
-    this.el.innerHTML = text
-      .split(' ')
+    this.el.innerHTML = words
       .map((w) => `<span class="split-word" style="white-space:nowrap">${w}</span>`)
       .join(' ');
 
-    const words = [...this.el.querySelectorAll('.split-word')];
-    if (!words.length) return;
+    const spans = [...this.el.querySelectorAll('.split-word')];
+    if (!spans.length) return;
 
     /* 2 — group words sharing a vertical offset into one line */
     const rows = [];
     let lastTop = null;
-    words.forEach((w) => {
+    spans.forEach((w) => {
       const top = w.offsetTop;
       if (lastTop === null || Math.abs(top - lastTop) > 2) {
         rows.push([]);
         lastTop = top;
       }
-      rows[rows.length - 1].push(w.textContent);
+      rows[rows.length - 1].push(w.innerHTML);
     });
 
     /* 3 — rebuild as masked lines */

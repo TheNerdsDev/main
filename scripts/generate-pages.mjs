@@ -139,14 +139,12 @@ const sketch = (m, other) => {
 
 const mainPage = () => {
   const [prem, meet] = team;
-  const actions = main.actions
-    .map(
-      (a) => `          <button class="duo-action" type="button" data-action="${a.id}" aria-label="${esc(a.label)}">
+  const actions = Array.from(
+    { length: main.rocks },
+    () => `          <button class="duo-action" type="button" aria-label="Throw a space rock">
             <canvas class="duo-action-rock" aria-hidden="true"></canvas>
-            <span class="duo-action-label" aria-hidden="true">${esc(a.label)}</span>
           </button>`
-    )
-    .join('\n');
+  ).join('\n');
 
   /* Each letter carries a copy of itself (data-c) for the hover roll. */
   const buttonChars = [...main.about.button]
@@ -173,12 +171,15 @@ ${m.photos.map((src, i) => `          <img class="about-photo" src="${src}" alt=
   <div class="page-content" id="page-content" tabindex="-1">
 ${header('main')}
 
+    <!-- One screen. The first scroll glides on to About and the rocks
+         travel down with the viewer (see Main.js). -->
     <section class="hero" aria-label="Welcome">
+      <div class="hero-stage">
       <div class="hero-text">
         <h1 class="title" data-split>
         ${splitTitle(main.title)}
         </h1>
-        <p class="text hero-intro" data-split-lines>${esc(main.intro)}</p>
+        <p class="text hero-intro" data-split-lines>${esc(main.intro).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')}</p>
         <a class="scroll-cue" href="#about">
           <span class="scroll-cue-track" aria-hidden="true"><span class="scroll-cue-spark"></span></span>
           <svg class="scroll-cue-head" viewBox="0 0 16 10" aria-hidden="true"><path d="M1 1.5 8 8.5l7-7" /></svg>
@@ -212,6 +213,7 @@ ${sketch(meet, prem)}
 ${actions}
         </div>
       </div>
+      </div>
     </section>
 
     <!-- A tall runway with a pinned stage: scrolling through it plays the
@@ -220,7 +222,7 @@ ${actions}
       <div class="about-stage">
 ${frame(meet, 'left')}
         <div class="about-body">
-          <p class="about-text">${esc(main.about.text)}</p>
+          <p class="about-text">${team.reduce((t, m) => t.replace(m.name,`<span class="about-name" style="color: ${m.colour}">${m.name}</span>`), esc(main.about.text))}</p>
           <a class="about-button" href="/info/" data-link aria-label="${esc(main.about.button)}">
             <span class="about-button-text" aria-hidden="true">${buttonChars}</span>
           </a>

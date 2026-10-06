@@ -57,14 +57,16 @@ void main() {
 
   // A wandering galactic band of soft clouds.
   float warp = fbm(vec3(p * 1.3, uTime * 0.006), 3, 2.0, 0.5);
-  float band = exp(-pow((across + warp * 0.08) / uBandWidth, 2.0));
-  float clouds = fbm(vec3(p * 2.1 + warp * 0.6, 4.0 + uTime * 0.01), OCTAVES, 2.0, 0.5) * 0.5 + 0.5;
+  float bx = (across + warp * 0.08) / uBandWidth;
+  float band = exp(-bx * bx);
+  /* Clamped: pow() of a negative is undefined in GLSL. */
+  float clouds = clamp(fbm(vec3(p * 2.1 + warp * 0.6, 4.0 + uTime * 0.01), OCTAVES, 2.0, 0.5) * 0.5 + 0.5, 0.0, 1.0);
 
   // Dark dust lanes cut through the bright core of the band.
   float lanes = smoothstep(0.52, 0.78, fbm(vec3(p * 4.5 + warp, 9.0), 3, 2.0, 0.5) * 0.5 + 0.5);
 
   // A brighter galactic core along the band, right of centre.
-  float core = exp(-pow(along - 0.35, 2.0) * 2.2) * band;
+  float core = exp(-(along - 0.35) * (along - 0.35) * 2.2) * band;
 
   // Colours arrive linear; build the nebula there, then lift it to a
   // perceptual curve so faint wisps stay visible against the near-black.
@@ -72,7 +74,7 @@ void main() {
   vec3 col = vec3(0.0);
   col += uBand * band * pow(clouds, 1.8) * 0.05 * (1.0 - lanes * 0.75);
   col += uHaze * core * pow(clouds, 2.2) * 0.03 * (1.0 - lanes * 0.8);
-  col = pow(col, vec3(0.4545)) * 0.3;
+  col = pow(max(col, vec3(0.0)), vec3(0.4545)) * 0.3;
 
   col += shootingStars(p);
 

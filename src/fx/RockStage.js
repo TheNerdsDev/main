@@ -48,6 +48,8 @@ export default class RockStage {
 
     this.chunks = [];
     this.flying = new Set();
+    /* Anything else that needs frames drawn (e.g. the scattered fragments) holds the stage open. */
+    this.holders = new Set();
     this.running = false;
     this.resize();
   }
@@ -67,11 +69,14 @@ export default class RockStage {
 
   /**
    * A rock for a throw. The caller places it every frame; `burst` swaps it
-   * for flying fragments.
+   * for flying fragments. Pass `geo` / `rot` to throw a particular rock
+   * (one of the floating ones) in the pose it was last seen in.
    */
-  rock(radius, tint) {
-    const mesh = new Mesh(this.rockGeo, this.rockMat);
-    mesh.rotation.set(rand(0, 6.28), rand(0, 6.28), rand(0, 6.28));
+  rock(radius, tint, { geo = this.rockGeo, rot = null, seed = 3.7 } = {}) {
+    const mesh = new Mesh(geo, this.rockMat);
+    this.rockMat.userData.rock.uSeed.value = seed;
+    if (rot) mesh.rotation.set(rot.x, rot.y, rot.z);
+    else mesh.rotation.set(rand(0, 6.28), rand(0, 6.28), rand(0, 6.28));
     mesh.scale.setScalar(0.001);
     this.rim.color.setRGB(tint[0] / 255, tint[1] / 255, tint[2] / 255);
     this.scene.add(mesh);
@@ -134,6 +139,16 @@ export default class RockStage {
     this.start();
   }
 
+  /** Keep rendering while `on` — for effects that own their own meshes. */
+  keep(id, on) {
+    if (on) {
+      this.holders.add(id);
+      this.start();
+    } else {
+      this.holders.delete(id);
+    }
+  }
+
   start() {
     if (this.running) return;
     this.running = true;
@@ -161,7 +176,7 @@ export default class RockStage {
 
     this.renderer.render(this.scene, this.camera);
 
-    if (!this.chunks.length && !this.flying.size) {
+    if (!this.chunks.length && !this.flying.size && !this.holders.size) {
       this.renderer.clear();
       gsap.ticker.remove(this.tick);
       this.running = false;

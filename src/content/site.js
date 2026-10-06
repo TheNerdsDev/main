@@ -24,21 +24,16 @@ export const studio = {
 export const main = {
   /* Each line must fit on one row — it is revealed behind its own mask. */
   title: ['Welcome to', 'our creative', 'platform'],
-  intro:
-    'Placeholder subtext — a sentence or two about what we make and who we make it for will go here.',
+  /* **word** renders bold. */
+  intro: 'Blending **creativity** and **technology** to build experiences that feel genuinely different',
   scrollLabel: 'Scroll Down',
   about: {
     text:
       "We're Meet & Prem the Nerds, two curious minds who get way too excited about turning simple ideas into something creative. If you can dream it up, we'll probably nerd out building it.",
     button: 'About Us'
   },
-  /* The four space rocks drifting around the sketches. */
-  actions: [
-    { id: 'meteor', label: 'Throw space rocks' },
-    { id: 'friendship', label: 'Friendship signal' },
-    { id: 'soon-1', label: 'Coming soon' },
-    { id: 'soon-2', label: 'Coming soon' }
-  ]
+  /* Space rocks drifting around the sketches — click one and it gets thrown. */
+  rocks: 4
 };
 
 /**

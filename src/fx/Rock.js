@@ -10,14 +10,14 @@ import { rand, clamp, drawDust } from './particles.js';
  * the face even if the page scrolls mid-flight.
  */
 export class RockThrow {
-  constructor({ stage, from, to, tint = [200, 200, 200], radius = 18, duration = 0.95, onImpact }) {
+  constructor({ stage, from, to, tint = [200, 200, 200], radius = 18, duration = 0.95, rock = {}, onImpact }) {
     const p = from();
     this.start = { x: p.x, y: p.y + window.scrollY };
     this.to = to;
     this.duration = duration;
     this.radius = radius;
     this.onImpact = onImpact;
-    this.rock = stage.rock(radius, tint);
+    this.rock = stage.rock(radius, tint, rock);
     this.t = 0;
     this.grit = [];
     this.landed = false;

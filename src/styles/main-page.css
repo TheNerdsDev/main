@@ -1,3 +1,12 @@
+/* Syne Mono (SIL Open Font License — see /fonts/SyneMono-OFL.txt). */
+@font-face {
+  font-family: 'Syne Mono';
+  src: url('/fonts/SyneMono-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* =================================================================
    LANDING PAGE  (#main)
    ================================================================= */
@@ -29,12 +38,17 @@
 
 /* ------------------------------------------------------------- hero */
 
-#main .hero {
+/* One screen. Leaving it is a guided glide, not a free scroll (Main.js). */
+#main .hero { position: relative; }
+#main .hero-stage {
   position: relative;
   height: 100vh;
   height: 100svh;
   min-height: 60rem;
 }
+
+/* While a glide has the wheel, keys can't scroll the page either. */
+html.lenis-stopped { overflow: hidden; }
 
 #main .hero-text {
   position: absolute;
@@ -194,9 +208,11 @@
 
 /* ---------------------------------------------------------- space rocks */
 
-/* Four bare 3D rocks drifting around the sketches — no frame, no glass.
-   Each is a button; its name shows as plain text on hover. */
-#main .duo-actions { position: absolute; inset: 0; pointer-events: none; }
+/* Bare 3D rocks drifting around the sketches — no frame, no glass, no
+   title. Each is a button: click it and it gets thrown. */
+/* Fixed to the viewport, so the rocks can leave the sketches and travel
+   down the page with the viewer. */
+#main .duo-actions { position: fixed; inset: 0; z-index: 6; pointer-events: none; }
 #main .duo-action {
   position: absolute;
   top: 0; left: 0;
@@ -220,30 +236,8 @@
 }
 #main .duo-action:focus-visible { outline: 1px dashed rgba(255, 255, 255, 0.35); outline-offset: 0.2rem; }
 
-/* Pressed: the rock squashes, then bounces back. */
-#main .duo-action.is-ping .duo-action-rock { animation: rock-kick 0.65s var(--ease-out); }
-@keyframes rock-kick {
-  0%   { transform: scale(1.14); }
-  28%  { transform: scale(0.84); }
-  62%  { transform: scale(1.22); }
-  100% { transform: scale(1.14); }
-}
-
-#main .duo-action-label {
-  position: absolute;
-  top: calc(100% + 0.4rem); left: 50%;
-  transform: translate(-50%, -0.4rem);
-  white-space: nowrap;
-  font-size: 1.25rem;
-  letter-spacing: 0.08em;
-  color: var(--c-ink);
-  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.9);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.35s var(--ease-out), transform 0.35s var(--ease-out);
-}
-#main .duo-action:hover .duo-action-label,
-#main .duo-action:focus-visible .duo-action-label { opacity: 1; transform: translate(-50%, 0); }
+/* In the air: can't be clicked again until it has drifted back. */
+#main .duo-action.is-away { pointer-events: none; }
 
 /* --------------------------------------------------------------- about */
 
@@ -254,7 +248,7 @@
   position: relative;
   z-index: 4;
 }
-html.webgl #main .about { height: 340vh; }
+html.webgl #main .about { height: 460vh; }
 
 #main .about-stage {
   position: sticky;
@@ -330,9 +324,10 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
   text-align: center;
 }
 #main .about-text {
+  font-family: 'Syne Mono', ui-monospace, monospace;
   font-size: 3.2rem;
   line-height: 132%;
-  font-weight: 500;
+  font-weight: 400;
   letter-spacing: -0.015em;
 }
 #main .about-text .line { padding-bottom: 0.08em; }
@@ -340,10 +335,12 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
 /* About Us: no fill, just a softly glowing white outline. On hover each
    letter rolls up and is replaced by its twin from below, in a ripple. */
 #main .about-button {
+  /* Centred by auto margins, not a translate (GSAP owns its transform). */
   position: absolute;
-  top: calc(100% + 5rem); left: 50%;
-  translate: -50% 0;
-  display: inline-flex;
+  top: calc(100% + 5rem); left: 0; right: 0;
+  width: max-content;
+  margin: 0 auto;
+  display: flex;
   align-items: center;
   justify-content: center;
   padding: 1.6rem 3.6rem;
@@ -358,13 +355,14 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
 }
 #main .about-button:hover,
 #main .about-button:focus-visible {
-  border-color: #fff;
-  box-shadow:
-    0 0 0.9rem rgba(255, 255, 255, 0.7),
-    0 0 3.4rem rgba(255, 255, 255, 0.3),
-    inset 0 0 1.2rem rgba(255, 255, 255, 0.3);
+  border-color: #0ACD88;
+  box-shadow: none;
   outline: none;
 }
+/* Hover: no fill, no glow — the outline and the label simply turn green. */
+#main .about-button:hover .about-button-text,
+#main .about-button:focus-visible .about-button-text { color: #0ACD88; text-shadow: none; }
+
 #main .about-button-text {
   display: flex;
   overflow: hidden;
@@ -373,8 +371,11 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
   line-height: 1.35;
   letter-spacing: 0.22em;
   text-transform: uppercase;
+  font-family: 'Syne Mono', ui-monospace, monospace;
+  font-weight: 400;
   color: #fff;
   text-shadow: 0 0 0.8rem rgba(255, 255, 255, 0.55);
+  transition: color 0.4s var(--ease-out), text-shadow 0.4s var(--ease-out);
 }
 #main .about-button-char {
   position: relative;
@@ -382,6 +383,9 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
   transition: transform 0.6s var(--ease-out);
   transition-delay: calc(var(--i) * 30ms);
 }
+/* Letter-spacing also trails the last letter — cancel it so the label
+   sits truly centred in the pill. */
+#main .about-button-char:last-child { margin-right: -0.22em; }
 #main .about-button-char::after {
   content: attr(data-c);
   position: absolute;
@@ -400,12 +404,13 @@ html.no-webgl #main .duo-actions { display: none; }
 /* ------------------------------------------------------------ tablets */
 
 @media screen and (max-width: 1099px) {
-  #main .hero { height: auto; min-height: 0; }
-  #main .hero-text { position: relative; top: auto; bottom: auto; left: auto; display: block; width: auto; max-width: none; padding: 15rem var(--unit) 0; }
+  /* The whole scene fits one screen: heading on top, sketches below. */
+  #main .hero-stage { display: flex; flex-direction: column; min-height: 0; }
+  #main .hero-text { position: relative; top: auto; bottom: auto; left: auto; display: block; flex: none; width: auto; max-width: none; padding: 15rem var(--unit) 0; }
   #main .title { font-size: 7.4rem; }
   #main .scroll-cue { display: none; }
 
-  #main .duo { position: relative; width: 100%; height: 100vw; max-height: 86rem; margin-top: 4rem; }
+  #main .duo { position: relative; flex: 1 1 auto; width: 100%; height: auto; min-height: 0; margin-top: 2rem; }
   #main .sketch { width: 38vw; }
   #main .sketch-meet { top: 4%; right: 9%; }
   #main .sketch-prem { top: 44%; left: 9%; }
@@ -421,7 +426,7 @@ html.no-webgl #main .duo-actions { display: none; }
   #main .about-frame-right { grid-area: right; }
   #main .about-body { grid-area: body; }
   #main .about-text { font-size: 2.8rem; }
-  #main .about-button { position: relative; top: auto; left: auto; translate: none; margin-top: 4rem; }
+  #main .about-button { position: relative; top: auto; left: auto; right: auto; margin: 4rem auto 0; }
 }
 
 /* ------------------------------------------------------------- phones */
@@ -431,7 +436,7 @@ html.no-webgl #main .duo-actions { display: none; }
   #main .title { font-size: 4.9rem; }
   #main .hero-intro { margin-top: 2rem; }
 
-  #main .duo { height: 128vw; margin-top: 2rem; }
+  #main .duo { margin-top: 1rem; }
   #main .sketch { width: 46vw; }
   #main .sketch-meet { top: 3%; right: 4%; }
   #main .sketch-prem { top: 44%; left: 4%; }
@@ -442,4 +447,7 @@ html.no-webgl #main .duo-actions { display: none; }
   #main .about-frame { padding: 0.7rem; }
   #main .about-text { font-size: 2.1rem; }
   #main .about-button { margin-top: 3.2rem; padding: 1.4rem 3rem; }
+  #main .about-body { align-items: center; }
 }
+
+#main .hero-intro strong { font-weight: 700; color: var(--c-ink); }
