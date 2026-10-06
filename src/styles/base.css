@@ -1,0 +1,250 @@
+/* =================================================================
+   RESET
+   ================================================================= */
+*, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body, div, span, h1, h2, h3, h4, p, a, img, ul, ol, li, figure, figcaption,
+header, footer, nav, section, aside, main, canvas, video, dl, dt, dd, button, fieldset {
+  margin: 0; padding: 0; border: 0; font-size: 100%; vertical-align: baseline;
+}
+ul, ol { list-style: none; }
+img, svg, video { max-width: 100%; height: auto; display: block; }
+button { background: none; border: none; font: inherit; color: inherit; cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+
+/* =================================================================
+   TOKENS
+   ================================================================= */
+:root {
+  --c-bg:        #05060F;
+  --c-ink:       #F4F3EE;
+  --c-dim:       rgba(244, 243, 238, 0.52);
+  --c-faint:     rgba(244, 243, 238, 0.28);
+  --c-line:      rgba(244, 243, 238, 0.14);
+  --c-accent:    #6E8FD6;
+
+  --unit:  2.4rem;
+  --col:   11.8rem;
+  --ar:    1.62 / 1;
+
+  --ease-out:  cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.76, 0, 0.24, 1);
+  --dur: 0.8s;
+}
+
+@media screen and (max-width: 1099px) {
+  :root { --unit: 2rem; --col: 10.5rem; }
+}
+@media screen and (max-width: 767px) {
+  :root { --unit: 1.6rem; --col: 7.4rem; }
+}
+
+/* =================================================================
+   FLUID ROOT  —  1rem = 10px at 1728px wide
+   ================================================================= */
+html {
+  font-size: 0.5787037037vw;
+  line-height: 100%;
+  background: var(--c-bg);
+  color: var(--c-ink);
+  overscroll-behavior: none;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; }
+
+@media screen and (max-width: 1365px) and (pointer: coarse) { html { font-size: 1vw; } }
+@media screen and (max-width: 1099px) { html { font-size: 1vw; } }
+@media screen and (max-width: 767px)  { html { font-size: 2.5vw; } }
+
+html.is-transitioning { pointer-events: none; }
+html.is-loading { overflow: hidden; }
+
+body {
+  min-height: 100vh;
+  background: var(--c-bg);
+  color: var(--c-ink);
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 1.7rem;
+  font-weight: 450;
+  line-height: 148%;
+  letter-spacing: -0.01em;
+  font-feature-settings: 'ss01', 'cv05';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+@media screen and (max-width: 767px) { body { font-size: 1.5rem; } }
+
+body:focus, .page-content:focus { outline: none; }
+
+/* =================================================================
+   TYPE
+   ================================================================= */
+.title,
+h1 {
+  font-family: 'Anton', 'Arial Narrow', sans-serif;
+  font-weight: 400;
+  font-size: 10.4rem;
+  line-height: 86%;
+  letter-spacing: 0.012em;
+  text-transform: uppercase;
+  cursor: default;
+}
+@media screen and (max-width: 1099px) { .title, h1 { font-size: 8.4rem; } }
+@media screen and (max-width: 767px)  { .title, h1 { font-size: 6.2rem; } }
+
+.label {
+  display: block;
+  font-size: 1.4rem;
+  line-height: 110%;
+  letter-spacing: 0.02em;
+  color: var(--c-faint);
+  text-transform: uppercase;
+}
+.text { font-size: 1.7rem; line-height: 140%; }
+.overline, .copyright, .project-meta, .nav, .logo, .back, .copied, .project-index-title, .project-title {
+  font-size: 1.5rem;
+  line-height: 120%;
+}
+@media screen and (max-width: 767px) {
+  .label { font-size: 1.3rem; }
+  .text  { font-size: 1.5rem; }
+  .overline, .copyright, .project-meta, .nav, .logo, .back, .copied,
+  .project-index-title, .project-title { font-size: 1.4rem; }
+}
+
+.line { display: block; position: relative; overflow: hidden; }
+.line-inner { display: inline-block; position: relative; will-change: transform; }
+
+/* =================================================================
+   LINK UNDERLINE
+   ================================================================= */
+.link { display: inline-block; position: relative; overflow: hidden; }
+.link::after {
+  content: '';
+  position: absolute;
+  left: 0; bottom: 0.1em;
+  width: 100%; height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: right center;
+  transition: transform 0.55s var(--ease-out);
+}
+.link:hover::after, .link:focus-visible::after, .link.is-current::after {
+  transform: scaleX(1);
+  transform-origin: left center;
+}
+.link:focus-visible { outline: 1px solid var(--c-accent); outline-offset: 0.4rem; }
+
+.skip-link {
+  position: absolute; top: 0; left: 0; z-index: 200;
+  padding: 1rem 1.6rem; background: var(--c-ink); color: var(--c-bg);
+  transform: translateY(-120%);
+  transition: transform 0.3s var(--ease-out);
+}
+.skip-link:focus { transform: translateY(0); }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* =================================================================
+   CANVAS + OVERLAY
+   ================================================================= */
+.canvas {
+  position: fixed; inset: 0;
+  width: 100%; height: 100%;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0;
+}
+.overlay {
+  position: fixed; inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: radial-gradient(120% 90% at 50% 10%, transparent 40%, rgba(5, 6, 15, 0.55) 100%);
+  mix-blend-mode: multiply;
+}
+
+/* =================================================================
+   LOADER
+   ================================================================= */
+.loader {
+  position: fixed; inset: 0; z-index: 100;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 2.4rem;
+  background: var(--c-bg);
+}
+.loader-icon { width: 7.2rem; height: 7.2rem; }
+.loader-icon-inner { width: 100%; height: 100%; overflow: visible; }
+.loader-dot { fill: var(--c-ink); }
+.loader-dot-a { transform-origin: 24px 24px; }
+.loader-dot-b { fill-opacity: 0.5; transform-origin: 24px 24px; }
+.loader-progress-wrapper { overflow: hidden; }
+.loader-progress-inner {
+  display: block;
+  font-size: 1.5rem;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--c-dim);
+}
+
+/* =================================================================
+   PAGE SHELL
+   ================================================================= */
+.page { position: relative; z-index: 3; }
+.page-content {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100svh;
+}
+
+.site-header {
+  position: fixed;
+  top: var(--unit); left: var(--unit); right: var(--unit);
+  z-index: 12;
+  display: flex; align-items: flex-start; justify-content: space-between;
+  mix-blend-mode: difference;
+}
+.logo { font-weight: 600; letter-spacing: -0.01em; }
+.nav { position: relative; display: flex; align-items: baseline; }
+.nav-comma { margin-right: 0.5rem; color: var(--c-dim); }
+.copied {
+  position: absolute; right: 0; top: 2.4rem;
+  color: var(--c-dim);
+  opacity: 0; pointer-events: none;
+}
+
+.site-footer {
+  position: fixed;
+  bottom: var(--unit); left: var(--unit); right: var(--unit);
+  z-index: 12;
+  display: flex; align-items: flex-end; justify-content: space-between;
+  pointer-events: none;
+  mix-blend-mode: difference;
+}
+.site-footer > * { pointer-events: auto; }
+.metas { display: flex; align-items: flex-end; }
+.metas .meta { display: flex; flex-direction: column; align-items: flex-start; width: 26rem; }
+.metas .meta + .meta { margin-left: var(--unit); }
+.meta .label { margin-bottom: 0.8rem; }
+.meta dd { margin: 0; }
+.meta-email { position: relative; }
+.meta-email .copied { right: auto; left: 0; top: auto; bottom: -2.2rem; }
+.copyright { color: var(--c-dim); }
+
+.back {
+  position: fixed;
+  top: calc(var(--unit) + 5.2rem);
+  left: var(--unit);
+  z-index: 12;
+  mix-blend-mode: difference;
+}
+.back-arrow { display: inline-block; margin-right: 0.8rem; }
+
+@media screen and (max-width: 767px) {
+  .metas.footer-metas .meta-available { display: none; }
+  .metas .meta { width: auto; }
+  .site-footer { bottom: 1.6rem; }
+}

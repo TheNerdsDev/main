@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" width="400" height="500">
+  <!-- Placeholder sketch: Prem. Replace with the real drawing and update
+       the eye / hit / hand points in src/content/site.js. Eyes are centred
+       at (161, 215) and (239, 215). -->
+  <defs>
+    <filter id="pencil" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="7" result="n" />
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="3.2" xChannelSelector="R" yChannelSelector="G" />
+    </filter>
+  </defs>
+  <g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" filter="url(#pencil)">
+    <!-- face -->
+    <path stroke-width="3.2" d="M122 176 C120 214 124 252 138 284 C154 318 176 338 200 340 C224 338 246 318 262 284 C276 252 280 214 278 176" />
+    <path stroke-width="1.4" opacity=".55" d="M125 182 C124 220 128 254 142 286 C158 316 178 334 201 336 C223 334 243 316 259 286 C273 254 276 220 275 182" />
+    <!-- ears -->
+    <path stroke-width="2.6" d="M122 204 C105 196 99 222 107 238 C112 249 120 251 126 246" />
+    <path stroke-width="1.6" opacity=".7" d="M114 214 C110 222 112 232 118 238" />
+    <path stroke-width="2.6" d="M278 204 C295 196 301 222 293 238 C288 249 280 251 274 246" />
+    <path stroke-width="1.6" opacity=".7" d="M286 214 C290 222 288 232 282 238" />
+    <!-- hair, side-swept -->
+    <path stroke-width="3.4" d="M120 182 C110 136 126 94 170 80 C214 66 264 80 282 120 C290 140 288 160 280 182" />
+    <path stroke-width="2.4" d="M128 160 C150 124 206 106 268 126" />
+    <path stroke-width="2.2" d="M134 146 C160 112 214 98 274 116" />
+    <path stroke-width="2" d="M146 128 C176 100 228 90 278 106" />
+    <path stroke-width="1.8" opacity=".8" d="M158 106 C186 86 232 82 266 94" />
+    <path stroke-width="2.2" d="M262 126 C272 140 278 158 279 178" />
+    <path stroke-width="1.6" opacity=".7" d="M124 170 C128 150 136 136 148 126" />
+    <path stroke-width="2" d="M170 84 C176 70 192 64 204 70 M204 70 C214 62 230 64 238 74" />
+    <!-- brows -->
+    <path stroke-width="4" d="M136 192 C148 182 168 180 184 187" />
+    <path stroke-width="4" d="M216 187 C232 180 252 182 264 192" />
+    <!-- eyes -->
+    <path stroke-width="2.6" d="M140 216 C150 204 172 204 182 216 C172 226 150 226 140 216 Z" />
+    <circle cx="161" cy="215" r="8" stroke-width="2" />
+    <circle cx="161" cy="215" r="3.6" fill="#fff" stroke="none" />
+    <path stroke-width="2.6" d="M218 216 C228 204 250 204 260 216 C250 226 228 226 218 216 Z" />
+    <circle cx="239" cy="215" r="8" stroke-width="2" />
+    <circle cx="239" cy="215" r="3.6" fill="#fff" stroke="none" />
+    <!-- round glasses -->
+    <circle cx="161" cy="215" r="30" stroke-width="2.6" />
+    <circle cx="239" cy="215" r="30" stroke-width="2.6" />
+    <path stroke-width="2.4" d="M191 210 C196 204 204 204 209 210" />
+    <path stroke-width="2.2" d="M131 208 L121 202 M269 208 L279 202" />
+    <!-- nose -->
+    <path stroke-width="2.4" d="M201 226 C198 242 193 256 189 266 C195 272 205 273 213 268" />
+    <path stroke-width="1.6" opacity=".7" d="M189 268 C192 271 195 271 197 269 M205 270 C208 271 211 270 213 268" />
+    <!-- mouth -->
+    <path stroke-width="3" d="M176 297 C188 304 212 304 224 297" />
+    <path stroke-width="1.6" opacity=".7" d="M186 310 C196 314 204 314 214 310" />
+    <path stroke-width="1.4" opacity=".55" d="M172 294 L176 297 M224 297 L228 294" />
+    <!-- neck + shoulders -->
+    <path stroke-width="2.8" d="M174 334 L172 374 M226 334 L228 374" />
+    <path stroke-width="1.4" opacity=".6" d="M226 352 C220 360 214 364 206 366" />
+    <path stroke-width="3.2" d="M172 372 C130 380 82 396 54 430 C42 448 36 474 34 500" />
+    <path stroke-width="3.2" d="M228 372 C270 380 318 396 346 430 C358 448 364 474 366 500" />
+    <path stroke-width="2.6" d="M172 372 C182 394 218 394 228 372" />
+    <path stroke-width="1.6" opacity=".6" d="M96 420 C104 446 108 472 108 500 M304 420 C296 446 292 472 292 500" />
+    <!-- hoodie strings -->
+    <path stroke-width="1.8" d="M186 392 L182 440 M214 392 L218 440" />
+    <circle cx="182" cy="444" r="3" stroke-width="1.6" />
+    <circle cx="218" cy="444" r="3" stroke-width="1.6" />
+  </g>
+</svg>

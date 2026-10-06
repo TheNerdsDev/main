@@ -1,0 +1,26 @@
+{
+  "name": "studio-portfolio",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Creative studio portfolio — WebGL, GSAP, Lenis",
+  "scripts": {
+    "pages": "node scripts/generate-pages.mjs",
+    "predev": "npm run pages",
+    "dev": "vite",
+    "prebuild": "npm run pages",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@fontsource/anton": "^5.1.0",
+    "@fontsource/inter": "^5.1.0",
+    "gsap": "^3.13.0",
+    "lenis": "^1.3.11",
+    "three": "^0.181.0"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0",
+    "vite-plugin-glsl": "^1.3.1"
+  }
+}

@@ -1,0 +1,357 @@
+/* =================================================================
+   MEDIA WRAPPERS  (DOM holds layout, WebGL draws the pixels)
+   ================================================================= */
+.media-wrapper {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: var(--ar);
+  background: rgba(244, 243, 238, 0.04);
+}
+.media {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
+html.webgl .media { visibility: hidden; }
+html.webgl .media-wrapper { background: none; }
+
+/* =================================================================
+   CURVE TOGGLE
+   ================================================================= */
+.curve-toggle {
+  position: fixed;
+  top: var(--unit); right: var(--unit);
+  z-index: 14;
+  width: 4rem; height: 4rem;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--c-line);
+  border-radius: 50%;
+  color: var(--c-ink);
+  transition: border-color 0.4s var(--ease-out), transform 0.5s var(--ease-out);
+}
+.curve-toggle:hover { border-color: var(--c-ink); transform: scale(1.08); }
+.curve-toggle svg { width: 1.7rem; height: 1.7rem; overflow: visible; }
+.curve-toggle path { stroke: currentColor; stroke-width: 1.4; fill: none; }
+.curve-toggle.is-active { background: var(--c-ink); color: var(--c-bg); border-color: var(--c-ink); }
+.site-header { padding-right: 5.6rem; }
+
+/* =================================================================
+   WORK INDEX (card stack)
+   ================================================================= */
+#projects .text-wrapper {
+  position: fixed;
+  top: 16rem; left: var(--unit);
+  z-index: 11;
+  width: 54rem;
+  pointer-events: none;
+}
+/* Long display words must not hit the mask's clipping edge. */
+#projects .title { font-size: 9.6rem; }
+#projects .overline {
+  display: block;
+  margin-bottom: 3.2rem;
+  color: var(--c-dim);
+  overflow: hidden;
+}
+#projects .title { margin-bottom: 2.4rem; }
+#projects .title .line + .line { margin-top: 0.6rem; }
+#projects .text { max-width: 36rem; color: var(--c-dim); }
+
+#projects .work { position: relative; }
+
+/* Scroll runway — the carousel itself is pinned, this just gives it travel. */
+#projects .work { height: 420vh; }
+
+/* Pinned column, centred at 66% of the viewport like the reference. */
+#projects .projects {
+  position: fixed;
+  top: 0;
+  left: 66%;
+  transform: translateX(-50%);
+  width: 66rem;
+  height: 100vh;
+  pointer-events: none;
+}
+#projects .project-item {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  pointer-events: auto;
+  will-change: transform;
+}
+#projects .project { display: block; width: 100%; }
+#projects .project .media-wrapper { aspect-ratio: var(--ar); }
+#projects .project-meta {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-top: 1.4rem;
+}
+#projects .project-year { color: var(--c-faint); }
+/* Pinned desktop stack: names live in the index rail, not under the cards. */
+#projects.is-pinned .project-meta { display: none; }
+
+#projects .project-index {
+  position: fixed;
+  top: 38vh; right: var(--unit);
+  z-index: 11;
+  display: flex; flex-direction: column; align-items: flex-end;
+  min-width: var(--col);
+}
+#projects .project-index-title { margin-bottom: 1.6rem; color: var(--c-accent); }
+#projects .project-titles {
+  display: flex; flex-direction: column; align-items: flex-end;
+  margin-bottom: 2.4rem;
+}
+
+/* Every preview occupies the same box; only the active one is faded up. */
+#projects .project-previews {
+  position: relative;
+  width: calc(var(--col) + var(--unit));
+  aspect-ratio: var(--ar);
+}
+#projects .project-previews .media-wrapper {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+}
+#projects .project-title {
+  display: block;
+  padding: 0.4rem 0;
+  font-size: 1.8rem;
+  font-weight: 500;
+  color: rgba(244, 243, 238, 0.78);
+  white-space: nowrap;
+  transition: color 0.4s var(--ease-out);
+}
+#projects .project-title.is-active { color: var(--c-ink); font-weight: 600; }
+
+@media screen and (max-width: 1365px) and (pointer: coarse) {
+  #projects .text-wrapper, #projects .project-index { position: static; width: auto; pointer-events: auto; }
+  #projects .text-wrapper { padding: 14rem var(--unit) 0; margin-bottom: 8rem; }
+  #projects .work { height: auto; }
+  #projects .projects {
+    position: static; width: auto; height: auto;
+    left: auto; transform: none; margin: 0;
+    padding: 0 var(--unit) 12rem; pointer-events: auto;
+  }
+  #projects .project-item { position: static; width: auto; margin: 0; }
+  #projects .project-item + .project-item { margin-top: 6rem; }
+  #projects .project-index { display: none; }
+}
+@media screen and (max-width: 1099px) {
+  #projects .text-wrapper, #projects .project-index { position: static; width: auto; pointer-events: auto; }
+  #projects .text-wrapper { padding: 14rem var(--unit) 0; margin-bottom: 8rem; }
+  #projects .work { height: auto; }
+  #projects .projects {
+    position: static; width: auto; height: auto;
+    left: auto; transform: none; margin: 0;
+    padding: 0 var(--unit) 12rem; pointer-events: auto;
+  }
+  #projects .project-item { position: static; width: auto; margin: 0; }
+  #projects .project-index { display: none; }
+  #projects .project-item + .project-item { margin-top: 6rem; }
+}
+
+/* =================================================================
+   WORK
+   ================================================================= */
+#work .page-content { padding: 18rem 0 12rem; }
+#work .title { padding: 0 var(--unit); margin-bottom: 4rem; text-align: center; }
+#work .hero-media { padding: 0 var(--unit); margin-bottom: 8rem; }
+#work .hero-media .media-wrapper { aspect-ratio: 2.1 / 1; }
+
+#work .description {
+  max-width: 62rem;
+  margin: 0 auto 6rem;
+  padding: 0 var(--unit);
+  font-size: 2.4rem;
+  line-height: 136%;
+}
+#work .metas {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--unit);
+  max-width: 96rem;
+  margin: 0 auto 12rem;
+  padding: 0 var(--unit);
+  align-items: start;
+}
+#work .metas .meta { width: auto; margin: 0; }
+#work .meta-list li { color: var(--c-dim); }
+#work .meta-list li + li { margin-top: 0.4rem; }
+
+#work .content {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--unit);
+  padding: 0 var(--unit);
+  margin-bottom: 12rem;
+}
+#work .content .media-wrapper:first-child { grid-column: 1 / -1; aspect-ratio: 2.1 / 1; }
+
+#work .work-bottom { padding: 0 var(--unit); text-align: center; }
+#work .next-project { display: inline-flex; flex-direction: column; align-items: center; gap: 1rem; }
+#work .next-project .text {
+  font-family: 'Anton', sans-serif;
+  font-size: 6.4rem;
+  text-transform: uppercase;
+  line-height: 100%;
+}
+
+@media screen and (max-width: 1099px) {
+  #work .metas { grid-template-columns: repeat(2, 1fr); row-gap: 3.2rem; }
+  #work .description { font-size: 2rem; }
+}
+@media screen and (max-width: 767px) {
+  #work .page-content { padding-top: 16rem; }
+  #work .content { grid-template-columns: 1fr; }
+  #work .content .media-wrapper:first-child { aspect-ratio: var(--ar); }
+  #work .hero-media .media-wrapper { aspect-ratio: var(--ar); }
+  #work .metas { grid-template-columns: 1fr; }
+  #work .next-project .text { font-size: 4.4rem; }
+}
+
+/* =================================================================
+   INFO
+   ================================================================= */
+#info .page-content { padding: 18rem 0 12rem; }
+#info .title { padding: 0 var(--unit); margin-bottom: 6rem; }
+#info .title .line + .line { margin-top: 0.6rem; }
+
+#info .info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: calc(var(--unit) * 2);
+  padding: 0 var(--unit);
+  margin-bottom: 12rem;
+  align-items: start;
+}
+/* Copy sits on the left, away from the backdrop; the portrait covers it. */
+#info .info-body { order: 1; }
+#info .info-portrait { order: 2; }
+#info .info-portrait .media-wrapper { aspect-ratio: 1 / 1.2; }
+#info .lead { font-size: 2.4rem; line-height: 136%; margin-bottom: 3.2rem; }
+#info .info-body .text { color: var(--c-dim); max-width: 46rem; }
+#info .info-body .text + .text { margin-top: 2rem; }
+
+#info .services {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--unit);
+  padding: 0 var(--unit);
+  margin-bottom: 10rem;
+}
+#info .service .label { margin-bottom: 1.6rem; padding-bottom: 1.2rem; border-bottom: 1px solid var(--c-line); }
+#info .service li { color: var(--c-dim); }
+#info .service li + li { margin-top: 0.5rem; }
+
+#info .capabilities, #info .elsewhere { padding: 0 var(--unit); margin-bottom: 8rem; }
+#info .capabilities .label, #info .elsewhere .label { margin-bottom: 1.6rem; }
+#info .capability-list { display: flex; flex-wrap: wrap; gap: 0.8rem; }
+#info .capability-list li {
+  padding: 0.6rem 1.4rem;
+  border: 1px solid var(--c-line);
+  border-radius: 10rem;
+  color: var(--c-dim);
+  font-size: 1.4rem;
+}
+#info .social-list { display: flex; flex-wrap: wrap; gap: 2.4rem; }
+
+@media screen and (max-width: 1099px) {
+  #info .info-grid { grid-template-columns: 1fr; gap: 4rem; }
+  #info .info-portrait .media-wrapper { aspect-ratio: var(--ar); }
+  #info .services { grid-template-columns: 1fr; gap: 3.2rem; }
+  #info .lead { font-size: 2rem; }
+}
+
+/* =================================================================
+   NO-WEBGL FALLBACK
+   ================================================================= */
+html.no-webgl .canvas,
+html.no-webgl .overlay,
+html.no-webgl .loader,
+html.no-webgl .curve-toggle,
+html.no-webgl .copied { display: none !important; }
+
+html.no-webgl body { background: var(--c-bg); }
+html.no-webgl .media { visibility: visible; }
+html.no-webgl .site-header,
+html.no-webgl .site-footer,
+html.no-webgl .back { mix-blend-mode: normal; }
+html.no-webgl #projects .text-wrapper,
+html.no-webgl #projects .project-index {
+  position: static; width: auto; pointer-events: auto;
+}
+html.no-webgl #projects .text-wrapper { padding: 14rem var(--unit) 0; margin-bottom: 8rem; }
+html.no-webgl #projects .work { height: auto; }
+html.no-webgl #projects .projects {
+  position: static; width: auto; height: auto; max-width: 92rem;
+  left: auto; transform: none; margin: 0 auto;
+  padding: 0 var(--unit) 12rem; pointer-events: auto;
+}
+html.no-webgl #projects .project-item { position: static; width: auto; margin: 0 0 6rem; transform: none !important; }
+html.no-webgl #projects .project-index { display: none; }
+html.no-webgl .site-header, html.no-webgl .site-footer { position: static; }
+html.no-webgl .site-footer { padding: 4rem var(--unit); border-top: 1px solid var(--c-line); margin-top: 6rem; }
+html.no-webgl .back { position: static; display: inline-block; margin: 0 var(--unit) 3rem; }
+
+/* =================================================================
+   REDUCED MOTION
+   ================================================================= */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+
+/* =================================================================
+   FOOTER — fixed on the home viewport, in flow on scrolling pages
+   ================================================================= */
+#work .site-footer,
+#info .site-footer {
+  position: relative;
+  inset: auto;
+  margin-top: 10rem;
+  padding-top: 4rem;
+  padding-left: var(--unit);
+  padding-right: var(--unit);
+  border-top: 1px solid var(--c-line);
+  mix-blend-mode: normal;
+}
+#work .page-content { padding-bottom: 6rem; }
+#info .page-content { padding-bottom: 6rem; }
+
+
+/* =================================================================
+   PHONES
+   Pre-split display lines must each fit on ONE visual row — a line
+   that wraps gets cut off by its own reveal mask.
+   ================================================================= */
+@media screen and (max-width: 767px) {
+  #projects .title { font-size: 4.9rem; }
+  #work .title { font-size: 4.6rem; }
+  #info .title { font-size: 4.9rem; }
+
+  /* Footer belongs in the flow on a scrolling phone page. */
+  #projects .site-footer {
+    position: relative;
+    inset: auto;
+    margin-top: 4rem;
+    padding: 3.2rem var(--unit) 0;
+    border-top: 1px solid var(--c-line);
+    mix-blend-mode: normal;
+  }
+  #projects .projects { padding-bottom: 4rem; }
+
+  .site-header { padding-right: 0; }
+  .curve-toggle { display: none; }
+}
+
+/* Tablets: the same wrap risk at a smaller display size. */
+@media screen and (min-width: 768px) and (max-width: 1099px) {
+  #projects .title { font-size: 7.4rem; }
+}

@@ -1,0 +1,445 @@
+/* =================================================================
+   LANDING PAGE  (#main)
+   ================================================================= */
+
+/* The thrown rock and its fragments (3D), with the dust, grit and blood
+   mist (2D) drawn over them. Both sit above the sketches. */
+.rock-canvas,
+.fx-canvas {
+  position: fixed; inset: 0;
+  width: 100%; height: 100%;
+  z-index: 6;
+  pointer-events: none;
+}
+.fx-canvas { z-index: 7; }
+
+/* Blood, glow and the orbiting actions are allowed past the sketches —
+   but never past the page edge (`clip`, unlike `hidden`, leaves vertical
+   overflow alone and doesn't create a scroll container). */
+#main .page-content { overflow-x: clip; }
+
+#main .site-footer {
+  position: relative;
+  inset: auto;
+  margin-top: 4rem;
+  padding: 4rem var(--unit) var(--unit);
+  border-top: 1px solid var(--c-line);
+  mix-blend-mode: normal;
+}
+
+/* ------------------------------------------------------------- hero */
+
+#main .hero {
+  position: relative;
+  height: 100vh;
+  height: 100svh;
+  min-height: 60rem;
+}
+
+#main .hero-text {
+  position: absolute;
+  top: 17vh; bottom: 3.2rem;
+  /* Pulled in from the edge of the screen. */
+  left: calc(var(--unit) + 7vw);
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  width: max-content;
+  max-width: 62rem;
+}
+#main .title { font-size: 9.6rem; }
+#main .title .line + .line { margin-top: 0.6rem; }
+#main .hero-intro {
+  max-width: 38rem;
+  margin-top: 3rem;
+  color: var(--c-dim);
+}
+
+/* A long arrow, centred under the heading, running down to the bottom
+   of the screen, with a spark sliding down it. */
+#main .scroll-cue {
+  position: relative;
+  flex: 1;
+  min-height: 12rem;
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 4.4rem;
+  color: var(--c-ink);
+}
+#main .scroll-cue-track {
+  position: relative;
+  display: block;
+  flex: 1;
+  width: 1.5px;
+  overflow: hidden;
+  background: linear-gradient(to bottom, rgba(244, 243, 238, 0.06), rgba(244, 243, 238, 0.75));
+  transform-origin: top center;
+}
+#main .scroll-cue-spark {
+  position: absolute;
+  left: -1px; top: 0;
+  width: 3.5px; height: 16%;
+  border-radius: 2px;
+  background: linear-gradient(to bottom, transparent, #fff);
+  box-shadow: 0 0 10px 1px rgba(255, 255, 255, 0.7);
+  animation: cue-spark 2.8s cubic-bezier(0.55, 0, 0.25, 1) infinite;
+}
+/* Percentages of the spark's own height (16% of the track), so it always
+   runs the full length however tall the arrow is. */
+@keyframes cue-spark {
+  0%   { transform: translateY(-100%); opacity: 0; }
+  12%  { opacity: 1; }
+  82%  { opacity: 1; }
+  100% { transform: translateY(625%); opacity: 0; }
+}
+#main .scroll-cue-head {
+  flex: none;
+  width: 2.4rem;
+  margin-top: -0.3rem;
+  overflow: visible;
+}
+#main .scroll-cue-head path { fill: none; stroke: currentColor; stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
+#main .scroll-cue-label {
+  position: absolute;
+  left: calc(50% + 2.2rem);
+  bottom: 0.4rem;
+  white-space: nowrap;
+  font-size: 1.3rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+  transition: color 0.4s var(--ease-out);
+}
+#main .scroll-cue:hover .scroll-cue-label,
+#main .scroll-cue:focus-visible .scroll-cue-label { color: var(--c-ink); }
+#main .scroll-cue:focus-visible { outline: 1px solid var(--c-accent); outline-offset: 0.8rem; }
+
+/* ------------------------------------------------------------ sketches */
+
+#main .duo {
+  position: absolute;
+  top: 0; right: 0;
+  width: 52%;
+  height: 100%;
+  z-index: 5;
+}
+#main .duo-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+#main .sketch {
+  position: absolute;
+  width: 30rem;
+  will-change: transform;
+}
+/* Meet, top right, up by the window's close button. */
+#main .sketch-meet { top: 9rem; right: 7.2rem; }
+/* Prem, diagonally down and to the left of Meet. */
+#main .sketch-prem { top: 44vh; left: 6%; }
+
+#main .sketch-body {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  will-change: transform;
+}
+#main .sketch-svg {
+  display: block;
+  width: 100%; height: 100%;
+  overflow: visible;
+  transition: filter 0.4s var(--ease-out);
+}
+#main .sketch:hover .sketch-svg { filter: brightness(1.25); }
+
+/* Blood can fly well past the drawing, mostly downwards. */
+#main .sketch-blood {
+  position: absolute;
+  top: -20%; left: -40%;
+  width: 180%; height: 190%;
+  pointer-events: none;
+  filter: url(#blood-goo);
+}
+
+#main .sketch-hit {
+  position: absolute;
+  inset: 4% 8% 10%;
+  z-index: 2;
+  border-radius: 40%;
+  cursor: pointer;
+}
+#main .sketch-hit:focus-visible { outline: 1px solid var(--neon); outline-offset: 0.4rem; }
+
+#main .sketch-name {
+  position: absolute;
+  left: 50%; bottom: -1.2rem;
+  transform: translateX(-50%);
+  font-size: 1.3rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--neon);
+  text-shadow: 0 0 6px var(--neon), 0 0 18px var(--neon);
+  pointer-events: none;
+}
+
+#main .sketch-gasp {
+  position: absolute;
+  top: -2%; right: 14%;
+  font-family: 'Anton', sans-serif;
+  font-size: 6rem;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 0 6px var(--neon), 0 0 20px var(--neon), 0 0 40px var(--neon);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------- space rocks */
+
+/* Four bare 3D rocks drifting around the sketches — no frame, no glass.
+   Each is a button; its name shows as plain text on hover. */
+#main .duo-actions { position: absolute; inset: 0; pointer-events: none; }
+#main .duo-action {
+  position: absolute;
+  top: 0; left: 0;
+  z-index: 3;
+  width: 7.4rem; height: 7.4rem;
+  border-radius: 50%;
+  pointer-events: auto;
+  cursor: pointer;
+  will-change: transform;
+}
+#main .duo-action-rock {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  filter: drop-shadow(0 0.8rem 1.4rem rgba(0, 0, 0, 0.65));
+  transition: transform 0.6s var(--ease-out), filter 0.6s var(--ease-out);
+}
+#main .duo-action:hover .duo-action-rock,
+#main .duo-action:focus-visible .duo-action-rock {
+  transform: scale(1.14);
+  filter: drop-shadow(0 1rem 1.8rem rgba(0, 0, 0, 0.7)) brightness(1.18);
+}
+#main .duo-action:focus-visible { outline: 1px dashed rgba(255, 255, 255, 0.35); outline-offset: 0.2rem; }
+
+/* Pressed: the rock squashes, then bounces back. */
+#main .duo-action.is-ping .duo-action-rock { animation: rock-kick 0.65s var(--ease-out); }
+@keyframes rock-kick {
+  0%   { transform: scale(1.14); }
+  28%  { transform: scale(0.84); }
+  62%  { transform: scale(1.22); }
+  100% { transform: scale(1.14); }
+}
+
+#main .duo-action-label {
+  position: absolute;
+  top: calc(100% + 0.4rem); left: 50%;
+  transform: translate(-50%, -0.4rem);
+  white-space: nowrap;
+  font-size: 1.25rem;
+  letter-spacing: 0.08em;
+  color: var(--c-ink);
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.9);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s var(--ease-out), transform 0.35s var(--ease-out);
+}
+#main .duo-action:hover .duo-action-label,
+#main .duo-action:focus-visible .duo-action-label { opacity: 1; transform: translate(-50%, 0); }
+
+/* --------------------------------------------------------------- about */
+
+/* A tall runway; the stage inside it is pinned while the scroll position
+   drives the sequence (see Main.js). Only with JS — without it the
+   section is simply laid out in full. */
+#main .about {
+  position: relative;
+  z-index: 4;
+}
+html.webgl #main .about { height: 340vh; }
+
+#main .about-stage {
+  position: sticky;
+  top: 0;
+  display: grid;
+  grid-template-columns: 1fr minmax(0, 60rem) 1fr;
+  align-items: center;
+  column-gap: 4rem;
+  height: 100vh;
+  height: 100svh;
+  padding: 0 var(--unit);
+}
+html.no-webgl #main .about-stage { position: relative; height: auto; min-height: 100vh; padding: 10rem var(--unit); }
+
+/* Frames and text share one centre line: captions and the button hang
+   outside the boxes that get centred, so they don't push anything off it. */
+#main .about-frame {
+  position: relative;
+  justify-self: center;
+  width: min(100%, 32rem);
+  margin: 0;
+  padding: 1.1rem;
+  border: 1px solid rgba(244, 243, 238, 0.16);
+  background: rgba(5, 6, 15, 0.35);
+}
+/* Neon corner brackets in each person's colour. */
+#main .about-frame::before,
+#main .about-frame::after {
+  content: '';
+  position: absolute;
+  width: 2.4rem; height: 2.4rem;
+  border: 2px solid var(--neon);
+  filter: drop-shadow(0 0 4px var(--neon));
+  pointer-events: none;
+}
+#main .about-frame::before { top: -1px; left: -1px; border-right: 0; border-bottom: 0; }
+#main .about-frame::after  { right: -1px; bottom: -1px; border-left: 0; border-top: 0; }
+
+#main .about-photos {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  background: #0a0b14;
+}
+#main .about-photo {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  will-change: transform, clip-path;
+}
+#main .about-flash {
+  position: absolute; inset: 0;
+  background: radial-gradient(circle at 50% 40%, #fff, rgba(255, 255, 255, 0.6) 60%, rgba(255, 255, 255, 0.3));
+  mix-blend-mode: screen;
+  opacity: 0;
+  pointer-events: none;
+}
+#main .about-caption {
+  position: absolute;
+  top: calc(100% + 1.2rem); left: 0;
+  font-size: 1.3rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--neon);
+  text-shadow: 0 0 8px var(--neon);
+}
+
+#main .about-body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+#main .about-text {
+  font-size: 3.2rem;
+  line-height: 132%;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+#main .about-text .line { padding-bottom: 0.08em; }
+
+/* About Us: no fill, just a softly glowing white outline. On hover each
+   letter rolls up and is replaced by its twin from below, in a ripple. */
+#main .about-button {
+  position: absolute;
+  top: calc(100% + 5rem); left: 50%;
+  translate: -50% 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.6rem 3.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 10rem;
+  background: none;
+  box-shadow:
+    0 0 0.6rem rgba(255, 255, 255, 0.45),
+    0 0 2.2rem rgba(255, 255, 255, 0.18),
+    inset 0 0 0.8rem rgba(255, 255, 255, 0.2);
+  transition: box-shadow 0.6s var(--ease-out), border-color 0.6s var(--ease-out);
+}
+#main .about-button:hover,
+#main .about-button:focus-visible {
+  border-color: #fff;
+  box-shadow:
+    0 0 0.9rem rgba(255, 255, 255, 0.7),
+    0 0 3.4rem rgba(255, 255, 255, 0.3),
+    inset 0 0 1.2rem rgba(255, 255, 255, 0.3);
+  outline: none;
+}
+#main .about-button-text {
+  display: flex;
+  overflow: hidden;
+  font-size: 1.4rem;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 0 0.8rem rgba(255, 255, 255, 0.55);
+}
+#main .about-button-char {
+  position: relative;
+  display: inline-block;
+  transition: transform 0.6s var(--ease-out);
+  transition-delay: calc(var(--i) * 30ms);
+}
+#main .about-button-char::after {
+  content: attr(data-c);
+  position: absolute;
+  left: 0; top: 100%;
+}
+#main .about-button:hover .about-button-char,
+#main .about-button:focus-visible .about-button-char { transform: translateY(-100%); }
+
+/* ---------------------------------------------------------- fallback */
+
+/* No WebGL / no JS: everything is simply visible, last photo on top. */
+html.no-webgl #main .sketch-gasp,
+html.no-webgl #main .sketch-blood,
+html.no-webgl #main .duo-actions { display: none; }
+
+/* ------------------------------------------------------------ tablets */
+
+@media screen and (max-width: 1099px) {
+  #main .hero { height: auto; min-height: 0; }
+  #main .hero-text { position: relative; top: auto; bottom: auto; left: auto; display: block; width: auto; max-width: none; padding: 15rem var(--unit) 0; }
+  #main .title { font-size: 7.4rem; }
+  #main .scroll-cue { display: none; }
+
+  #main .duo { position: relative; width: 100%; height: 100vw; max-height: 86rem; margin-top: 4rem; }
+  #main .sketch { width: 38vw; }
+  #main .sketch-meet { top: 4%; right: 9%; }
+  #main .sketch-prem { top: 44%; left: 9%; }
+
+  /* Frames side by side on one line, the text centred beneath them. */
+  #main .about-stage {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas: "left right" "body body";
+    align-content: center;
+    row-gap: 7rem;
+  }
+  #main .about-frame-left  { grid-area: left; }
+  #main .about-frame-right { grid-area: right; }
+  #main .about-body { grid-area: body; }
+  #main .about-text { font-size: 2.8rem; }
+  #main .about-button { position: relative; top: auto; left: auto; translate: none; margin-top: 4rem; }
+}
+
+/* ------------------------------------------------------------- phones */
+
+@media screen and (max-width: 767px) {
+  #main .hero-text { padding-top: 13rem; }
+  #main .title { font-size: 4.9rem; }
+  #main .hero-intro { margin-top: 2rem; }
+
+  #main .duo { height: 128vw; margin-top: 2rem; }
+  #main .sketch { width: 46vw; }
+  #main .sketch-meet { top: 3%; right: 4%; }
+  #main .sketch-prem { top: 44%; left: 4%; }
+  #main .sketch-gasp { font-size: 4.4rem; }
+  #main .duo-action { width: 5.8rem; height: 5.8rem; }
+
+  #main .about-stage { column-gap: 1.6rem; row-gap: 5.6rem; }
+  #main .about-frame { padding: 0.7rem; }
+  #main .about-text { font-size: 2.1rem; }
+  #main .about-button { margin-top: 3.2rem; padding: 1.4rem 3rem; }
+}
