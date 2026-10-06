@@ -1,4 +1,4 @@
-# Twofold — Creative Studio Portfolio
+# The Nerds — Creative Studio Portfolio
 
 A WebGL-driven portfolio site. Three.js renders the background world and every
 project image; GSAP drives the motion; Lenis handles smooth scroll; a small

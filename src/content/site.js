@@ -4,12 +4,12 @@
  */
 
 export const studio = {
-  name: 'Twofold',
-  wordmark: 'Twofold',
+  name: 'The Nerds',
+  wordmark: 'The Nerds',
   tagline: 'Creative Development Studio',
   description:
     'A two-person studio building websites, software and automation for businesses that deserve better than a template.',
-  email: 'hello@twofold.studio',
+  email: 'hello@thenerds.studio',
   location: 'Ahmedabad, IN — working remotely',
   available: 'January 2027',
   year: '2026',
@@ -112,7 +112,7 @@ export const info = {
   lead:
     'We are a small studio. That is the point — you talk to the people writing the code, every single time.',
   body: [
-    'Twofold is run by two developers who got tired of watching good local businesses settle for templates that look like everyone else. A cafe, a salon, a neighbourhood kitchen — each one has a character worth putting on screen, and almost none of them get it.',
+    'The Nerds is run by two developers who got tired of watching good local businesses settle for templates that look like everyone else. A cafe, a salon, a neighbourhood kitchen — each one has a character worth putting on screen, and almost none of them get it.',
     'We handle the whole thing: design direction, front-end build, the backend and automations that keep it running, and the hosting it sits on. No handoffs between agencies, no account manager relaying messages. One conversation, start to finish.',
     'Our work leans on motion and interaction, but never at the cost of speed. Every site we ship is measured on a mid-range phone before it goes live, because that is what your customers are actually holding.'
   ],
