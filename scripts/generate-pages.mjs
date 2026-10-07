@@ -26,7 +26,6 @@ const shell = ({ title, description, pageId, body, bodyClass = '' }) => `<!docty
 <meta property="og:description" content="${esc(description)}" />
 <meta property="og:site_name" content="${esc(studio.name)}" />
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-<script>try { var t = localStorage.getItem('theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}</script>
 <link rel="preload" as="image" href="/textures/noise.png" />
 </head>
 <body class="${bodyClass}">
@@ -60,9 +59,7 @@ const header = (current) => `  <header class="site-header">
     <a class="logo link" href="/" data-link><span class="line-inner">${esc(studio.wordmark)}</span></a>
     <nav class="nav" aria-label="Primary">
       <a class="nav-link link${current === 'projects' ? ' is-current' : ''}" href="/work/" data-link><span class="line-inner">Work</span></a>
-      <span class="nav-comma" aria-hidden="true">,</span>
       <a class="nav-link link${current === 'info' ? ' is-current' : ''}" href="/info/" data-link><span class="line-inner">Info</span></a>
-      <span class="nav-comma" aria-hidden="true">,</span>
       <a class="nav-link link${current === 'contact' ? ' is-current' : ''}" href="/contact/" data-link><span class="line-inner">Contact</span></a>
     </nav>
   </header>`;
@@ -141,35 +138,34 @@ const sketch = (m, other) => {
 const showcaseSection = () => {
   const pad = (n) => String(n).padStart(2, '0');
   const cards = projects
-    .map((p, i) => `          <a class="show-card" href="/work/${p.slug}/" data-link data-cursor="View" style="--accent: ${p.accent}">
-            <span class="show-card-media"><img class="show-card-img" src="/media/${p.slug}/featured.jpg" alt="${esc(p.name)}" loading="lazy" decoding="async" /></span>
-            <span class="show-card-meta">
-              <span class="show-card-no">${pad(i + 1)}</span>
-              <span class="show-card-name">${esc(p.name)}</span>
-              <span class="show-card-year">${esc(p.year)}</span>
+    .map((p, i) => `          <a class="show-card" href="/work/${p.slug}/" data-link data-cursor="View"${p.video ? ` data-video="${esc(p.video)}"` : ''} style="--accent: ${p.accent}">
+            <span class="show-card-inner">
+              <span class="show-card-media"><img class="show-card-img" src="/media/${p.slug}/featured.jpg" alt="${esc(p.name)}" loading="lazy" decoding="async" /></span>
+              <span class="show-card-meta">
+                <span class="show-card-no">${pad(i + 1)}</span>
+                <span class="show-card-name">${esc(p.name)}</span>
+                <span class="show-card-year">${esc(p.year)}</span>
+              </span>
+              <span class="show-card-excerpt">${esc(p.excerpt)} &middot; ${esc(p.role)}</span>
             </span>
-            <span class="show-card-excerpt">${esc(p.excerpt)} &middot; ${esc(p.role)}</span>
           </a>`)
     .join('\n');
 
   return `    <section class="showcase" id="work" aria-labelledby="showcase-title">
       <div class="showcase-stage">
         <div class="showcase-head">
-          <div>
-            <span class="showcase-kicker">${esc(showcase.kicker)}</span>
+          <div class="showcase-heading">
             <h2 class="showcase-title" id="showcase-title">${showcase.title.map((l) => `<span class="line"><span class="line-inner">${esc(l)}</span></span>`).join(' ')}</h2>
+            <a class="showcase-all" href="/work/" data-link data-cursor="Open">
+              <span class="showcase-all-text">${esc(showcase.more)}</span>
+              <span class="showcase-all-sub">${projects.length} projects</span>
+              <svg class="showcase-all-arrow" viewBox="0 0 48 48" aria-hidden="true"><path d="M10 38 38 10M16 10h22v22" /></svg>
+            </a>
           </div>
           <span class="showcase-count" aria-hidden="true"><span class="showcase-count-now">01</span> / ${pad(projects.length)}</span>
         </div>
         <div class="showcase-track">
 ${cards}
-          <a class="show-card show-card-all" href="/work/" data-link data-cursor="Open">
-            <span class="show-card-all-box">
-              <svg class="show-card-all-arrow" viewBox="0 0 48 48" aria-hidden="true"><path d="M10 38 38 10M16 10h22v22" /></svg>
-              <span class="show-card-all-text">${esc(showcase.more)}</span>
-              <span class="show-card-all-sub">${projects.length} projects, one stack</span>
-            </span>
-          </a>
         </div>
         <div class="showcase-progress" aria-hidden="true"><span class="showcase-progress-bar"></span></div>
       </div>
@@ -243,9 +239,11 @@ ${actions}
 ${frame(meet, 'left')}
         <div class="about-body">
           <p class="about-text">${team.reduce((t, m) => t.replace(m.name,`<span class="about-name" style="color: ${m.colour}">${m.name}</span>`), esc(main.about.text))}</p>
-          <a class="about-button" href="/info/" data-link aria-label="${esc(main.about.button)}">
-            <span class="about-button-text" aria-hidden="true">${buttonChars}</span>
-          </a>
+          <div class="about-cta">
+            <a class="about-button" href="/info/" data-link aria-label="${esc(main.about.button)}">
+              <span class="about-button-text" aria-hidden="true">${buttonChars}</span>
+            </a>
+          </div>
         </div>
 ${frame(prem, 'right')}
       </div>

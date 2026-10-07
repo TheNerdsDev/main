@@ -110,7 +110,6 @@ export const contact = {
 
 /* Home-page showcase: the projects, given a section of their own. */
 export const showcase = {
-  kicker: 'Selected work',
   title: ['Things we', 'built lately'],
   more: 'All work'
 };
@@ -152,7 +151,9 @@ export const projects = [
       'A scroll-driven site for a neighbourhood salon, where every section reveals itself as you move down the page. Built around short intro films and a booking flow that takes three taps.',
     deliverables: ['Art direction', 'Scroll animation', 'Booking integration', 'Hosting'],
     link: 'https://example.com',
-    shots: 3
+    shots: 3,
+    /* Plays inside the ink when the card is hovered. Placeholder clip for now. */
+    video: '/media/sample/preview.mp4'
   },
   {
     slug: 'harbour-coffee',
@@ -165,7 +166,9 @@ export const projects = [
       'A storefront for a two-location roastery, with a menu that updates itself from the till system and a pickup-ordering flow that works on a phone in one hand.',
     deliverables: ['Brand site', 'Menu sync', 'Online ordering', 'Analytics'],
     link: 'https://example.com',
-    shots: 3
+    shots: 3,
+    /* Plays inside the ink when the card is hovered. Placeholder clip for now. */
+    video: '/media/sample/preview.mp4'
   },
   {
     slug: 'mesa-kitchen',
@@ -178,7 +181,9 @@ export const projects = [
       'A restaurant site built to make people hungry. Full-bleed food photography treated with a custom WebGL grade, and a reservation system wired straight into the floor plan.',
     deliverables: ['Front-end build', 'WebGL image grade', 'Reservations', 'CMS'],
     link: 'https://example.com',
-    shots: 3
+    shots: 3,
+    /* Plays inside the ink when the card is hovered. Placeholder clip for now. */
+    video: '/media/sample/preview.mp4'
   },
   {
     slug: 'atlas-fitness',
@@ -191,7 +196,9 @@ export const projects = [
       'A booking platform for a studio running forty classes a week. Members see a schedule that loads instantly; staff see a dashboard that replaced three spreadsheets.',
     deliverables: ['Product design', 'Booking platform', 'Staff dashboard', 'Automation'],
     link: 'https://example.com',
-    shots: 3
+    shots: 3,
+    /* Plays inside the ink when the card is hovered. Placeholder clip for now. */
+    video: '/media/sample/preview.mp4'
   },
   {
     slug: 'verde-grocer',
@@ -204,7 +211,9 @@ export const projects = [
       'A grocer with eight hundred products and no time to manage a website. We built the storefront and the automation that keeps stock, pricing and delivery slots in sync on their own.',
     deliverables: ['Storefront', 'Inventory sync', 'Delivery slots', 'Infrastructure'],
     link: 'https://example.com',
-    shots: 3
+    shots: 3,
+    /* Plays inside the ink when the card is hovered. Placeholder clip for now. */
+    video: '/media/sample/preview.mp4'
   }
 ];
 

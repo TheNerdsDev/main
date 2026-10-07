@@ -2,7 +2,7 @@ import {
   WebGLRenderer, Scene, PerspectiveCamera, OrthographicCamera,
   WebGLRenderTarget, PlaneGeometry, Mesh, ShaderMaterial,
   Vector2, Color, HalfFloatType, RGBAFormat,
-  LinearFilter, NoColorSpace, SRGBColorSpace, LinearSRGBColorSpace
+  LinearFilter, NoColorSpace, SRGBColorSpace
 } from 'three';
 import gsap from 'gsap';
 import store from '../core/Store.js';
@@ -92,8 +92,6 @@ export default class World {
       uRes:        { value: new Vector2(store.width * store.dpr, store.height * store.dpr) },
       uDpr:        { value: store.dpr },
       uInkAmount:  { value: store.isTouch ? 0.35 : 1 },
-      /* 1 = the galaxy is out; 0 = hidden (light theme). */
-      uSpace:      { value: 1 },
       uFade:       { value: 1 },
       uIntro:      { value: 0 },
       tInk:        { value: null },
@@ -158,25 +156,6 @@ export default class World {
     });
     tween(this.uniforms.uAccent);
     tween(this.compositeMaterial.uniforms.uAccent);
-  }
-
-  /**
-   * Light theme: fade the galaxy out and clear to paper; dark: bring the
-   * night back. The paper colour is given as raw output values so the
-   * canvas matches the page's CSS background exactly.
-   */
-  setTheme(light, immediate = false) {
-    const d = immediate ? 0 : 1.1;
-    const target = light ? new Color().setRGB(0xef / 255, 0xed / 255, 0xe6 / 255, LinearSRGBColorSpace) : PALETTE.bg;
-    this.clear ||= PALETTE.bg.clone();
-    const apply = () => {
-      this.renderer.setClearColor(this.clear, 1);
-      this.compositeMaterial.uniforms.uBg.value.copy(this.clear);
-    };
-    gsap.to(this.uniforms.uSpace, { value: light ? 0 : 1, duration: d, ease: 'power2.inOut', overwrite: 'auto' });
-    gsap.to(this.compositeMaterial.uniforms.uVignette, { value: light ? 0.12 : 0.65, duration: d, ease: 'power2.inOut', overwrite: 'auto' });
-    gsap.to(this.clear, { r: target.r, g: target.g, b: target.b, duration: d, ease: 'power2.inOut', overwrite: 'auto', onUpdate: apply, onComplete: apply });
-    if (immediate) { this.clear.copy(target); apply(); }
   }
 
   reveal() {

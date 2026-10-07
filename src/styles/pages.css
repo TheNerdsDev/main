@@ -16,28 +16,6 @@ html.webgl .media { visibility: hidden; }
 html.webgl .media-wrapper { background: none; }
 
 /* =================================================================
-   THEME TOGGLE
-   ================================================================= */
-.theme-toggle {
-  position: fixed;
-  top: var(--unit); right: var(--unit);
-  z-index: 14;
-  width: 4rem; height: 4rem;
-  display: flex; align-items: center; justify-content: center;
-  border: 1px solid var(--c-line);
-  border-radius: 50%;
-  color: var(--c-ink);
-  transition: border-color 0.4s var(--ease-out), transform 0.5s var(--ease-out);
-}
-.theme-toggle:hover { border-color: var(--c-ink); transform: scale(1.08); }
-.theme-toggle:focus-visible { outline: 1px solid var(--c-accent); outline-offset: 0.3rem; }
-.theme-toggle svg { width: 1.8rem; height: 1.8rem; overflow: visible; transition: transform 0.8s var(--ease-out); }
-.theme-toggle circle { fill: none; stroke: currentColor; stroke-width: 1.4; }
-.theme-toggle path { fill: currentColor; }
-html[data-theme="light"] .theme-toggle svg { transform: rotate(180deg); }
-.site-header { padding-right: 5.6rem; }
-
-/* =================================================================
    WORK INDEX (card stack)
    ================================================================= */
 #projects .text-wrapper {
@@ -337,7 +315,6 @@ html[data-theme="light"] .theme-toggle svg { transform: rotate(180deg); }
 html.no-webgl .canvas,
 html.no-webgl .overlay,
 html.no-webgl .loader,
-html.no-webgl .theme-toggle,
 html.no-webgl .copied { display: none !important; }
 
 html.no-webgl body { background: var(--c-bg); }

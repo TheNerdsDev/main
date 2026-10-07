@@ -45,7 +45,6 @@ export default class App {
     this.loader = new Loader();
 
     this.bindEvents();
-    this.createThemeToggle();
     this.bindCopyButtons(document);
     if (Cursor.supported()) this.cursor = new Cursor();
 
@@ -114,38 +113,6 @@ export default class App {
   }
 
   /* ---------------------------------------------------------- extras */
-
-  /** Light / dark switch, remembered between visits. */
-  createThemeToggle() {
-    const html = document.documentElement;
-    const isLight = () => html.dataset.theme === 'light';
-    this.world.setTheme(isLight(), true);
-
-    const btn = document.createElement('button');
-    btn.className = 'theme-toggle';
-    btn.type = 'button';
-    btn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 3.5a8.5 8.5 0 0 1 0 17Z" /></svg>';
-    const label = () => {
-      btn.setAttribute('aria-label', isLight() ? 'Switch to dark mode' : 'Switch to light mode');
-      btn.setAttribute('aria-pressed', String(isLight()));
-      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', isLight() ? '#EFEDE6' : '#05060F');
-    };
-    label();
-
-    btn.addEventListener('click', () => {
-      const next = isLight() ? 'dark' : 'light';
-      html.classList.add('theme-fade');
-      html.dataset.theme = next;
-      try { localStorage.setItem('theme', next); } catch { /* private mode */ }
-      this.world.setTheme(next === 'light');
-      label();
-      clearTimeout(this.themeFade);
-      this.themeFade = setTimeout(() => html.classList.remove('theme-fade'), 700);
-    });
-
-    document.body.appendChild(btn);
-    this.themeToggle = btn;
-  }
 
   bindCopyButtons(root) {
     root.querySelectorAll('[data-email]').forEach((btn) => {

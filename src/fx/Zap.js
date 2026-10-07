@@ -1,7 +1,5 @@
 import { rand, clamp, lerp, drawGlow, drawDust } from './particles.js';
 
-const isLight = () => document.documentElement.dataset.theme === 'light';
-
 /** A jagged bolt from (x, y) heading `ang`, as a list of points. */
 const bolt = (x, y, ang, len, kinks) => {
   const pts = [[x, y]];
@@ -85,7 +83,6 @@ export class Zap {
 
   update(dt, ctx) {
     this.t += dt;
-    const light = isLight();
     const [r, g, b] = this.rgb;
     const t = this.t;
 
@@ -102,19 +99,19 @@ export class Zap {
       if (on) {
         const fade = 1 - Math.pow(t / ARC, 2);
         const p = this.at();
-        ctx.globalCompositeOperation = light ? 'source-over' : 'lighter';
-        drawGlow(ctx, this.rgb, p.x, p.y, 70 * this.scale * fade, light ? 0.35 : 0.8 * fade);
+        ctx.globalCompositeOperation = 'lighter';
+        drawGlow(ctx, this.rgb, p.x, p.y, 70 * this.scale * fade, 0.8 * fade);
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         for (const arc of this.arcs) {
           /* Halo in the tube's colour, then the white-hot core. */
-          ctx.globalAlpha = arc.a * fade * (light ? 0.5 : 0.4);
+          ctx.globalAlpha = arc.a * fade * 0.4;
           ctx.strokeStyle = `rgb(${r},${g},${b})`;
           ctx.lineWidth = 5 * this.scale;
           stroke(ctx, arc.main);
           if (arc.fork) stroke(ctx, arc.fork);
           ctx.globalAlpha = arc.a * fade;
-          ctx.strokeStyle = light ? `rgb(${r * 0.55 | 0},${g * 0.55 | 0},${b * 0.55 | 0})` : '#fff';
+          ctx.strokeStyle = '#fff';
           ctx.lineWidth = 1.3 * this.scale;
           stroke(ctx, arc.main);
           if (arc.fork) stroke(ctx, arc.fork);
@@ -124,7 +121,7 @@ export class Zap {
 
     /* ---- sparks: white-hot streaks cooling to the neon colour as they fall. */
     this.sparks = this.sparks.filter((p) => (p.life += dt) < p.max);
-    ctx.globalCompositeOperation = light ? 'source-over' : 'lighter';
+    ctx.globalCompositeOperation = 'lighter';
     ctx.lineCap = 'round';
     for (const p of this.sparks) {
       const k = p.life / p.max;
@@ -135,7 +132,7 @@ export class Zap {
       const c = lerp(1, 0, clamp(k * 1.6, 0, 1));
       const cr = lerp(r, 255, c) | 0, cg = lerp(g, 255, c) | 0, cb = lerp(b, 255, c) | 0;
       ctx.globalAlpha = 1 - k * k;
-      ctx.strokeStyle = light ? `rgb(${r * 0.6 | 0},${g * 0.6 | 0},${b * 0.6 | 0})` : `rgb(${cr},${cg},${cb})`;
+      ctx.strokeStyle = `rgb(${cr},${cg},${cb})`;
       ctx.lineWidth = p.w;
       ctx.beginPath();
       ctx.moveTo(p.x, p.y);
@@ -167,16 +164,14 @@ export class Zap {
         ctx.translate(x, y);
         ctx.rotate(t * s.spin);
         ctx.globalAlpha = alpha * (0.55 + 0.45 * (depth + 1) / 2);
-        if (!light) {
-          ctx.shadowColor = 'rgba(255, 214, 90, 0.9)';
-          ctx.shadowBlur = 10;
-        }
+        ctx.shadowColor = 'rgba(255, 214, 90, 0.9)';
+        ctx.shadowBlur = 10;
         starPath(ctx, size);
-        ctx.fillStyle = light ? '#D99A00' : '#FFE27A';
+        ctx.fillStyle = '#FFE27A';
         ctx.fill();
         ctx.shadowBlur = 0;
         starPath(ctx, size * 0.42);
-        ctx.fillStyle = light ? '#FFE9A8' : '#FFFBEA';
+        ctx.fillStyle = '#FFFBEA';
         ctx.fill();
         ctx.restore();
       }

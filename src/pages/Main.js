@@ -7,6 +7,7 @@ import Duo from '../fx/Duo.js';
 import RockStage from '../fx/RockStage.js';
 import Scatter from '../fx/Scatter.js';
 import { Crumble } from '../fx/Zap.js';
+import DropReveal from '../fx/DropReveal.js';
 import { PALETTE } from '../gl/World.js';
 import { clamp } from '../fx/particles.js';
 
@@ -55,6 +56,7 @@ export default class Main extends Page {
     this.aboutText = q('.about-text');
     this.frames = [...this.el.querySelectorAll('.about-frame')];
     this.button = q('.about-button');
+    this.buttonWrap = q('.about-cta');
     this.buttonText = q('.about-button-text');
     this.show = q('.showcase');
     this.showTrack = q('.showcase-track');
@@ -64,6 +66,10 @@ export default class Main extends Page {
     this.showBar = q('.showcase-progress-bar');
     this.showX = 0;
     this.showIn = -1;
+    /* Hovering a card rains water drops on it, each one uncovering a little
+       more of the project's video. */
+    const showStage = q('.showcase-stage');
+    if (showStage && DropReveal.supported()) this.drops = new DropReveal(showStage, this.showCards);
 
     this.fx = new FxLayer();
     this.stage = new RockStage();
@@ -93,8 +99,61 @@ export default class Main extends Page {
       if (this.state === 'home') this.goAbout();
     };
     this.cue?.addEventListener('click', this.onCue);
+    this.bindButtonShake();
 
     this.measure();
+  }
+
+  /**
+   * About Us is magnetic: once the cursor comes within reach, the button
+   * leans after it — following its movement, but never more than PULL px
+   * from home — and eases back when the cursor leaves. (Hover also grows
+   * it; see the CSS.)
+   */
+  bindButtonShake() {
+    const btn = this.button;
+    if (!btn || !window.matchMedia('(hover: hover)').matches) return;
+    const PULL = 22;
+    const s = { x: 0, y: 0, tx: 0, ty: 0, on: false };
+    this.onButtonMove = (e) => {
+      const r = btn.getBoundingClientRect();
+      if (!r.width) return;
+      /* Where it sits without the lean, so the pull doesn't feed on itself. */
+      const cx = r.left + r.width / 2 - s.x;
+      const cy = r.top + r.height / 2 - s.y;
+      const dx = e.clientX - cx;
+      const dy = e.clientY - cy;
+      const reach = r.width / 2 + 70;
+      const d = Math.hypot(dx, dy);
+      if (d < reach) {
+        /* Follows the cursor, softly capped at the edge of its radius. */
+        const k = (PULL * Math.tanh(d / (reach * 0.5))) / Math.max(d, 1);
+        s.tx = dx * k;
+        s.ty = dy * k;
+      } else {
+        s.tx = 0;
+        s.ty = 0;
+      }
+      if (!s.on && (s.tx || s.ty)) {
+        s.on = true;
+        gsap.ticker.add(this.buttonSpring);
+      }
+    };
+    this.buttonSpring = () => {
+      const k = 1 - Math.pow(1 - 0.16, gsap.ticker.deltaRatio(60));
+      s.x += (s.tx - s.x) * k;
+      s.y += (s.ty - s.y) * k;
+      btn.style.setProperty('--nx', `${s.x.toFixed(2)}px`);
+      btn.style.setProperty('--ny', `${s.y.toFixed(2)}px`);
+      if (!s.tx && !s.ty && Math.abs(s.x) + Math.abs(s.y) < 0.05) {
+        s.x = s.y = 0;
+        btn.style.removeProperty('--nx');
+        btn.style.removeProperty('--ny');
+        gsap.ticker.remove(this.buttonSpring);
+        s.on = false;
+      }
+    };
+    window.addEventListener('pointermove', this.onButtonMove, { passive: true });
   }
 
   get lenis() { return this.app?.scroll?.lenis; }
@@ -171,7 +230,6 @@ export default class Main extends Page {
    */
   buildAbout() {
     this.aboutTl?.kill();
-    this.showTl?.kill();
     const tl = gsap.timeline({ paused: true });
 
     this.frames.forEach((f, fi) => {
@@ -207,7 +265,9 @@ export default class Main extends Page {
 
     const buttonAt = textAt + Math.max(0, lines.length - 1) * LINE_STEP + 0.55;
     if (this.button) {
-      tl.fromTo(this.button, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' }, buttonAt);
+      /* Reveal the wrapper, never the button: the button's own scale and
+         translate belong to the hover. */
+      tl.fromTo(this.buttonWrap || this.button, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' }, buttonAt);
       /* The label draws together from wide tracking as it arrives. */
       tl.fromTo(this.buttonText, { letterSpacing: '0.7em', opacity: 0 }, { letterSpacing: '0.22em', opacity: 1, duration: 0.7, ease: 'power3.out' }, buttonAt + 0.1);
     }
@@ -226,7 +286,7 @@ export default class Main extends Page {
   buildShowcase() {
     if (!this.show) return;
     const lines = this.show.querySelectorAll('.showcase-title .line-inner');
-    const bits = this.show.querySelectorAll('.showcase-kicker, .showcase-count, .showcase-progress');
+    const bits = this.show.querySelectorAll('.showcase-all, .showcase-count, .showcase-progress');
     const tl = gsap.timeline({ paused: true, defaults: { ease: 'none' } });
     tl.fromTo(lines, { yPercent: 115 }, { yPercent: 0, duration: 0.5, stagger: 0.12, ease: 'power3.out' }, 0)
       .fromTo(bits, { opacity: 0 }, { opacity: 1, duration: 0.4, stagger: 0.08 }, 0.15)
@@ -266,7 +326,7 @@ export default class Main extends Page {
     this.showTrack.style.transform = `translate3d(${this.showX.toFixed(1)}px, 0, 0)`;
     this.showBar.style.transform = `scaleX(${q.toFixed(4)})`;
 
-    const n = this.showCards.length - 1;
+    const n = this.showCards.length;
     const now = Math.min(n, Math.floor(q * n) + 1);
     if (now !== this.showIn) {
       this.showIn = now;
@@ -322,6 +382,10 @@ export default class Main extends Page {
       /* Once About is released the debris scrolls away with it. */
       const release = Math.max(0, scroll - end);
       this.scatter.update(clamp((this.rockP - COLLIDE) / (SCATTERED - COLLIDE), 0, 1), meet, this.duo.rockRadius(), -release);
+      /* Once broken, the debris is drawn behind the page — it floats behind
+         the text and photos, never over them. A thrown rock stays in front. */
+      const behind = broken ? '2' : '';
+      if (this.stage.canvas.style.zIndex !== behind) this.stage.canvas.style.zIndex = behind;
     }
 
     this.updateShowcase(scroll, vh, ease);
@@ -382,9 +446,12 @@ export default class Main extends Page {
     /* Never leave the scroll locked behind us. */
     if (this.state === 'toAbout' || this.state === 'toHome') this.lenis?.start();
     this.cue?.removeEventListener('click', this.onCue);
+    if (this.onButtonMove) window.removeEventListener('pointermove', this.onButtonMove);
+    if (this.buttonSpring) gsap.ticker.remove(this.buttonSpring);
     gsap.killTweensOf([this.cue, this.journey, ...this.heroLines()]);
     this.aboutTl?.kill();
     this.showTl?.kill();
+    this.drops?.destroy();
     this.scatter.destroy();
     this.duo?.destroy();
     this.fx.destroy();

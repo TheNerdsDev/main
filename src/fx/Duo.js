@@ -13,9 +13,9 @@ const VIEW_W = 400;
 const SHOCK = 0.55;
 /* Orbit speed at rest, radians per second. Always clockwise. */
 const SPEED = 0.17;
-/* The part of each sketch the rocks steer round: the head, hair to chin
-   (fractions of the drawing). */
-const FACE = { y: 0.41, rx: 0.25, ry: 0.28 };
+/* The part of each sketch the rocks steer round: the figure itself, from
+   the top of the hair down past the name under it (fractions of the drawing). */
+const FIGURE = { y: 0.6, rx: 0.25, ry: 0.47 };
 /*
  * Each rock's own orbit, deliberately uneven so the four never read as a
  * set piece: their own starting places, distances, sizes and rhythms.
@@ -30,6 +30,9 @@ const ORBITS = [
   { start: 3.3, r: 1.12, size: 1.12, phase: 4.2 },
   { start: 4.75, r: 1.05, size: 0.9, phase: 1.3 }
 ];
+
+/* The welcome copy, left of the sketches: the rocks keep to its right. */
+const TEXT = '.hero .title .line-inner, .hero-intro, .scroll-cue';
 
 /** Keep `v` within lo..hi, rounding off as it nears either end instead of stopping dead. */
 const soften = (v, lo, hi, band) => {
@@ -388,6 +391,10 @@ export default class Duo {
   measure() {
     this.W = this.el.offsetWidth;
     this.H = this.el.offsetHeight;
+    const page = this.el.closest('.page') || document;
+    this.texts = [...page.querySelectorAll(TEXT)];
+    const nav = page.querySelector('.site-header');
+    this.ceiling = nav ? nav.getBoundingClientRect().bottom + 10 : 0;
     this.members.forEach((m) => {
       m.cx = m.root.offsetLeft + m.root.offsetWidth / 2;
       m.cy = m.root.offsetTop + m.root.offsetHeight / 2;
@@ -452,9 +459,11 @@ export default class Duo {
     const faces = avoid > 0
       ? this.members.map((m) => {
         const r = m.body.getBoundingClientRect();
-        return { x: r.left + r.width / 2, y: r.top + r.height * FACE.y, rx: r.width * FACE.rx, ry: r.height * FACE.ry };
+        return { x: r.left + r.width / 2, y: r.top + r.height * FIGURE.y, rx: r.width * FIGURE.rx, ry: r.height * FIGURE.ry };
       })
       : [];
+    /* The welcome copy's right edge — a wall the orbit keeps to the right of. */
+    const wall = avoid > 0 ? this.texts.reduce((m, el) => Math.max(m, el.getBoundingClientRect().right), -Infinity) : -Infinity;
 
     for (const act of this.actions) {
       const { r, size, phase } = act.orbit;
@@ -480,34 +489,43 @@ export default class Duo {
       const ey = Math.sin(act.angle) * ry * rr;
       let x = cx + ex * ct - ey * st + Math.sin(t * 2.3 + phase * 1.7) * 6 * (1 - e);
       let y = cy + ex * st + ey * ct + Math.cos(t * 1.9 + phase * 1.1) * 6 * (1 - e);
+      /* The rock's drawn radius at its largest on this orbit (the near side
+         of the ring is drawn 10% bigger). */
+      const rockR = o * 0.42 * size * 1.1;
       if (fe < 1) {
-        /* At home, stay inside the sketches' box — easing away from its
-           edges rather than sliding along them. */
+        /* At home, stay inside the sketches' box and below the header —
+           easing away from the edges rather than sliding along them. */
         const band = o * 0.9;
-        const bx = soften(x, box.left + o * 0.6, box.right - o * 0.6, band);
-        const by = soften(y, box.top + o * 0.6, box.bottom - o * 0.6, band);
+        const top = Math.max(box.top + o * 0.6, this.ceiling + rockR * 1.15);
+        const left = Math.max(box.left + o * 0.6, wall + 16 + rockR);
+        const bx = soften(x, left, box.right - o * 0.6, band);
+        const by = soften(y, top, box.bottom - o * 0.6, band);
         x = bx + (x - bx) * fe;
         y = by + (y - by) * fe;
       }
 
-      /* Never across a face: inside a band round each head the path is
-         eased outwards, smoothly — on the rim at the very middle, untouched
-         from twice the head's size out — so a rock arcs round the head the
-         way something in orbit would round a planet. */
-      const rockR = o * 0.42 * size;
-      for (const fc of faces) {
-        const dx = x - fc.x;
-        const dy = y - fc.y;
-        const d = Math.hypot(dx / (fc.rx + rockR), dy / (fc.ry + rockR));
-        if (d < 2) {
-          const push = ((1 + (d * d) / 4) / Math.max(d, 0.05) - 1) * avoid;
-          x += dx * push;
-          y += dy * push;
-        }
-      }
       if (avoid > 0) {
-        x = Math.min(Math.max(x, rockR), vw - rockR);
-        y = Math.min(Math.max(y, rockR), vh * 2);
+        /* Never across either figure or their names. Each pushes the path
+           outwards inside a band around it, smoothly — so a rock arcs round
+           a sketch the way something in orbit rounds a planet. The header
+           is a ceiling; where the two disagree a few passes settle it, so
+           a rock slides round instead of being shoved from one into the
+           other. */
+        for (let pass = 0; pass < 4; pass++) {
+          for (const fc of faces) {
+            const dx = x - fc.x;
+            const dy = y - fc.y;
+            const d = Math.hypot(dx / (fc.rx + rockR), dy / (fc.ry + rockR));
+            if (d < 2) {
+              const push = ((1 + (d * d) / 4) / Math.max(d, 0.05) - 1) * avoid;
+              x += dx * push;
+              y += dy * push;
+            }
+          }
+          const lo = this.ceiling + rockR;
+          if (y < lo) y += (lo - y) * avoid;
+          x = Math.min(Math.max(x, rockR), vw - rockR);
+        }
       }
 
       /* Tilted ring: the near side (lower) a touch larger than the far side;

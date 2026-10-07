@@ -1,7 +1,6 @@
 uniform float uTime;
 uniform float uDpr;
 uniform float uIntro;
-uniform float uSpace;
 attribute float aScale;   // core size, px
 attribute float aSeed;
 attribute float aKind;    // 0 = dust, 1 = glitter star
@@ -23,7 +22,7 @@ void main() {
   // Glitter: a short, sharp flare every few seconds.
   float flash = pow(0.5 + 0.5 * sin(uTime * (0.35 + aSeed * 0.8) + aSeed * 91.0), 14.0);
 
-  vAlpha = tw * uIntro * uSpace * mix(1.0, 0.6, depth);
+  vAlpha = tw * uIntro * mix(1.0, 0.6, depth);
   vKind = aKind;
   vFlash = flash * aKind;
   vColor = aColor;

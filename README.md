@@ -37,11 +37,11 @@ Nearly everything lives in **one file**: `src/content/site.js`.
 | Studio name, email, availability, socials | `studio` in `src/content/site.js` |
 | Landing page headline, subtext, About copy, button label, the four rocks | `main` |
 | The two of us: sketches, neon colours, eye / hit points, About photos | `team` |
-| The work reel on the landing page (kicker, heading, link label) | `showcase` |
+| The work reel on the landing page (heading, link label) | `showcase` |
 | Work index headline and intro | `workIndex` |
 | Contact page heading, lead and details | `contact` |
 | About page copy, services, stack | `info` |
-| Projects (name, year, role, description, accent colour) | `projects` |
+| Projects (name, year, role, description, accent colour, hover video) | `projects` |
 | Colours, spacing, type scale | `:root` in `src/styles/base.css` |
 
 After editing content, run `npm run pages` (or just `npm run dev` / `npm run
@@ -67,18 +67,27 @@ the bottom of `src/styles/pages.css`.
 ### The landing page, top to bottom
 
 1. **Welcome.** The two neon sketches, with four space rocks circling them
-   clockwise — each on its own orbit and rhythm, swinging round the heads
-   rather than across them. Click a sketch, or a rock, and one throws it at
+   clockwise — each on its own orbit and rhythm, swinging round the figures
+   (and their names, and the header) rather than across them. Click a sketch, or a rock, and one throws it at
    the other: the rock bursts, the neon shorts out (arcs and sparks), the face
    goes shock → pain → anger (or sadness, if they started it), and they see
    stars for a moment.
 2. **About.** The first scroll takes over and glides you down; the rocks come
    along, still circling. From here your scroll drives it, both ways: the rocks
-   spiral in, collide and crumble, their pieces swirling out clockwise across
-   the page; then the photos, the brief and the About Us button play in.
+   spiral in, collide and crumble; the pieces fly off in straight lines,
+   slowing like debris in drag. About two thirds come to rest spread evenly
+   over the screen and keep floating gently about their spots, drawn behind
+   the text and photos; the rest fly off. Then the photos, the brief and the
+   About Us button play in.
 3. **Work.** A pinned reel: the scroll pulls the projects sideways past you,
-   each card linking to its case study, ending on "All work" (the full card
-   stack at `/work/`). On phones it becomes a plain vertical list.
+   each card linking to its case study. Hover a card and it comes forward
+   while the others step back and dim — and water drops start falling on
+   it: each lands with a splat and a ripple, and where it lies the project's
+   video shows through it, bent by the drop like a lens. More drops follow
+   the pointer and fill the dry gaps, beads run together, and the water
+   takes the whole card with the video playing on loop; move away and it
+   dries back. An "All work" box beside the
+   heading opens the full card stack at `/work/`. On phones it becomes a plain vertical list.
 
 ### Swapping in your own sketches
 
@@ -117,6 +126,15 @@ public/media/studio/portrait.jpg   # about page
 
 Regenerate the placeholders any time with `python3 scripts/generate_media.py`.
 
+### Project videos
+
+Each project's `video` (in `projects`) plays under the water drops when its card
+on the landing page is hovered. They all point at one placeholder clip for
+now, `public/media/sample/preview.mp4` — a 10-second excerpt of *Big Buck
+Bunny* (© Blender Foundation, peach.blender.org, CC BY 3.0). Swap in a
+short, muted, looping MP4 per project (H.264, ~640–960 px wide, a few MB
+at most) and point `video` at it.
+
 ---
 
 ## Structure
@@ -145,11 +163,12 @@ src/
     FxLayer.js         Full-screen effects canvas; only ticks while busy
     Duo.js             The two sketches, the four orbiting rocks, throws and reactions
     SpaceRocks.js      The tumbling 3D rocks that drift around the sketches
-    Scatter.js         The rocks' fragments, swirling out across the page by scroll
+    Scatter.js         The rocks' fragments: burst by scroll, spread evenly, float behind the page
     asteroid.js        Procedural 3D asteroid mesh + per-pixel rock material
     RockStage.js       3D layer for the thrown rock and its fragments
     Rock.js            Throw path + impact dust and grit
     Zap.js             Neon short-circuit + dizzy stars on a hit; the collision's dust
+    DropReveal.js      Water-drop hover on the work cards, revealing each project's video
     faceMap.js         Hurt / angry / sad expressions as displacement maps
     eyeMap.js          Displacement map that widens the eyes in shock
     particles.js       Shared sprites, heat ramp and helpers
@@ -183,11 +202,6 @@ Each frame:
 - **Duotone → colour on hover.** Index cards are graded to a two-tone blue;
   hovering fades in the project's own accent colour and zooms the plane.
 - **Scroll-velocity bend.** Plane edges lag behind the centre as you scroll.
-- **Light / dark.** The round toggle (top right) switches themes and remembers
-  the choice. Light mode is warm paper: the galaxy fades out
-  (`World.setTheme`), the colour tokens in `base.css` swap, and the neon reads
-  as saturated ink. The theme is applied before first paint, so there's no
-  flash.
 - **Cursor.** On mouse / trackpad devices the pointer is a small star with an
   orbit that trails it; it opens up over links, turns into a dashed target over
   a rock, and steps aside for the text caret in form fields.
@@ -207,7 +221,7 @@ image crushes to black.
 - No WebGL2, or `prefers-reduced-motion: reduce` → the canvas, loader and
   overlay are removed and the site renders as a plain, fully readable document
   with real `<img>` tags. All content is in the HTML, so it works without JS.
-- Skip link, focus-visible outlines, `aria-pressed` on the theme toggle,
+- Skip link, focus-visible outlines,
   semantic headings and landmarks throughout.
 - Pointer-driven effects (and the custom cursor) are disabled on touch
   devices and with reduced motion.
