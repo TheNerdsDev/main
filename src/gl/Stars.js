@@ -61,6 +61,7 @@ export default class Stars {
       uniforms: {
         uTime:     this.world.uniforms.uTime,
         uIntro:    this.world.uniforms.uIntro,
+        uSpace:    this.world.uniforms.uSpace,
         uRes:      this.world.uniforms.uRes,
         uDpr:      this.world.uniforms.uDpr,
         uPointer:  { value: this.pointer },
@@ -143,6 +144,7 @@ export default class Stars {
       uniforms: {
         uTime:  this.world.uniforms.uTime,
         uIntro: this.world.uniforms.uIntro,
+        uSpace: this.world.uniforms.uSpace,
         uDpr:   this.world.uniforms.uDpr
       }
     });

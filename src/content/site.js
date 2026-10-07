@@ -49,7 +49,8 @@ export const main = {
  *          brows = inner brow ends, browsOuter = outer ends,
  *          mouth = centre of the mouth, corners = its two corners
  *          (always listed left, then right)
- *   hit    where an incoming rock strikes and the blood starts
+ *   hit    where an incoming rock strikes (and the neon shorts out)
+ *   crown  top of the head, where the dizzy stars circle
  *   hand   where a thrown rock leaves from
  */
 export const team = [
@@ -69,6 +70,7 @@ export const team = [
       corners: [[0.44, 0.594], [0.56, 0.594]]
     },
     hit: [0.5, 0.355],
+    crown: [0.5, 0.13],
     hand: [0.86, 0.84],
     photos: ['/media/team/prem-1.svg', '/media/team/prem-2.svg', '/media/team/prem-3.svg']
   },
@@ -88,14 +90,33 @@ export const team = [
       corners: [[0.445, 0.6], [0.555, 0.6]]
     },
     hit: [0.5, 0.355],
+    crown: [0.5, 0.13],
     hand: [0.14, 0.84],
     photos: ['/media/team/meet-1.svg', '/media/team/meet-2.svg', '/media/team/meet-3.svg']
   }
 ];
 
+/* Contact page at `/contact/`. */
+export const contact = {
+  title: ['Got an idea?', "Let's talk."],
+  lead:
+    "Tell us what you're building — a website, a tool, an automation, or just a hunch you can't shake. We read everything and reply within two working days.",
+  details: [
+    { label: 'Response time', value: 'Within 48 hours' },
+    { label: 'Based in', value: 'Ahmedabad, IN — working remotely' },
+    { label: 'Available', value: 'January 2027' }
+  ]
+};
+
+/* Home-page showcase: the projects, given a section of their own. */
+export const showcase = {
+  kicker: 'Selected work',
+  title: ['Things we', 'built lately'],
+  more: 'All work'
+};
+
 /* Work index at `/work/` — the card stack. */
 export const workIndex = {
-  overline: 'Independent studio — est. 2026',
   title: ['Built to be', 'Remembered'],
   intro:
     'We design and build high-performance websites for local businesses — with more going on beneath the surface.',
@@ -103,7 +124,7 @@ export const workIndex = {
 };
 
 export const info = {
-  title: ['Two people,', 'One workshop'],
+  title: ['Two nerds,', 'zero templates'],
   lead:
     'We are a small studio. That is the point — you talk to the people writing the code, every single time.',
   body: [

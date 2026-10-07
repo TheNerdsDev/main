@@ -2,7 +2,7 @@ import gsap from 'gsap';
 
 /**
  * A full-screen 2D canvas above the page for short-lived effects —
- * the dust and grit of thrown rocks, impacts, blood mist. It only ticks while
+ * the dust and grit of thrown rocks, impacts, sparks and arcs. It only ticks while
  * at least one effect is alive, so it costs nothing when idle.
  *
  * An effect is any object with `update(dt, ctx, layer)` returning false

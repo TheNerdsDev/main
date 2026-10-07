@@ -11,8 +11,8 @@
    LANDING PAGE  (#main)
    ================================================================= */
 
-/* The thrown rock and its fragments (3D), with the dust, grit and blood
-   mist (2D) drawn over them. Both sit above the sketches. */
+/* The thrown rock and its fragments (3D), with the dust, grit, sparks
+   and arcs (2D) drawn over them. Both sit above the sketches. */
 .rock-canvas,
 .fx-canvas {
   position: fixed; inset: 0;
@@ -22,7 +22,7 @@
 }
 .fx-canvas { z-index: 7; }
 
-/* Blood, glow and the orbiting actions are allowed past the sketches —
+/* Sparks, glow and the orbiting actions are allowed past the sketches —
    but never past the page edge (`clip`, unlike `hidden`, leaves vertical
    overflow alone and doesn't create a scroll container). */
 #main .page-content { overflow-x: clip; }
@@ -88,7 +88,7 @@ html.lenis-stopped { overflow: hidden; }
   flex: 1;
   width: 1.5px;
   overflow: hidden;
-  background: linear-gradient(to bottom, rgba(244, 243, 238, 0.06), rgba(244, 243, 238, 0.75));
+  background: linear-gradient(to bottom, rgba(var(--c-ink-rgb), 0.06), rgba(var(--c-ink-rgb), 0.75));
   transform-origin: top center;
 }
 #main .scroll-cue-spark {
@@ -96,8 +96,8 @@ html.lenis-stopped { overflow: hidden; }
   left: -1px; top: 0;
   width: 3.5px; height: 16%;
   border-radius: 2px;
-  background: linear-gradient(to bottom, transparent, #fff);
-  box-shadow: 0 0 10px 1px rgba(255, 255, 255, 0.7);
+  background: linear-gradient(to bottom, transparent, var(--c-ink));
+  box-shadow: 0 0 10px 1px rgba(var(--c-ink-rgb), 0.7);
   animation: cue-spark 2.8s cubic-bezier(0.55, 0, 0.25, 1) infinite;
 }
 /* Percentages of the spark's own height (16% of the track), so it always
@@ -139,7 +139,6 @@ html.lenis-stopped { overflow: hidden; }
   height: 100%;
   z-index: 5;
 }
-#main .duo-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
 
 #main .sketch {
   position: absolute;
@@ -163,15 +162,6 @@ html.lenis-stopped { overflow: hidden; }
   transition: filter 0.4s var(--ease-out);
 }
 #main .sketch:hover .sketch-svg { filter: brightness(1.25); }
-
-/* Blood can fly well past the drawing, mostly downwards. */
-#main .sketch-blood {
-  position: absolute;
-  top: -20%; left: -40%;
-  width: 180%; height: 190%;
-  pointer-events: none;
-  filter: url(#blood-goo);
-}
 
 #main .sketch-hit {
   position: absolute;
@@ -200,7 +190,7 @@ html.lenis-stopped { overflow: hidden; }
   font-family: 'Anton', sans-serif;
   font-size: 6rem;
   line-height: 1;
-  color: #fff;
+  color: var(--c-ink);
   text-shadow: 0 0 6px var(--neon), 0 0 20px var(--neon), 0 0 40px var(--neon);
   opacity: 0;
   pointer-events: none;
@@ -234,7 +224,7 @@ html.lenis-stopped { overflow: hidden; }
   transform: scale(1.14);
   filter: drop-shadow(0 1rem 1.8rem rgba(0, 0, 0, 0.7)) brightness(1.18);
 }
-#main .duo-action:focus-visible { outline: 1px dashed rgba(255, 255, 255, 0.35); outline-offset: 0.2rem; }
+#main .duo-action:focus-visible { outline: 1px dashed rgba(var(--c-ink-rgb), 0.35); outline-offset: 0.2rem; }
 
 /* In the air: can't be clicked again until it has drifted back. */
 #main .duo-action.is-away { pointer-events: none; }
@@ -271,8 +261,8 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
   width: min(100%, 32rem);
   margin: 0;
   padding: 1.1rem;
-  border: 1px solid rgba(244, 243, 238, 0.16);
-  background: rgba(5, 6, 15, 0.35);
+  border: 1px solid rgba(var(--c-ink-rgb), 0.16);
+  background: rgba(var(--c-bg-rgb), 0.35);
 }
 /* Neon corner brackets in each person's colour. */
 #main .about-frame::before,
@@ -344,13 +334,13 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
   align-items: center;
   justify-content: center;
   padding: 1.6rem 3.6rem;
-  border: 1px solid rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(var(--c-ink-rgb), 0.9);
   border-radius: 10rem;
   background: none;
   box-shadow:
-    0 0 0.6rem rgba(255, 255, 255, 0.45),
-    0 0 2.2rem rgba(255, 255, 255, 0.18),
-    inset 0 0 0.8rem rgba(255, 255, 255, 0.2);
+    0 0 0.6rem rgba(var(--c-ink-rgb), 0.45),
+    0 0 2.2rem rgba(var(--c-ink-rgb), 0.18),
+    inset 0 0 0.8rem rgba(var(--c-ink-rgb), 0.2);
   transition: box-shadow 0.6s var(--ease-out), border-color 0.6s var(--ease-out);
 }
 #main .about-button:hover,
@@ -373,8 +363,8 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
   text-transform: uppercase;
   font-family: 'Syne Mono', ui-monospace, monospace;
   font-weight: 400;
-  color: #fff;
-  text-shadow: 0 0 0.8rem rgba(255, 255, 255, 0.55);
+  color: var(--c-ink);
+  text-shadow: 0 0 0.8rem rgba(var(--c-ink-rgb), 0.55);
   transition: color 0.4s var(--ease-out), text-shadow 0.4s var(--ease-out);
 }
 #main .about-button-char {
@@ -394,11 +384,189 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
 #main .about-button:hover .about-button-char,
 #main .about-button:focus-visible .about-button-char { transform: translateY(-100%); }
 
+/* ---------------------------------------------------------- showcase */
+
+/* A pinned stage; Main.js sizes the runway so the scroll pulls the reel
+   sideways from the first project to the last. */
+#main .showcase {
+  position: relative;
+  z-index: 4;
+}
+#main .showcase-stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5vh;
+  overflow: hidden;
+}
+#main .showcase-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 3rem;
+  padding: 0 calc(var(--unit) + 7vw);
+}
+#main .showcase-kicker,
+#main .showcase-count {
+  display: block;
+  font-family: 'Syne Mono', monospace;
+  font-size: 1.3rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+#main .showcase-kicker { margin-bottom: 1.6rem; }
+#main .showcase-kicker::before {
+  content: '';
+  display: inline-block;
+  width: 0.7rem; height: 0.7rem;
+  margin-right: 1rem;
+  border-radius: 50%;
+  background: #0ACD88;
+  box-shadow: 0 0 0.8rem #0ACD88;
+  vertical-align: 0.1em;
+}
+#main .showcase-title {
+  font-family: 'Anton', 'Arial Narrow', sans-serif;
+  font-weight: 400;
+  font-size: 7.6rem;
+  line-height: 88%;
+  letter-spacing: 0.012em;
+  text-transform: uppercase;
+}
+#main .showcase-count { font-variant-numeric: tabular-nums; }
+#main .showcase-count-now { color: var(--c-ink); }
+
+#main .showcase-track {
+  display: flex;
+  align-items: flex-start;
+  gap: 3.2rem;
+  width: max-content;
+  padding: 0 calc(var(--unit) + 7vw);
+  will-change: transform;
+}
+
+#main .show-card {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem;
+  width: clamp(28rem, 29vw, 48rem);
+  color: var(--c-ink);
+}
+/* Staggered heights, like prints pinned along a wall. */
+#main .show-card:nth-child(even) { margin-top: 6vh; }
+
+#main .show-card-media {
+  position: relative;
+  display: block;
+  aspect-ratio: 4 / 3;
+  max-height: 46vh;
+  overflow: hidden;
+  border-radius: 0.4rem;
+  background: rgba(var(--c-ink-rgb), 0.05);
+  box-shadow: 0 0 0 1px rgba(var(--c-ink-rgb), 0.08);
+  transition: box-shadow 0.5s var(--ease-out), transform 0.6s var(--ease-out);
+}
+#main .show-card-img {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  transform: scale(1.14);
+  filter: saturate(0.85) brightness(0.92);
+  transition: filter 0.5s var(--ease-out);
+  will-change: transform;
+}
+#main .show-card:hover .show-card-media,
+#main .show-card:focus-visible .show-card-media {
+  transform: translateY(-0.6rem);
+  box-shadow: 0 0 0 1px var(--accent), 0 1.6rem 4rem -1.6rem var(--accent);
+}
+#main .show-card:hover .show-card-img { filter: saturate(1.05) brightness(1.04); }
+#main .show-card:focus-visible { outline: none; }
+
+#main .show-card-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 1.2rem;
+}
+#main .show-card-no,
+#main .show-card-year {
+  font-family: 'Syne Mono', monospace;
+  font-size: 1.2rem;
+  letter-spacing: 0.1em;
+  color: var(--c-faint);
+}
+#main .show-card-year { margin-left: auto; }
+#main .show-card-name {
+  font-family: 'Anton', 'Arial Narrow', sans-serif;
+  font-size: 3rem;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat;
+  transition: background-size 0.5s var(--ease-out);
+}
+#main .show-card:hover .show-card-name { background-size: 100% 1px; }
+#main .show-card-excerpt { font-size: 1.5rem; line-height: 140%; color: var(--c-dim); }
+
+/* The way through to the full index. */
+#main .show-card-all { width: clamp(22rem, 20vw, 32rem); align-self: stretch; }
+#main .show-card-all-box {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 1rem;
+  min-height: 24rem;
+  max-height: 46vh;
+  padding: 2.4rem;
+  border: 1px dashed rgba(var(--c-ink-rgb), 0.3);
+  border-radius: 0.4rem;
+  transition: border-color 0.4s var(--ease-out), color 0.4s var(--ease-out);
+}
+#main .show-card-all-arrow {
+  width: 4.8rem; height: 4.8rem;
+  margin-bottom: auto;
+  fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  transition: transform 0.5s var(--ease-out);
+}
+#main .show-card-all-text {
+  font-family: 'Anton', 'Arial Narrow', sans-serif;
+  font-size: 4.4rem;
+  line-height: 1;
+  text-transform: uppercase;
+}
+#main .show-card-all-sub { font-size: 1.4rem; color: var(--c-dim); }
+#main .show-card-all:hover .show-card-all-box,
+#main .show-card-all:focus-visible .show-card-all-box { border-color: #0ACD88; color: #0ACD88; }
+#main .show-card-all:hover .show-card-all-arrow { transform: translate(0.6rem, -0.6rem); }
+
+#main .showcase-progress {
+  position: absolute;
+  left: calc(var(--unit) + 7vw); right: calc(var(--unit) + 7vw);
+  bottom: 5vh;
+  height: 1px;
+  background: var(--c-line);
+}
+#main .showcase-progress-bar {
+  position: absolute;
+  inset: 0;
+  background: var(--c-ink);
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+}
+
 /* ---------------------------------------------------------- fallback */
 
 /* No WebGL / no JS: everything is simply visible, last photo on top. */
 html.no-webgl #main .sketch-gasp,
-html.no-webgl #main .sketch-blood,
 html.no-webgl #main .duo-actions { display: none; }
 
 /* ------------------------------------------------------------ tablets */
@@ -451,3 +619,26 @@ html.no-webgl #main .duo-actions { display: none; }
 }
 
 #main .hero-intro strong { font-weight: 700; color: var(--c-ink); }
+
+/* Light theme: neon reads as saturated ink on paper rather than glowing tubes. */
+html[data-theme="light"] #main .sketch-svg { filter: brightness(0.78) saturate(1.35); }
+html[data-theme="light"] #main .sketch-name { text-shadow: none; }
+html[data-theme="light"] #main .about-button { box-shadow: none; }
+html[data-theme="light"] #main .about-button-text { text-shadow: none; }
+
+/* Showcase without the pinned reel: phones, and no WebGL. */
+@media screen and (max-width: 767px) {
+  #main .showcase { height: auto !important; }
+  #main .showcase-stage { position: static; height: auto; padding: 10rem 0 6rem; gap: 4rem; }
+  #main .showcase-head { padding: 0 var(--unit); }
+  #main .showcase-title { font-size: 5.4rem; }
+  #main .showcase-track { flex-direction: column; width: auto; gap: 5rem; padding: 0 var(--unit); transform: none !important; }
+  #main .show-card, #main .show-card-all { width: 100%; }
+  #main .show-card:nth-child(even) { margin-top: 0; }
+  #main .show-card-media { max-height: none; }
+  #main .show-card-all-box { min-height: 16rem; }
+  #main .showcase-progress { display: none; }
+}
+html.no-webgl #main .showcase-stage { position: static; height: auto; padding: 8rem 0; }
+html.no-webgl #main .showcase-track { width: auto; overflow-x: auto; }
+html.no-webgl #main .showcase-progress { display: none; }

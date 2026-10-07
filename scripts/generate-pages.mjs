@@ -5,7 +5,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { studio, main, team, workIndex, info, projects, getNext } from '../src/content/site.js';
+import { studio, main, team, workIndex, info, contact, showcase, projects, getNext } from '../src/content/site.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -26,6 +26,7 @@ const shell = ({ title, description, pageId, body, bodyClass = '' }) => `<!docty
 <meta property="og:description" content="${esc(description)}" />
 <meta property="og:site_name" content="${esc(studio.name)}" />
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<script>try { var t = localStorage.getItem('theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}</script>
 <link rel="preload" as="image" href="/textures/noise.png" />
 </head>
 <body class="${bodyClass}">
@@ -58,12 +59,11 @@ ${body}
 const header = (current) => `  <header class="site-header">
     <a class="logo link" href="/" data-link><span class="line-inner">${esc(studio.wordmark)}</span></a>
     <nav class="nav" aria-label="Primary">
-      <a class="nav-link link${current === 'info' ? ' is-current' : ''}" href="/info/" data-link><span class="line-inner">Info</span></a>
-      <span class="nav-comma" aria-hidden="true">,</span>
       <a class="nav-link link${current === 'projects' ? ' is-current' : ''}" href="/work/" data-link><span class="line-inner">Work</span></a>
       <span class="nav-comma" aria-hidden="true">,</span>
-      <button class="nav-link link" type="button" data-email="${esc(studio.email)}"><span class="line-inner">Contact</span></button>
-      <span class="copied" aria-hidden="true">Email copied</span>
+      <a class="nav-link link${current === 'info' ? ' is-current' : ''}" href="/info/" data-link><span class="line-inner">Info</span></a>
+      <span class="nav-comma" aria-hidden="true">,</span>
+      <a class="nav-link link${current === 'contact' ? ' is-current' : ''}" href="/contact/" data-link><span class="line-inner">Contact</span></a>
     </nav>
   </header>`;
 
@@ -131,10 +131,49 @@ const sketch = (m, other) => {
               </defs>
               <image href="${m.sketch}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet" filter="url(#neon-${m.id})" />
             </svg>
-            <canvas class="sketch-blood" aria-hidden="true"></canvas>
           </div>
           <span class="sketch-name">${esc(m.name)}</span>
         </div>`;
+};
+
+/* The work, given a section of its own on the landing page: a pinned
+   reel that the scroll pulls sideways (see Main.js). */
+const showcaseSection = () => {
+  const pad = (n) => String(n).padStart(2, '0');
+  const cards = projects
+    .map((p, i) => `          <a class="show-card" href="/work/${p.slug}/" data-link data-cursor="View" style="--accent: ${p.accent}">
+            <span class="show-card-media"><img class="show-card-img" src="/media/${p.slug}/featured.jpg" alt="${esc(p.name)}" loading="lazy" decoding="async" /></span>
+            <span class="show-card-meta">
+              <span class="show-card-no">${pad(i + 1)}</span>
+              <span class="show-card-name">${esc(p.name)}</span>
+              <span class="show-card-year">${esc(p.year)}</span>
+            </span>
+            <span class="show-card-excerpt">${esc(p.excerpt)} &middot; ${esc(p.role)}</span>
+          </a>`)
+    .join('\n');
+
+  return `    <section class="showcase" id="work" aria-labelledby="showcase-title">
+      <div class="showcase-stage">
+        <div class="showcase-head">
+          <div>
+            <span class="showcase-kicker">${esc(showcase.kicker)}</span>
+            <h2 class="showcase-title" id="showcase-title">${showcase.title.map((l) => `<span class="line"><span class="line-inner">${esc(l)}</span></span>`).join(' ')}</h2>
+          </div>
+          <span class="showcase-count" aria-hidden="true"><span class="showcase-count-now">01</span> / ${pad(projects.length)}</span>
+        </div>
+        <div class="showcase-track">
+${cards}
+          <a class="show-card show-card-all" href="/work/" data-link data-cursor="Open">
+            <span class="show-card-all-box">
+              <svg class="show-card-all-arrow" viewBox="0 0 48 48" aria-hidden="true"><path d="M10 38 38 10M16 10h22v22" /></svg>
+              <span class="show-card-all-text">${esc(showcase.more)}</span>
+              <span class="show-card-all-sub">${projects.length} projects, one stack</span>
+            </span>
+          </a>
+        </div>
+        <div class="showcase-progress" aria-hidden="true"><span class="showcase-progress-bar"></span></div>
+      </div>
+    </section>`;
 };
 
 const mainPage = () => {
@@ -188,25 +227,6 @@ ${header('main')}
       </div>
 
       <div class="duo" data-duo>
-        <svg class="duo-defs" width="0" height="0" aria-hidden="true" focusable="false">
-          <!-- Wet blood: melt the drawn circles into one liquid surface
-               (blur + alpha threshold), shade it as a raised bead of liquid,
-               then lay a glossy highlight on top. -->
-          <filter id="blood-goo" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="2.4" result="soft" />
-            <feColorMatrix in="soft" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 26 -11" result="goo" />
-            <feGaussianBlur in="goo" stdDeviation="2" result="bump" />
-            <feDiffuseLighting in="bump" surfaceScale="3" diffuseConstant="1.2" lighting-color="#ffffff" result="shade">
-              <feDistantLight azimuth="235" elevation="40" />
-            </feDiffuseLighting>
-            <feComposite in="goo" in2="shade" operator="arithmetic" k1="1" k2="0" k3="0" k4="0" result="shaded" />
-            <feSpecularLighting in="bump" surfaceScale="4.5" specularConstant="1.35" specularExponent="30" lighting-color="#fff0f0" result="spec">
-              <feDistantLight azimuth="235" elevation="46" />
-            </feSpecularLighting>
-            <feComposite in="spec" in2="goo" operator="in" result="gloss" />
-            <feComposite in="shaded" in2="gloss" operator="arithmetic" k1="0" k2="1" k3="0.8" k4="0" />
-          </filter>
-        </svg>
 ${sketch(prem, meet)}
 ${sketch(meet, prem)}
         <div class="duo-actions" role="group" aria-label="Space rocks">
@@ -230,6 +250,8 @@ ${frame(meet, 'left')}
 ${frame(prem, 'right')}
       </div>
     </section>
+
+${showcaseSection()}
 
 ${footer()}
   </div>
@@ -275,7 +297,6 @@ const projectsPage = () => {
 ${header('projects')}
 
     <div class="text-wrapper">
-      <span class="overline"><span class="line-inner">${esc(workIndex.overline)}</span></span>
       <h1 class="title" data-split>
         ${splitTitle(workIndex.title)}
       </h1>
@@ -426,6 +447,53 @@ ${footer()}
   });
 };
 
+/* -------------------------------------------------------------- contact */
+
+const contactPage = () => {
+  const details = contact.details
+    .map((d) => `        <div class="contact-detail"><dt class="label">${esc(d.label)}</dt><dd class="text">${esc(d.value)}</dd></div>`)
+    .join('\n');
+  const social = studio.social
+    .map((s) => `<li><a class="text link" href="${esc(s.url)}" target="_blank" rel="noopener noreferrer"><span class="line-inner">${esc(s.label)} &nearr;</span></a></li>`)
+    .join('');
+
+  return shell({
+    title: `${studio.name} — Contact`,
+    description: contact.lead,
+    pageId: 'contact',
+    body: `<div class="page" id="contact" data-page="contact">
+  <div class="page-content" id="page-content" tabindex="-1">
+${header('contact')}
+
+    <h1 class="title" data-split>
+        ${splitTitle(contact.title)}
+    </h1>
+
+    <div class="contact-grid">
+      <p class="lead" data-split-lines>${esc(contact.lead)}</p>
+
+      <div class="contact-email">
+        <span class="label">Write to us</span>
+        <button class="contact-address" type="button" data-email="${esc(studio.email)}">
+          <span class="contact-address-text">${esc(studio.email)}</span>
+          <span class="contact-address-hint">Click to copy</span>
+        </button>
+        <span class="copied" aria-live="polite">Copied to your clipboard</span>
+        <a class="contact-mail link" href="mailto:${esc(studio.email)}"><span class="line-inner">Or open it in your mail app &rarr;</span></a>
+      </div>
+
+      <dl class="contact-details">
+${details}
+        <div class="contact-detail"><dt class="label">Elsewhere</dt><dd><ul class="social-list">${social}</ul></dd></div>
+      </dl>
+    </div>
+
+${footer()}
+  </div>
+</div>`
+  });
+};
+
 /* ----------------------------------------------------------------- emit */
 
 const write = (relDir, html) => {
@@ -439,6 +507,7 @@ console.log('Generating pages…');
 write('', mainPage());
 write('work', projectsPage());
 write('info', infoPage());
+write('contact', contactPage());
 projects.forEach((p) => write(join('work', p.slug), workPage(p)));
 
 /* favicon */
@@ -449,4 +518,4 @@ writeFileSync(
   'utf8'
 );
 console.log('  ✓ public/favicon.svg');
-console.log(`Done — ${projects.length + 3} pages.`);
+console.log(`Done — ${projects.length + 4} pages.`);

@@ -5,8 +5,31 @@ import Scroll from './Scroll.js';
 import Loader from './Loader.js';
 import Router from './Router.js';
 import World from '../gl/World.js';
+import Cursor from './Cursor.js';
 import { createPage } from '../pages/index.js';
 import { projects } from '../content/site.js';
+
+/**
+ * Copy text to the clipboard. The async Clipboard API only exists on
+ * secure origins (https / localhost) — on a LAN address like
+ * http://192.168.x.x it's missing, so fall back to the older
+ * execCommand route instead of giving up.
+ */
+const copyText = async (text) => {
+  if (navigator.clipboard && window.isSecureContext) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
+  document.body.appendChild(ta);
+  ta.select();
+  const ok = document.execCommand('copy');
+  ta.remove();
+  if (!ok) throw new Error('copy failed');
+};
 
 export default class App {
   constructor() {
@@ -22,8 +45,9 @@ export default class App {
     this.loader = new Loader();
 
     this.bindEvents();
-    this.createCurveToggle();
+    this.createThemeToggle();
     this.bindCopyButtons(document);
+    if (Cursor.supported()) this.cursor = new Cursor();
 
     this.start();
   }
@@ -91,25 +115,36 @@ export default class App {
 
   /* ---------------------------------------------------------- extras */
 
-  createCurveToggle() {
-    if (store.isMobile) return;
+  /** Light / dark switch, remembered between visits. */
+  createThemeToggle() {
+    const html = document.documentElement;
+    const isLight = () => html.dataset.theme === 'light';
+    this.world.setTheme(isLight(), true);
 
     const btn = document.createElement('button');
-    btn.className = 'curve-toggle';
+    btn.className = 'theme-toggle';
     btn.type = 'button';
-    btn.setAttribute('aria-pressed', 'false');
-    btn.setAttribute('aria-label', 'Toggle curved view');
-    btn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12h20M2 12c0-5 4.5-9 10-9s10 4 10 9" /></svg>';
+    btn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 3.5a8.5 8.5 0 0 1 0 17Z" /></svg>';
+    const label = () => {
+      btn.setAttribute('aria-label', isLight() ? 'Switch to dark mode' : 'Switch to light mode');
+      btn.setAttribute('aria-pressed', String(isLight()));
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', isLight() ? '#EFEDE6' : '#05060F');
+    };
+    label();
 
     btn.addEventListener('click', () => {
-      const next = !store.isCurveMode;
-      this.world.setCurve(next);
-      btn.classList.toggle('is-active', next);
-      btn.setAttribute('aria-pressed', String(next));
+      const next = isLight() ? 'dark' : 'light';
+      html.classList.add('theme-fade');
+      html.dataset.theme = next;
+      try { localStorage.setItem('theme', next); } catch { /* private mode */ }
+      this.world.setTheme(next === 'light');
+      label();
+      clearTimeout(this.themeFade);
+      this.themeFade = setTimeout(() => html.classList.remove('theme-fade'), 700);
     });
 
     document.body.appendChild(btn);
-    this.curveToggle = btn;
+    this.themeToggle = btn;
   }
 
   bindCopyButtons(root) {
@@ -123,7 +158,7 @@ export default class App {
           || btn.closest('.nav, .meta')?.querySelector('.copied');
 
         try {
-          await navigator.clipboard.writeText(email);
+          await copyText(email);
           if (feedback) {
             gsap.killTweensOf(feedback);
             gsap.fromTo(feedback,
@@ -133,7 +168,9 @@ export default class App {
             gsap.to(feedback, { opacity: 0, duration: 0.4, delay: 1.6, ease: 'power2.in' });
           }
         } catch {
-          window.location.href = `mailto:${email}`;
+          /* Copying is blocked entirely — select the address so it can be copied by hand. */
+          const text = btn.querySelector('.contact-address-text, .line-inner');
+          if (text) window.getSelection()?.selectAllChildren(text);
         }
       });
     });

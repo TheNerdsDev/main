@@ -2,6 +2,7 @@
 
 uniform float uTime;
 uniform float uIntro;
+uniform float uSpace;
 uniform vec2  uRes;
 uniform float uDpr;
 uniform vec2  uPointer;
@@ -78,5 +79,5 @@ void main() {
 
   col += shootingStars(p);
 
-  gl_FragColor = vec4(col * uIntro, 1.0);
+  gl_FragColor = vec4(col * uIntro * uSpace, 1.0);
 }

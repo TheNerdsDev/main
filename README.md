@@ -37,7 +37,9 @@ Nearly everything lives in **one file**: `src/content/site.js`.
 | Studio name, email, availability, socials | `studio` in `src/content/site.js` |
 | Landing page headline, subtext, About copy, button label, the four rocks | `main` |
 | The two of us: sketches, neon colours, eye / hit points, About photos | `team` |
+| The work reel on the landing page (kicker, heading, link label) | `showcase` |
 | Work index headline and intro | `workIndex` |
+| Contact page heading, lead and details | `contact` |
 | About page copy, services, stack | `info` |
 | Projects (name, year, role, description, accent colour) | `projects` |
 | Colours, spacing, type scale | `:root` in `src/styles/base.css` |
@@ -56,10 +58,27 @@ the bottom of `src/styles/pages.css`.
 
 | Path | Page | Class |
 |---|---|---|
-| `/` | Landing — welcome, the two neon sketches, About | `src/pages/Main.js` |
+| `/` | Landing — welcome, the two neon sketches, About, the work reel | `src/pages/Main.js` |
 | `/work/` | Work index — the scrolling card stack | `src/pages/Projects.js` |
 | `/work/<slug>/` | Case study | `src/pages/Work.js` |
 | `/info/` | About / info | `src/pages/Info.js` |
+| `/contact/` | Contact — address (click to copy), mail link, details | `src/pages/Page.js` |
+
+### The landing page, top to bottom
+
+1. **Welcome.** The two neon sketches, with four space rocks circling them
+   clockwise — each on its own orbit and rhythm, swinging round the heads
+   rather than across them. Click a sketch, or a rock, and one throws it at
+   the other: the rock bursts, the neon shorts out (arcs and sparks), the face
+   goes shock → pain → anger (or sadness, if they started it), and they see
+   stars for a moment.
+2. **About.** The first scroll takes over and glides you down; the rocks come
+   along, still circling. From here your scroll drives it, both ways: the rocks
+   spiral in, collide and crumble, their pieces swirling out clockwise across
+   the page; then the photos, the brief and the About Us button play in.
+3. **Work.** A pinned reel: the scroll pulls the projects sideways past you,
+   each card linking to its case study, ending on "All work" (the full card
+   stack at `/work/`). On phones it becomes a plain vertical list.
 
 ### Swapping in your own sketches
 
@@ -74,8 +93,9 @@ ones, drop the files in (PNG, JPG or SVG) and update each entry in `team`:
 - `face` — where the expressions pull: `brows` (inner brow ends),
   `browsOuter` (outer ends), `mouth` (its centre) and `corners`. Measure
   these on the new drawing — hurt, angry and sad are built from them
-- `hit` (where a rock strikes and the blood starts) and `hand` (where a
-  thrown rock leaves from)
+- `hit` (where a rock strikes and the neon shorts out), `crown` (top of the
+  head, where the dizzy stars circle) and `hand` (where a thrown rock leaves
+  from)
 
 Then run `npm run pages`. The neon colour comes from `colour`.
 
@@ -110,6 +130,7 @@ src/
     Scroll.js          Lenis, driven off the GSAP ticker
     Router.js          Fetch + swap pages, canvas survives navigation
     Loader.js          Preloader with a real progress counter
+    Cursor.js          The custom pointer: a star, its orbit and a satellite
     Assets.js          Shared texture cache, deduped in-flight loads
     SplitText.js       Splits paragraphs into masked lines
     Component.js       Base class: mirrors a DOM box into the GL world
@@ -122,13 +143,13 @@ src/
     shaders/           GLSL — noise, media, ink, composite, sky, stars
   fx/                  Landing page effects (2D canvas + SVG filters)
     FxLayer.js         Full-screen effects canvas; only ticks while busy
-    Duo.js             The two sketches, the four floating rocks, throws and reactions
+    Duo.js             The two sketches, the four orbiting rocks, throws and reactions
     SpaceRocks.js      The tumbling 3D rocks that drift around the sketches
-    Scatter.js         The rocks' fragments, scattered across the page by scroll
+    Scatter.js         The rocks' fragments, swirling out across the page by scroll
     asteroid.js        Procedural 3D asteroid mesh + per-pixel rock material
     RockStage.js       3D layer for the thrown rock and its fragments
-    Rock.js            Throw path + impact dust, grit and blood mist
-    Blood.js           Liquid blood sim, rendered through #blood-goo
+    Rock.js            Throw path + impact dust and grit
+    Zap.js             Neon short-circuit + dizzy stars on a hit; the collision's dust
     faceMap.js         Hurt / angry / sad expressions as displacement maps
     eyeMap.js          Displacement map that widens the eyes in shock
     particles.js       Shared sprites, heat ramp and helpers
@@ -162,8 +183,14 @@ Each frame:
 - **Duotone → colour on hover.** Index cards are graded to a two-tone blue;
   hovering fades in the project's own accent colour and zooms the plane.
 - **Scroll-velocity bend.** Plane edges lag behind the centre as you scroll.
-- **Curve mode.** The toggle (top right, desktop) wraps the whole layout around
-  a cylinder of radius 1100.
+- **Light / dark.** The round toggle (top right) switches themes and remembers
+  the choice. Light mode is warm paper: the galaxy fades out
+  (`World.setTheme`), the colour tokens in `base.css` swap, and the neon reads
+  as saturated ink. The theme is applied before first paint, so there's no
+  flash.
+- **Cursor.** On mouse / trackpad devices the pointer is a small star with an
+  orbit that trails it; it opens up over links, turns into a dashed target over
+  a rock, and steps aside for the text caret in form fields.
 - **Ink trail.** Drag the cursor across the page — the trail refracts whatever
   is underneath and glows in the current accent colour.
 
@@ -180,9 +207,12 @@ image crushes to black.
 - No WebGL2, or `prefers-reduced-motion: reduce` → the canvas, loader and
   overlay are removed and the site renders as a plain, fully readable document
   with real `<img>` tags. All content is in the HTML, so it works without JS.
-- Skip link, focus-visible outlines, `aria-pressed` on the curve toggle,
+- Skip link, focus-visible outlines, `aria-pressed` on the theme toggle,
   semantic headings and landmarks throughout.
-- Pointer-driven effects are disabled on touch devices.
+- Pointer-driven effects (and the custom cursor) are disabled on touch
+  devices and with reduced motion.
+- Copying the email works on plain `http://` LAN addresses too (falls back
+  from the async Clipboard API), and never opens a mail tab by surprise.
 
 ## Performance
 

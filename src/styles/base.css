@@ -16,11 +16,14 @@ a { color: inherit; text-decoration: none; }
    ================================================================= */
 :root {
   --c-bg:        #05060F;
+  --c-bg-rgb:    5, 6, 15;
   --c-ink:       #F4F3EE;
-  --c-dim:       rgba(244, 243, 238, 0.52);
-  --c-faint:     rgba(244, 243, 238, 0.28);
-  --c-line:      rgba(244, 243, 238, 0.14);
+  --c-ink-rgb:   244, 243, 238;
+  --c-dim:       rgba(var(--c-ink-rgb), 0.52);
+  --c-faint:     rgba(var(--c-ink-rgb), 0.28);
+  --c-line:      rgba(var(--c-ink-rgb), 0.14);
   --c-accent:    #6E8FD6;
+  color-scheme: dark;
 
   --unit:  2.4rem;
   --col:   11.8rem;
@@ -29,6 +32,22 @@ a { color: inherit; text-decoration: none; }
   --ease-out:  cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out: cubic-bezier(0.76, 0, 0.24, 1);
   --dur: 0.8s;
+}
+
+/* Light theme: warm paper, near-black ink. The galaxy fades out (World.setTheme). */
+html[data-theme="light"] {
+  --c-bg:        #EFEDE6;
+  --c-bg-rgb:    239, 237, 230;
+  --c-ink:       #101119;
+  --c-ink-rgb:   16, 17, 25;
+  --c-dim:       rgba(var(--c-ink-rgb), 0.62);
+  --c-faint:     rgba(var(--c-ink-rgb), 0.4);
+  --c-line:      rgba(var(--c-ink-rgb), 0.16);
+  color-scheme: light;
+}
+/* Colours change smoothly when the theme is switched. */
+html.theme-fade body, html.theme-fade body * {
+  transition: color 0.6s var(--ease-out), background-color 0.6s var(--ease-out), border-color 0.6s var(--ease-out) !important;
 }
 
 @media screen and (max-width: 1099px) {
@@ -164,7 +183,13 @@ h1 {
   pointer-events: none;
   background: radial-gradient(120% 90% at 50% 10%, transparent 40%, rgba(5, 6, 15, 0.55) 100%);
   mix-blend-mode: multiply;
+  transition: opacity 0.8s var(--ease-out);
 }
+html[data-theme="light"] .overlay { opacity: 0; }
+/* `difference` blending only reads well on a dark page. */
+html[data-theme="light"] .site-header,
+html[data-theme="light"] .site-footer,
+html[data-theme="light"] .back { mix-blend-mode: normal; }
 
 /* =================================================================
    LOADER
@@ -248,3 +273,101 @@ h1 {
   .metas .meta { width: auto; }
   .site-footer { bottom: 1.6rem; }
 }
+
+/* =================================================================
+   CURSOR — a little star system (see core/Cursor.js)
+   ================================================================= */
+html.has-cursor, html.has-cursor * { cursor: none !important; }
+html.has-cursor :is(input, textarea, select, [contenteditable="true"]) { cursor: text !important; }
+
+.cursor {
+  position: fixed; inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s var(--ease-out);
+}
+.cursor.is-visible { opacity: 1; }
+.cursor.is-text { opacity: 0; }
+
+.cursor-dot,
+.cursor-ring,
+.cursor-label {
+  position: absolute;
+  top: 0; left: 0;
+  will-change: transform;
+}
+
+/* The star: a hot point with a soft halo. */
+.cursor-dot::before {
+  content: '';
+  position: absolute;
+  width: 0.6rem; height: 0.6rem;
+  margin: -0.3rem 0 0 -0.3rem;
+  border-radius: 50%;
+  background: var(--c-ink);
+  box-shadow: 0 0 0.6rem 0.1rem rgba(var(--c-ink-rgb), 0.7), 0 0 1.6rem 0.2rem rgba(var(--c-ink-rgb), 0.25);
+  transition: transform 0.35s var(--ease-out);
+}
+
+/* The orbit, and the satellite riding it. */
+.cursor-ring::before,
+.cursor-sat {
+  position: absolute;
+  width: 3.4rem; height: 3.4rem;
+  margin: -1.7rem 0 0 -1.7rem;
+  border-radius: 50%;
+  transition: width 0.45s var(--ease-out), height 0.45s var(--ease-out), margin 0.45s var(--ease-out), border-color 0.35s var(--ease-out);
+}
+.cursor-ring::before {
+  content: '';
+  border: 1px solid rgba(var(--c-ink-rgb), 0.38);
+}
+.cursor-sat::before {
+  content: '';
+  position: absolute;
+  top: -0.25rem; left: 50%;
+  width: 0.5rem; height: 0.5rem;
+  margin-left: -0.25rem;
+  border-radius: 50%;
+  background: var(--c-accent);
+  box-shadow: 0 0 0.6rem rgba(110, 143, 214, 0.9);
+}
+
+/* Something to click: the orbit opens up. */
+.cursor.is-hover .cursor-ring::before,
+.cursor.is-hover .cursor-sat {
+  width: 5.6rem; height: 5.6rem;
+  margin: -2.8rem 0 0 -2.8rem;
+}
+.cursor.is-hover .cursor-ring::before { border-color: rgba(var(--c-ink-rgb), 0.75); }
+.cursor.is-hover .cursor-dot::before { transform: scale(0.6); }
+
+/* A space rock: a dashed target. */
+.cursor.is-rock .cursor-ring::before,
+.cursor.is-rock .cursor-sat {
+  width: 4.6rem; height: 4.6rem;
+  margin: -2.3rem 0 0 -2.3rem;
+}
+.cursor.is-rock .cursor-ring::before { border: 1px dashed rgba(var(--c-ink-rgb), 0.85); }
+
+/* Pressed: squeezed. */
+.cursor.is-down .cursor-ring::before,
+.cursor.is-down .cursor-sat {
+  width: 2.4rem; height: 2.4rem;
+  margin: -1.2rem 0 0 -1.2rem;
+}
+.cursor.is-down .cursor-dot::before { transform: scale(1.5); }
+
+.cursor-label {
+  font-family: 'Syne Mono', monospace;
+  font-size: 1rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--c-ink);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.3s var(--ease-out);
+}
+.cursor-label:not(:empty) { margin: 3.4rem 0 0; translate: -50% 0; }
+.cursor.has-label .cursor-label { opacity: 0.85; }
