@@ -605,6 +605,8 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
 #main .finale {
   position: relative;
   z-index: 4;
+  /* Sideways swipes move the planets; up/down still scrolls the page. */
+  touch-action: pan-y;
   height: 100vh;
   height: 100svh;
   min-height: 56rem;
