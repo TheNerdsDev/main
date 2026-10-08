@@ -16,11 +16,14 @@ a { color: inherit; text-decoration: none; }
    ================================================================= */
 :root {
   --c-bg:        #05060F;
+  --c-bg-rgb:    5, 6, 15;
   --c-ink:       #F4F3EE;
-  --c-dim:       rgba(244, 243, 238, 0.52);
-  --c-faint:     rgba(244, 243, 238, 0.28);
-  --c-line:      rgba(244, 243, 238, 0.14);
+  --c-ink-rgb:   244, 243, 238;
+  --c-dim:       rgba(var(--c-ink-rgb), 0.52);
+  --c-faint:     rgba(var(--c-ink-rgb), 0.28);
+  --c-line:      rgba(var(--c-ink-rgb), 0.14);
   --c-accent:    #6E8FD6;
+  color-scheme: dark;
 
   --unit:  2.4rem;
   --col:   11.8rem;
@@ -101,14 +104,14 @@ h1 {
   text-transform: uppercase;
 }
 .text { font-size: 1.7rem; line-height: 140%; }
-.overline, .copyright, .project-meta, .nav, .logo, .back, .copied, .project-index-title, .project-title {
+.overline, .project-meta, .nav, .logo, .back, .copied, .project-index-title, .project-title {
   font-size: 1.5rem;
   line-height: 120%;
 }
 @media screen and (max-width: 767px) {
   .label { font-size: 1.3rem; }
   .text  { font-size: 1.5rem; }
-  .overline, .copyright, .project-meta, .nav, .logo, .back, .copied,
+  .overline, .project-meta, .nav, .logo, .back, .copied,
   .project-index-title, .project-title { font-size: 1.4rem; }
 }
 
@@ -202,41 +205,59 @@ h1 {
 
 .site-header {
   position: fixed;
-  top: var(--unit); left: var(--unit); right: var(--unit);
+  top: 0; left: 0; right: 0;
   z-index: 12;
-  display: flex; align-items: flex-start; justify-content: space-between;
-  mix-blend-mode: difference;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1.4rem var(--unit);
+  /* Frosted glass in the site's own background colour, untinted: the sky
+     glows through it, anything passing beneath is blurred past reading. */
+  background: rgba(var(--c-bg-rgb), 0.42);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 .logo { font-weight: 600; letter-spacing: -0.01em; }
-.nav { position: relative; display: flex; align-items: baseline; }
-.nav-comma { margin-right: 0.5rem; color: var(--c-dim); }
+.nav { position: relative; display: flex; align-items: center; gap: 2.8rem; }
+
+/* Header links: the letters roll on hover and turn green. */
+.roll-link {
+  position: relative;
+  display: inline-flex;
+  color: var(--c-ink);
+  transition: color 0.4s var(--ease-out);
+}
+.roll { display: inline-flex; overflow: hidden; line-height: 1.25; }
+.roll-char {
+  position: relative;
+  display: inline-block;
+  transition: transform 0.6s var(--ease-out);
+  transition-delay: calc(var(--i) * 28ms);
+}
+.roll-char::after {
+  content: attr(data-c);
+  position: absolute;
+  left: 0; top: 100%;
+}
+.roll-link:hover, .roll-link:focus-visible { color: #0ACD88; }
+.roll-link:hover .roll-char, .roll-link:focus-visible .roll-char { transform: translateY(-100%); }
+.roll-link:focus-visible { outline: 1px solid #0ACD88; outline-offset: 0.5rem; }
+/* The page you're on: a short green rule under it. */
+.roll-link.is-current::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: -0.5rem;
+  height: 1px;
+  background: #0ACD88;
+}
 .copied {
   position: absolute; right: 0; top: 2.4rem;
   color: var(--c-dim);
   opacity: 0; pointer-events: none;
 }
 
-.site-footer {
-  position: fixed;
-  bottom: var(--unit); left: var(--unit); right: var(--unit);
-  z-index: 12;
-  display: flex; align-items: flex-end; justify-content: space-between;
-  pointer-events: none;
-  mix-blend-mode: difference;
-}
-.site-footer > * { pointer-events: auto; }
-.metas { display: flex; align-items: flex-end; }
-.metas .meta { display: flex; flex-direction: column; align-items: flex-start; width: 26rem; }
-.metas .meta + .meta { margin-left: var(--unit); }
-.meta .label { margin-bottom: 0.8rem; }
-.meta dd { margin: 0; }
-.meta-email { position: relative; }
-.meta-email .copied { right: auto; left: 0; top: auto; bottom: -2.2rem; }
-.copyright { color: var(--c-dim); }
-
 .back {
   position: fixed;
-  top: calc(var(--unit) + 5.2rem);
+  top: calc(var(--unit) + 6.2rem);
   left: var(--unit);
   z-index: 12;
   mix-blend-mode: difference;
@@ -244,7 +265,102 @@ h1 {
 .back-arrow { display: inline-block; margin-right: 0.8rem; }
 
 @media screen and (max-width: 767px) {
-  .metas.footer-metas .meta-available { display: none; }
-  .metas .meta { width: auto; }
-  .site-footer { bottom: 1.6rem; }
 }
+
+/* =================================================================
+   CURSOR — a little star system (see core/Cursor.js)
+   ================================================================= */
+html.has-cursor, html.has-cursor * { cursor: none !important; }
+html.has-cursor :is(input, textarea, select, [contenteditable="true"]) { cursor: text !important; }
+
+.cursor {
+  position: fixed; inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s var(--ease-out);
+}
+.cursor.is-visible { opacity: 1; }
+.cursor.is-text { opacity: 0; }
+
+.cursor-dot,
+.cursor-ring,
+.cursor-label {
+  position: absolute;
+  top: 0; left: 0;
+  will-change: transform;
+}
+
+/* The star: a hot point with a soft halo. */
+.cursor-dot::before {
+  content: '';
+  position: absolute;
+  width: 0.6rem; height: 0.6rem;
+  margin: -0.3rem 0 0 -0.3rem;
+  border-radius: 50%;
+  background: var(--c-ink);
+  box-shadow: 0 0 0.6rem 0.1rem rgba(var(--c-ink-rgb), 0.7), 0 0 1.6rem 0.2rem rgba(var(--c-ink-rgb), 0.25);
+  transition: transform 0.35s var(--ease-out);
+}
+
+/* The orbit, and the satellite riding it. */
+.cursor-ring::before,
+.cursor-sat {
+  position: absolute;
+  width: 3.4rem; height: 3.4rem;
+  margin: -1.7rem 0 0 -1.7rem;
+  border-radius: 50%;
+  transition: width 0.45s var(--ease-out), height 0.45s var(--ease-out), margin 0.45s var(--ease-out), border-color 0.35s var(--ease-out);
+}
+.cursor-ring::before {
+  content: '';
+  border: 1px solid rgba(var(--c-ink-rgb), 0.38);
+}
+.cursor-sat::before {
+  content: '';
+  position: absolute;
+  top: -0.25rem; left: 50%;
+  width: 0.5rem; height: 0.5rem;
+  margin-left: -0.25rem;
+  border-radius: 50%;
+  background: var(--c-accent);
+  box-shadow: 0 0 0.6rem rgba(110, 143, 214, 0.9);
+}
+
+/* Something to click: the orbit opens up. */
+.cursor.is-hover .cursor-ring::before,
+.cursor.is-hover .cursor-sat {
+  width: 5.6rem; height: 5.6rem;
+  margin: -2.8rem 0 0 -2.8rem;
+}
+.cursor.is-hover .cursor-ring::before { border-color: rgba(var(--c-ink-rgb), 0.75); }
+.cursor.is-hover .cursor-dot::before { transform: scale(0.6); }
+
+/* A space rock: a dashed target. */
+.cursor.is-rock .cursor-ring::before,
+.cursor.is-rock .cursor-sat {
+  width: 4.6rem; height: 4.6rem;
+  margin: -2.3rem 0 0 -2.3rem;
+}
+.cursor.is-rock .cursor-ring::before { border: 1px dashed rgba(var(--c-ink-rgb), 0.85); }
+
+/* Pressed: squeezed. */
+.cursor.is-down .cursor-ring::before,
+.cursor.is-down .cursor-sat {
+  width: 2.4rem; height: 2.4rem;
+  margin: -1.2rem 0 0 -1.2rem;
+}
+.cursor.is-down .cursor-dot::before { transform: scale(1.5); }
+
+.cursor-label {
+  font-family: 'Syne Mono', monospace;
+  font-size: 1rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--c-ink);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.3s var(--ease-out);
+}
+.cursor-label:not(:empty) { margin: 3.4rem 0 0; translate: -50% 0; }
+.cursor.has-label .cursor-label { opacity: 0.85; }

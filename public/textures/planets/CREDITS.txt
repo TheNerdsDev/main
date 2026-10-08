@@ -1,0 +1,10 @@
+Planet textures
+- Solar System Scope texture library, https://www.solarsystemscope.com/textures
+  Licence: Creative Commons Attribution 4.0 (https://creativecommons.org/licenses/by/4.0/)
+  Changes: resized; Earth roughness derived from the specular map; Saturn ring
+  read into a radial strip.
+- Earth night lights: NASA Earth Observatory, "Earth at Night" (Black Marble 2012),
+  public domain. Changes: background removed, warm tint.
+- Venus cloud layer and Uranus rings: generated (scripts/planet-textures.py).
+
+Saturn ring inner/outer radius ratio: 0.4961

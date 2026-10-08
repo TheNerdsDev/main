@@ -5,13 +5,37 @@ import Scroll from './Scroll.js';
 import Loader from './Loader.js';
 import Router from './Router.js';
 import World from '../gl/World.js';
+import Cursor from './Cursor.js';
 import { createPage } from '../pages/index.js';
 import { projects } from '../content/site.js';
+
+/**
+ * Copy text to the clipboard. The async Clipboard API only exists on
+ * secure origins (https / localhost) — on a LAN address like
+ * http://192.168.x.x it's missing, so fall back to the older
+ * execCommand route instead of giving up.
+ */
+const copyText = async (text) => {
+  if (navigator.clipboard && window.isSecureContext) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
+  document.body.appendChild(ta);
+  ta.select();
+  const ok = document.execCommand('copy');
+  ta.remove();
+  if (!ok) throw new Error('copy failed');
+};
 
 export default class App {
   constructor() {
     this.canvas = document.querySelector('.canvas');
     this.pageEl = document.querySelector('.page');
+    this.hoistHeader(this.pageEl);
 
     store.html.classList.add('webgl');
 
@@ -22,8 +46,8 @@ export default class App {
     this.loader = new Loader();
 
     this.bindEvents();
-    this.createCurveToggle();
     this.bindCopyButtons(document);
+    if (Cursor.supported()) this.cursor = new Cursor();
 
     this.start();
   }
@@ -70,6 +94,7 @@ export default class App {
 
     /* 2 — swap the DOM. */
     outgoing.destroy();
+    this.hoistHeader(nextPageEl);
     this.pageEl.replaceWith(nextPageEl);
     this.pageEl = nextPageEl;
     document.title = title;
@@ -91,25 +116,28 @@ export default class App {
 
   /* ---------------------------------------------------------- extras */
 
-  createCurveToggle() {
-    if (store.isMobile) return;
-
-    const btn = document.createElement('button');
-    btn.className = 'curve-toggle';
-    btn.type = 'button';
-    btn.setAttribute('aria-pressed', 'false');
-    btn.setAttribute('aria-label', 'Toggle curved view');
-    btn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12h20M2 12c0-5 4.5-9 10-9s10 4 10 9" /></svg>';
-
-    btn.addEventListener('click', () => {
-      const next = !store.isCurveMode;
-      this.world.setCurve(next);
-      btn.classList.toggle('is-active', next);
-      btn.setAttribute('aria-pressed', String(next));
+  /**
+   * The header lives outside the page: one bar for the whole visit, so it
+   * doesn't flicker between pages — and so its frosted glass can see (and
+   * blur) the page beneath it. Inside a page's own stacking layer, the
+   * backdrop blur has nothing to work with and text shows through.
+   * Each incoming page's header only tells us which link is current.
+   */
+  hoistHeader(pageEl) {
+    const incoming = pageEl.querySelector('.site-header');
+    if (!incoming) return;
+    if (!this.header) {
+      this.header = incoming;
+      document.body.insertBefore(incoming, document.body.firstChild);
+      return;
+    }
+    const current = [...incoming.querySelectorAll('a')].map((a) => a.classList.contains('is-current'));
+    [...this.header.querySelectorAll('a')].forEach((a, i) => {
+      a.classList.toggle('is-current', !!current[i]);
+      if (current[i]) a.setAttribute('aria-current', 'page');
+      else a.removeAttribute('aria-current');
     });
-
-    document.body.appendChild(btn);
-    this.curveToggle = btn;
+    incoming.remove();
   }
 
   bindCopyButtons(root) {
@@ -123,7 +151,7 @@ export default class App {
           || btn.closest('.nav, .meta')?.querySelector('.copied');
 
         try {
-          await navigator.clipboard.writeText(email);
+          await copyText(email);
           if (feedback) {
             gsap.killTweensOf(feedback);
             gsap.fromTo(feedback,
@@ -133,7 +161,9 @@ export default class App {
             gsap.to(feedback, { opacity: 0, duration: 0.4, delay: 1.6, ease: 'power2.in' });
           }
         } catch {
-          window.location.href = `mailto:${email}`;
+          /* Copying is blocked entirely — select the address so it can be copied by hand. */
+          const text = btn.querySelector('.contact-address-text, .line-inner');
+          if (text) window.getSelection()?.selectAllChildren(text);
         }
       });
     });

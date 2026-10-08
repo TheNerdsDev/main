@@ -39,7 +39,6 @@ class Store {
 
     /* flags */
     this.isTransitioning = false;
-    this.isCurveMode = false;
     this.pageId = document.querySelector('.page')?.dataset.page || 'main';
 
     this.time = 0;

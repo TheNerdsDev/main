@@ -1,18 +1,46 @@
 import gsap from 'gsap';
 import { team } from '../content/site.js';
-import Blood from './Blood.js';
 import SpaceRocks from './SpaceRocks.js';
 import { RockThrow, RockImpact } from './Rock.js';
+import { Zap } from './Zap.js';
 import { eyeMap } from './eyeMap.js';
 import { faceMap } from './faceMap.js';
+import NeonSketch from './NeonSketch.js';
 import { hexToRgb, clamp } from './particles.js';
 
 /* Sketch viewBox width — matches the markup in generate-pages.mjs. */
 const VIEW_W = 400;
 /* The flash of shock on impact: eyes widen by this fraction of their radius. */
 const SHOCK = 0.55;
-/* How far (radians) the rocks swirl round each other as they close in. */
-const SWIRL = 1.1;
+/* Orbit speed at rest, radians per second. Always clockwise. */
+const SPEED = 0.17;
+/* The part of each sketch the rocks steer round: the figure itself, from
+   the top of the hair down past the name under it (fractions of the drawing). */
+const FIGURE = { y: 0.6, rx: 0.25, ry: 0.47 };
+/*
+ * Each rock's own orbit, deliberately uneven so the four never read as a
+ * set piece: their own starting places, distances, sizes and rhythms.
+ *   start  where it starts on its orbit (radians)
+ *   r      orbit size relative to the others
+ *   size   rock size
+ *   phase  offsets its speed and distance wobbles
+ */
+const ORBITS = [
+  { start: 0.35, r: 1.0, size: 1.0, phase: 0 },
+  { start: 1.95, r: 0.93, size: 0.8, phase: 2.1 },
+  { start: 3.3, r: 1.12, size: 1.12, phase: 4.2 },
+  { start: 4.75, r: 1.05, size: 0.9, phase: 1.3 }
+];
+
+/* The welcome copy, left of the sketches: the rocks keep to its right. */
+const TEXT = '.hero .title .line-inner, .hero-intro, .scroll-cue';
+
+/** Keep `v` within lo..hi, rounding off as it nears either end instead of stopping dead. */
+const soften = (v, lo, hi, band) => {
+  if (v > hi - band) return hi - band + band * Math.tanh((v - hi + band) / band);
+  if (v < lo + band) return lo + band - band * Math.tanh((lo + band - v) / band);
+  return v;
+};
 
 const XLINK = 'http://www.w3.org/1999/xlink';
 const setHref = (node, url) => {
@@ -27,8 +55,8 @@ const setHref = (node, url) => {
  *  - Click a floating rock: whoever it is drifting nearest grabs that very
  *    rock and flings it at the other one; it drifts back in afterwards.
  *
- * A hit bursts the rock, sprays blood, knocks the sketch back and makes
- * its neon stutter. The face reacts in three beats: a flash of shock
+ * A hit bursts the rock, knocks the sketch back and shorts its neon —
+ * arcs crackle and spark, the tube stutters, and it sees stars. The face reacts in three beats: a flash of shock
  * (eyes wide), a wince of pain, then anger — or sadness, if they started
  * it and this is the payback — before it relaxes.
  */
@@ -41,7 +69,8 @@ export default class Duo {
     this.members = team.map((m) => {
       const root = el.querySelector(`[data-sketch="${m.id}"]`);
       const h = VIEW_W / m.aspect;
-      setHref(root.querySelector('.eye-map'), eyeMap(VIEW_W, h, m.eyes, m.eyeR));
+      const eyeUrl = eyeMap(VIEW_W, h, m.eyes, m.eyeR);
+      setHref(root.querySelector('.eye-map'), eyeUrl);
 
       const faces = {};
       if (m.face) {
@@ -62,16 +91,29 @@ export default class Duo {
       gasp.textContent = '!';
       root.querySelector('.sketch-body').appendChild(gasp);
 
+      /* Drawn on the GPU, so a reacting face costs next to nothing; the SVG
+         filter stays as the fallback. */
+      const host = root.querySelector('.sketch-svg');
+      const neon = faces.hurt
+        ? new NeonSketch(host, {
+          src: m.sketch,
+          view: [VIEW_W, h],
+          colour: m.colour,
+          ink: m.ink,
+          maps: { eye: eyeUrl, hurt: faces.hurt.url, angry: faces.angry.url, sad: faces.sad.url }
+        })
+        : null;
+
       return {
         ...m,
         root,
+        neon,
         body: root.querySelector('.sketch-body'),
-        svg: root.querySelector('.sketch-svg'),
+        svg: host,
         hitBtn: root.querySelector('.sketch-hit'),
         gasp,
         faces,
         mapB,
-        blood: new Blood(root.querySelector('.sketch-blood')),
         rgb: hexToRgb(m.colour),
         rad: m.eyeR * VIEW_W,
         /* Animated filter strengths, pushed into the SVG in loop(). */
@@ -83,13 +125,15 @@ export default class Duo {
       };
     });
 
-    this.actions = [...el.querySelectorAll('.duo-action')].map((btn, i, all) => ({
-      btn, i, hovered: false, pace: 1, angle: (i / all.length) * Math.PI * 2 + 0.4
-    }));
+    this.actions = [...el.querySelectorAll('.duo-action')].map((btn, i) => {
+      const orbit = ORBITS[i % ORBITS.length];
+      return { btn, i, orbit, hovered: false, pace: 1, angle: orbit.start, x: 0, y: 0 };
+    });
     this.rocks = new SpaceRocks(this.actions.map((a) => a.btn));
     this.actionsEl = el.querySelector('.duo-actions');
     this.f = 0;
     this.k = 0;
+    this.gone = false;
 
     this.bind();
     this.idle();
@@ -129,10 +173,11 @@ export default class Duo {
 
   /**
    * The rocks' trip alongside the viewer, set by the page every frame.
-   *   f     0 = orbiting the sketches; 1 = travelling with the viewer, in a
-   *         loose ring around the middle of the screen
-   *   k     0 → 1: drawn together into the centre until their surfaces meet
+   *   f     0 = orbiting the sketches; 1 = travelling with the viewer,
+   *         still circling, now round the middle of the screen
+   *   k     0 → 1: their orbits tighten until they meet in the middle
    *   gone  broken apart — the fragments have taken over
+   * They keep circling clockwise the whole way; nothing lines up.
    */
   setJourney(f, k, gone) {
     if (f > 0 && this.f === 0) {
@@ -146,10 +191,10 @@ export default class Duo {
         a.away = false;
         a.btn.classList.remove('is-away');
       });
-      this.assignSlots();
     }
     this.f = f;
     this.k = k;
+    this.gone = gone;
     this.rocks.frenzy = k * k;
     if (this.actionsEl) {
       this.actionsEl.style.pointerEvents = f > 0 ? 'none' : '';
@@ -157,37 +202,11 @@ export default class Duo {
     }
   }
 
-  /**
-   * Give each rock the place in the travelling ring closest to where it is
-   * now, so none of them cross paths on the way.
-   */
-  assignSlots() {
-    const mx = window.innerWidth / 2;
-    const my = window.innerHeight / 2;
-    const slots = [-3, -1, 1, 3].map((n) => (n * Math.PI) / 4);
-    const angles = this.actions.map((a) => {
-      const c = this.rockCentre(a);
-      return Math.atan2(c.y - my, c.x - mx);
-    });
-    const order = this.actions.map((_, i) => i).sort((p, q) => angles[p] - angles[q]);
-    const gap = (a, b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
-    let best = 0;
-    let bestCost = Infinity;
-    for (let shift = 0; shift < slots.length; shift++) {
-      const cost = order.reduce((sum, ai, j) => sum + gap(angles[ai], slots[(j + shift) % slots.length]), 0);
-      if (cost < bestCost) { bestCost = cost; best = shift; }
-    }
-    order.forEach((ai, j) => { this.actions[ai].slot = slots[(j + best) % slots.length]; });
-  }
-
-  /** Where the rocks meet (viewport px), and each one's direction from there at contact. */
+  /** Where the rocks met (viewport px): the centre, and each rock as it was. */
   meeting() {
     return {
       at: { x: window.innerWidth / 2, y: window.innerHeight / 2 },
-      dirs: this.actions.map((a) => {
-        const ang = (a.slot ?? 0) + SWIRL;
-        return { x: Math.cos(ang), y: Math.sin(ang) };
-      })
+      rocks: this.actions.map((a) => ({ x: a.x, y: a.y, size: a.orbit.size }))
     };
   }
 
@@ -310,12 +329,14 @@ export default class Duo {
   hit(m, at, dir, mood) {
     const scale = clamp(m.body.offsetWidth / 300, 0.6, 1.3);
     this.fx.add(new RockImpact({ at, dir, scale }));
-
-    /* Blood starts where the rock struck, in the blood canvas's space. */
-    const c = m.blood.canvas;
-    const lx = m.hit[0] * m.body.offsetWidth - c.offsetLeft;
-    const ly = m.hit[1] * m.body.offsetHeight - c.offsetTop;
-    m.blood.splash(lx, ly, dir, scale);
+    /* The tube shorts where it was struck, then they see stars. */
+    this.fx.add(new Zap({
+      at: () => this.point(m, m.hit),
+      head: () => this.point(m, m.crown || [0.5, 0.1]),
+      colour: m.rgb,
+      scale,
+      dir
+    }));
 
     /* Knocked back along the line of impact, then a decaying shudder. */
     gsap.killTweensOf(m.body);
@@ -368,6 +389,7 @@ export default class Duo {
     if (!faces.hurt) return;
     const next = faces[mood] || faces.angry;
     setHref(m.mapB, next.url);
+    m.neon?.setMood(mood);
 
     gsap.timeline()
       .set(after, { v: 0 })
@@ -383,11 +405,13 @@ export default class Duo {
 
   /* -------------------------------------------------------------- loop */
 
-  /* -------------------------------------------------------------- loop */
-
   measure() {
     this.W = this.el.offsetWidth;
     this.H = this.el.offsetHeight;
+    const page = this.el.closest('.page') || document;
+    this.texts = [...page.querySelectorAll(TEXT)];
+    const nav = document.querySelector('.site-header');
+    this.ceiling = nav ? nav.getBoundingClientRect().bottom + 10 : 0;
     this.members.forEach((m) => {
       m.cx = m.root.offsetLeft + m.root.offsetWidth / 2;
       m.cy = m.root.offsetTop + m.root.offsetHeight / 2;
@@ -402,8 +426,15 @@ export default class Duo {
     this.last = now;
     const t = now / 1000;
 
-    /* Push the eye / expression strengths into the filters only when they change. */
+    /* Push the eye / expression strengths to the sketch — the GPU one if
+       it's up, otherwise into the SVG filter (only when they change). */
     for (const m of this.members) {
+      if (m.neon?.ready) {
+        const [e, h, md] = m.warps;
+        m.neon.set(e.v, h.v, md.v);
+        m.neon.render();
+        continue;
+      }
       for (const w of m.warps) {
         if (!w.node) continue;
         const v = Math.round(w.v * 10) / 10;
@@ -414,76 +445,128 @@ export default class Duo {
       }
     }
 
-    /* Orbit: the rocks wander an ellipse wrapped around both sketches,
-       each with its own wobble; hovering one slows it so it can be clicked. */
     const [a, b] = this.members;
     if (!a.size) return;
-    const cx = (a.cx + b.cx) / 2;
-    const cy = (a.cy + b.cy) / 2;
-    const ang = Math.atan2(b.cy - a.cy, b.cx - a.cx);
-    const half = Math.hypot(b.cx - a.cx, b.cy - a.cy) / 2;
-    const ra = half + a.size * 0.72;
-    const rb = a.size * 0.82;
-    const ca = Math.cos(ang);
-    const sa = Math.sin(ang);
     const o = this.orb;
-    /* The orbit lives in the sketches' box; the rocks' layer is the viewport. */
-    const box = this.el.getBoundingClientRect();
+    const f = this.f;
+    /* Ease the hand-over so the orbit bends rather than slides. */
+    const fe = f * f * (3 - 2 * f);
 
-    /* Journey: a loose ring round the middle of the screen, then the
-       collision — a slow drift inwards that becomes a rush, swirling as
-       they close, until their surfaces meet. */
+    /* Home orbit: a tilted ellipse wrapped around both sketches. It lives in
+       the sketches' box; the rocks' layer is the viewport. */
+    const box = this.el.getBoundingClientRect();
+    const hx = box.left + (a.cx + b.cx) / 2;
+    const hy = box.top + (a.cy + b.cy) / 2;
+    const hTilt = Math.atan2(b.cy - a.cy, b.cx - a.cx);
+    const hRx = Math.hypot(b.cx - a.cx, b.cy - a.cy) / 2 + a.size * 0.56;
+    const hRy = a.size * 0.74;
+
+    /* Travelling orbit: the same loop, round the middle of the screen. */
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    const mx = vw / 2;
-    const my = vh / 2;
-    const rx = Math.min(vw * 0.3, 460);
-    const ry = Math.min(vh * 0.3, 250);
-    const e = this.k * this.k * this.k;
-    const cs = Math.cos(e * SWIRL);
-    const sn = Math.sin(e * SWIRL);
+    const tRx = Math.min(vw * 0.3, 460);
+    const tRy = Math.min(vh * 0.3, 250);
+
+    const cx = hx + (vw / 2 - hx) * fe;
+    const cy = hy + (vh / 2 - hy) * fe;
+    const tilt = hTilt + (-0.14 - hTilt) * fe;
+    const ct = Math.cos(tilt);
+    const st = Math.sin(tilt);
+    const rx = hRx + (tRx - hRx) * fe;
+    const ry = hRy + (tRy - hRy) * fe;
+
+    /* Meeting: the orbits tighten slowly, then all at once. */
+    const e = Math.pow(this.k, 2.2);
+
+    /* Both heads, so the rocks can swing round them instead of across. */
+    const avoid = 1 - fe;
+    const faces = avoid > 0
+      ? this.members.map((m) => {
+        const r = m.body.getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height * FIGURE.y, rx: r.width * FIGURE.rx, ry: r.height * FIGURE.ry };
+      })
+      : [];
+    /* The welcome copy's right edge — a wall the orbit keeps to the right of. */
+    const wall = avoid > 0 ? this.texts.reduce((m, el) => Math.max(m, el.getBoundingClientRect().right), -Infinity) : -Infinity;
 
     for (const act of this.actions) {
+      const { r, size, phase } = act.orbit;
       act.pace += ((act.hovered ? 0 : 1) - act.pace) * Math.min(1, dt * 6);
-      act.angle += dt * 0.17 * act.pace;
-      const i = act.i;
-      const wr = 1 + 0.07 * Math.sin(t * 1.3 + i * 2.1);
-      const ex = Math.cos(act.angle) * ra * wr;
-      const ey = Math.sin(act.angle) * rb * wr;
-      let lx = cx + ex * ca - ey * sa + Math.sin(t * 2.3 + i * 1.7) * 7;
-      let ly = cy + ex * sa + ey * ca + Math.cos(t * 1.9 + i * 1.1) * 7;
-      lx = clamp(lx, o * 0.6, this.W - o * 0.6);
-      ly = clamp(ly, o * 0.6, this.H - o * 0.6);
-      let x = box.left + lx;
-      let y = box.top + ly;
-      let s = 1;
 
-      if (this.f > 0) {
-        const slot = act.slot ?? 0;
-        let px = mx + Math.cos(slot) * rx + Math.sin(t * 0.9 + i * 1.7) * 6;
-        let py = my + Math.sin(slot) * ry + Math.cos(t * 0.8 + i * 1.3) * 6;
-        if (e > 0) {
-          s = 1 + 0.4 * e;
-          const dx = px - mx;
-          const dy = py - my;
-          const len = Math.hypot(dx, dy) || 1;
-          const contact = o * 0.36 * s;
-          const r = contact + (len - contact) * (1 - e);
-          px = mx + (dx / len) * r * cs - (dy / len) * r * sn;
-          py = my + (dx / len) * r * sn + (dy / len) * r * cs;
-        }
-        x += (px - x) * this.f;
-        y += (py - y) * this.f;
+      /* Distance from the centre, as a fraction of the orbit: shrinks to
+         touching as they meet, breathing a little all the while. */
+      const contact = (o * 0.34 * size) / Math.max(1, Math.min(rx, ry) * r);
+      const shrink = contact + (1 - contact) * (1 - e);
+      const breathe = 1 + 0.07 * Math.sin(t * 0.9 + phase) * (1 - e);
+      const rr = r * shrink * breathe;
+
+      /* Clockwise, always (the angle rises on a y-down screen). Each one
+         surges and lags on its own rhythm, and a tighter orbit runs faster —
+         like anything caught spiralling in. */
+      if (!this.gone) {
+        const surge = 1 + 0.3 * Math.sin(t * 0.37 + phase);
+        const pull = Math.min(Math.pow(shrink, -1.5), 9);
+        act.angle += dt * SPEED * act.pace * surge * pull;
       }
 
+      const ex = Math.cos(act.angle) * rx * rr;
+      const ey = Math.sin(act.angle) * ry * rr;
+      let x = cx + ex * ct - ey * st + Math.sin(t * 2.3 + phase * 1.7) * 6 * (1 - e);
+      let y = cy + ex * st + ey * ct + Math.cos(t * 1.9 + phase * 1.1) * 6 * (1 - e);
+      /* The rock's drawn radius at its largest on this orbit (the near side
+         of the ring is drawn 10% bigger). */
+      const rockR = o * 0.42 * size * 1.1;
+      if (fe < 1) {
+        /* At home, stay inside the sketches' box and below the header —
+           easing away from the edges rather than sliding along them. */
+        const band = o * 0.9;
+        const top = Math.max(box.top + o * 0.6, this.ceiling + rockR * 1.15);
+        const left = Math.max(box.left + o * 0.6, wall + 16 + rockR);
+        const bx = soften(x, left, box.right - o * 0.6, band);
+        const by = soften(y, top, box.bottom - o * 0.6, band);
+        x = bx + (x - bx) * fe;
+        y = by + (y - by) * fe;
+      }
+
+      if (avoid > 0) {
+        /* Never across either figure or their names. Each pushes the path
+           outwards inside a band around it, smoothly — so a rock arcs round
+           a sketch the way something in orbit rounds a planet. The header
+           is a ceiling; where the two disagree a few passes settle it, so
+           a rock slides round instead of being shoved from one into the
+           other. */
+        for (let pass = 0; pass < 4; pass++) {
+          for (const fc of faces) {
+            const dx = x - fc.x;
+            const dy = y - fc.y;
+            const d = Math.hypot(dx / (fc.rx + rockR), dy / (fc.ry + rockR));
+            if (d < 2) {
+              const push = ((1 + (d * d) / 4) / Math.max(d, 0.05) - 1) * avoid;
+              x += dx * push;
+              y += dy * push;
+            }
+          }
+          const lo = this.ceiling + rockR;
+          if (y < lo) y += (lo - y) * avoid;
+          x = Math.min(Math.max(x, rockR), vw - rockR);
+        }
+      }
+
+      /* Tilted ring: the near side (lower) a touch larger than the far side;
+         closing in, they also come up towards the viewer. */
+      const depth = Math.sin(act.angle) * (1 - e);
+      const s = size * (1 + 0.1 * depth) * (1 + 0.4 * e);
+      act.x = x;
+      act.y = y;
+      act.btn.style.zIndex = String(Math.round(10 + depth * 5));
       act.btn.style.transform = `translate3d(${(x - o / 2).toFixed(1)}px, ${(y - o / 2).toFixed(1)}px, 0) scale(${s.toFixed(3)})`;
     }
   };
 
   resize() {
     this.measure();
-    this.members.forEach((m) => m.blood.resize());
     this.rocks.resize();
+    this.members.forEach((m) => m.neon?.resize());
   }
 
   destroy() {
@@ -494,7 +577,7 @@ export default class Duo {
     this.members.forEach((m) => {
       m.humCall?.kill();
       gsap.killTweensOf([m.root, m.body, m.svg, m.gasp, ...m.warps]);
-      m.blood.destroy();
+      m.neon?.destroy();
     });
   }
 }

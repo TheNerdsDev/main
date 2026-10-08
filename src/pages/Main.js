@@ -6,6 +6,9 @@ import FxLayer from '../fx/FxLayer.js';
 import Duo from '../fx/Duo.js';
 import RockStage from '../fx/RockStage.js';
 import Scatter from '../fx/Scatter.js';
+import { Crumble } from '../fx/Zap.js';
+import WaterReveal from '../fx/WaterReveal.js';
+import PlanetShower from '../fx/PlanetShower.js';
 import { PALETTE } from '../gl/World.js';
 import { clamp } from '../fx/particles.js';
 
@@ -14,13 +17,16 @@ import { clamp } from '../fx/particles.js';
  *
  *   Home → About   the first scroll takes over: the heading and subtext
  *                  fade away on their own, the page glides down to About,
- *                  and the four rocks come along with you — they let go of
- *                  the sketches and settle in a ring around the screen.
+ *                  and the four rocks come along with you, still circling
+ *                  (clockwise, unevenly), now round the screen.
  *   About          now your scroll drives everything, both ways: the
  *                  photos and text unfold, and over the very same scroll
- *                  the rocks are drawn together, collide in the centre and
- *                  scatter in pieces across the page.
+ *                  the rocks spiral in, collide in the centre and crumble,
+ *                  their pieces swirling out across the page.
  *   About → Home   scroll back above About and it glides you home again.
+ *
+ * Below About, the work gets its own pinned reel: the scroll pulls the
+ * projects sideways past you, then lets go to the footer.
  */
 const GLIDE = 1.6;
 const glideEase = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
@@ -51,7 +57,22 @@ export default class Main extends Page {
     this.aboutText = q('.about-text');
     this.frames = [...this.el.querySelectorAll('.about-frame')];
     this.button = q('.about-button');
+    this.finale = q('.finale');
+    this.finaleButton = q('.finale-button');
+    this.buttonWrap = q('.about-cta');
     this.buttonText = q('.about-button-text');
+    this.show = q('.showcase');
+    this.showTrack = q('.showcase-track');
+    this.showCards = [...this.el.querySelectorAll('.show-card')];
+    this.showImgs = this.showCards.map((c) => c.querySelector('.show-card-img'));
+    this.showNow = q('.showcase-count-now');
+    this.showBar = q('.showcase-progress-bar');
+    this.showX = 0;
+    this.showIn = -1;
+    /* Hovering a card floods it with water from the pointer outwards, and
+       the project's video plays under it. */
+    const showStage = q('.showcase-stage');
+    if (showStage && WaterReveal.supported()) this.water = new WaterReveal(showStage, this.showCards);
 
     this.fx = new FxLayer();
     this.stage = new RockStage();
@@ -64,6 +85,7 @@ export default class Main extends Page {
     this.aboutP = 0;
     this.rockP = 0;
     this.buildAbout();
+    this.buildShowcase();
 
     /* Where we are: 'home' | 'toAbout' | 'about' | 'toHome'. */
     this.state = 'home';
@@ -80,8 +102,101 @@ export default class Main extends Page {
       if (this.state === 'home') this.goAbout();
     };
     this.cue?.addEventListener('click', this.onCue);
+    this.bindButtonShake();
+    this.buildFinale();
 
     this.measure();
+  }
+
+  /**
+   * The About Us and Contact us buttons are magnetic: once the cursor comes
+   * within reach, a button leans after it — following its movement, but
+   * never more than PULL px from home — and eases back when the cursor
+   * leaves. (Hover also grows it; see the CSS.)
+   */
+  bindButtonShake() {
+    if (!window.matchMedia('(hover: hover)').matches) return;
+    const PULL = 22;
+    const springs = [this.button, this.finaleButton].filter(Boolean).map((btn) => ({
+      btn, x: 0, y: 0, tx: 0, ty: 0
+    }));
+    if (!springs.length) return;
+    let on = false;
+    this.onButtonMove = (e) => {
+      for (const s of springs) {
+        const r = s.btn.getBoundingClientRect();
+        if (!r.width) continue;
+        /* Where it sits without the lean, so the pull doesn't feed on itself. */
+        const cx = r.left + r.width / 2 - s.x;
+        const cy = r.top + r.height / 2 - s.y;
+        const dx = e.clientX - cx;
+        const dy = e.clientY - cy;
+        const reach = r.width / 2 + 70;
+        const d = Math.hypot(dx, dy);
+        if (d < reach) {
+          /* Follows the cursor, softly capped at the edge of its radius. */
+          const k = (PULL * Math.tanh(d / (reach * 0.5))) / Math.max(d, 1);
+          s.tx = dx * k;
+          s.ty = dy * k;
+        } else {
+          s.tx = 0;
+          s.ty = 0;
+        }
+      }
+      if (!on && springs.some((s) => s.tx || s.ty)) {
+        on = true;
+        gsap.ticker.add(this.buttonSpring);
+      }
+    };
+    this.buttonSpring = () => {
+      const k = 1 - Math.pow(1 - 0.16, gsap.ticker.deltaRatio(60));
+      let busy = false;
+      for (const s of springs) {
+        s.x += (s.tx - s.x) * k;
+        s.y += (s.ty - s.y) * k;
+        if (!s.tx && !s.ty && Math.abs(s.x) + Math.abs(s.y) < 0.05) {
+          if (s.x || s.y) {
+            s.x = s.y = 0;
+            s.btn.style.removeProperty('--nx');
+            s.btn.style.removeProperty('--ny');
+          }
+          continue;
+        }
+        busy = true;
+        s.btn.style.setProperty('--nx', `${s.x.toFixed(2)}px`);
+        s.btn.style.setProperty('--ny', `${s.y.toFixed(2)}px`);
+      }
+      if (!busy) {
+        gsap.ticker.remove(this.buttonSpring);
+        on = false;
+      }
+    };
+    window.addEventListener('pointermove', this.onButtonMove, { passive: true });
+  }
+
+  /**
+   * The closing section: a planet shower each time it scrolls into view
+   * (from above), and the heading and button arriving with it. Without
+   * WebGL2 (or with reduced motion) the text simply shows.
+   */
+  buildFinale() {
+    if (!this.finale) return;
+    const reveal = () => {
+      this.finale.classList.remove('is-in');
+      void this.finale.offsetWidth;
+      this.finale.classList.add('is-in');
+    };
+    const canvas = this.finale.querySelector('.planet-canvas');
+    if (canvas && PlanetShower.supported()) {
+      this.planets = new PlanetShower(this.finale, canvas, { onShower: reveal });
+    }
+    if (!this.planets || this.planets.dead) {
+      canvas?.remove();
+      this.finaleIO = new IntersectionObserver((entries) => {
+        if (entries.some((e) => e.isIntersecting)) this.finale.classList.add('is-in');
+      }, { threshold: 0.3 });
+      this.finaleIO.observe(this.finale);
+    }
   }
 
   get lenis() { return this.app?.scroll?.lenis; }
@@ -193,7 +308,9 @@ export default class Main extends Page {
 
     const buttonAt = textAt + Math.max(0, lines.length - 1) * LINE_STEP + 0.55;
     if (this.button) {
-      tl.fromTo(this.button, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' }, buttonAt);
+      /* Reveal the wrapper, never the button: the button's own scale and
+         translate belong to the hover. */
+      tl.fromTo(this.buttonWrap || this.button, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' }, buttonAt);
       /* The label draws together from wide tracking as it arrives. */
       tl.fromTo(this.buttonText, { letterSpacing: '0.7em', opacity: 0 }, { letterSpacing: '0.22em', opacity: 1, duration: 0.7, ease: 'power3.out' }, buttonAt + 0.1);
     }
@@ -205,10 +322,69 @@ export default class Main extends Page {
     this.aboutTl = tl;
   }
 
+  /**
+   * The work reel: heading and cards rise in as the section arrives (scrubbed,
+   * so it reverses too). The sideways travel is driven from loop().
+   */
+  buildShowcase() {
+    if (!this.show) return;
+    const lines = this.show.querySelectorAll('.showcase-title .line-inner');
+    const bits = this.show.querySelectorAll('.showcase-all, .showcase-count, .showcase-progress');
+    const tl = gsap.timeline({ paused: true, defaults: { ease: 'none' } });
+    tl.fromTo(lines, { yPercent: 115 }, { yPercent: 0, duration: 0.5, stagger: 0.12, ease: 'power3.out' }, 0)
+      .fromTo(bits, { opacity: 0 }, { opacity: 1, duration: 0.4, stagger: 0.08 }, 0.15)
+      .fromTo(this.showCards, { y: 90, opacity: 0 }, { y: 0, opacity: 1, duration: 0.55, stagger: 0.07, ease: 'power3.out' }, 0.2);
+    this.showTl = tl;
+    this.showP = -1;
+  }
+
   measure() {
+    if (this.show) {
+      /* Pinned reel on wider screens: the runway is the sideways distance,
+         plus a short hold on the last card. */
+      this.showPinned = store.html.classList.contains('webgl') && window.innerWidth >= 768;
+      this.showTravel = this.showPinned ? Math.max(0, this.showTrack.scrollWidth - window.innerWidth) : 0;
+      this.show.style.height = this.showPinned ? `${Math.round(window.innerHeight * 1.25 + this.showTravel)}px` : '';
+      if (!this.showPinned) this.showTrack.style.transform = '';
+    }
     if (!this.about) return;
     this.aboutTop = this.about.getBoundingClientRect().top + store.scroll;
     this.aboutH = this.about.offsetHeight;
+    if (this.show) this.showTop = this.show.getBoundingClientRect().top + store.scroll;
+  }
+
+  /** Scroll-driven reel: reveal, sideways travel, counter, progress, parallax. */
+  updateShowcase(scroll, vh, ease) {
+    if (!this.show || this.showTop == null) return;
+    const reveal = clamp((scroll + vh - this.showTop) / (vh * 0.75), 0, 1);
+    const p = ease(Math.max(this.showP, 0), reveal);
+    if (p !== this.showP) {
+      this.showP = p;
+      this.showTl.progress(p);
+    }
+    if (!this.showPinned) return;
+
+    const q = clamp((scroll - this.showTop) / Math.max(1, this.showTravel), 0, 1);
+    this.showX = ease(this.showX, -q * this.showTravel);
+    this.showTrack.style.transform = `translate3d(${this.showX.toFixed(1)}px, 0, 0)`;
+    this.showBar.style.transform = `scaleX(${q.toFixed(4)})`;
+
+    const n = this.showCards.length;
+    const now = Math.min(n, Math.floor(q * n) + 1);
+    if (now !== this.showIn) {
+      this.showIn = now;
+      this.showNow.textContent = String(now).padStart(2, '0');
+    }
+
+    /* Each photo drifts against the travel, so the reel has depth. */
+    const vw = window.innerWidth;
+    this.showCards.forEach((card, i) => {
+      const img = this.showImgs[i];
+      if (!img) return;
+      const c = card.offsetLeft + card.offsetWidth / 2 + this.showX;
+      if (c < -vw * 0.5 || c > vw * 1.5) return;
+      img.style.transform = `translate3d(${(((c - vw / 2) / vw) * -7).toFixed(2)}%, 0, 0) scale(1.14)`;
+    });
   }
 
   /* ----------------------------------------------------------- loop */
@@ -242,11 +418,20 @@ export default class Main extends Page {
       const broken = this.rockP >= COLLIDE;
       this.duo.setJourney(this.journey.f, k, broken);
 
-      const { at, dirs } = this.duo.meeting();
+      const meet = this.duo.meeting();
+      /* The moment they meet, going forwards: a cloud of pulverised rock. */
+      if (broken && !this.broken) this.fx.add(new Crumble({ ...meet, scale: clamp(store.width / 1400, 0.6, 1.2) }));
+      this.broken = broken;
       /* Once About is released the debris scrolls away with it. */
       const release = Math.max(0, scroll - end);
-      this.scatter.update(clamp((this.rockP - COLLIDE) / (SCATTERED - COLLIDE), 0, 1), at, dirs, this.duo.rockRadius(), -release);
+      this.scatter.update(clamp((this.rockP - COLLIDE) / (SCATTERED - COLLIDE), 0, 1), meet, this.duo.rockRadius(), -release);
+      /* Once broken, the debris is drawn behind the page — it floats behind
+         the text and photos, never over them. A thrown rock stays in front. */
+      const behind = broken ? '2' : '';
+      if (this.stage.canvas.style.zIndex !== behind) this.stage.canvas.style.zIndex = behind;
     }
+
+    this.updateShowcase(scroll, vh, ease);
   }
 
   resize() {
@@ -263,6 +448,7 @@ export default class Main extends Page {
     this.fx.resize();
     this.stage.resize();
     this.duo?.resize();
+    this.planets?.resize();
   }
 
   /* ------------------------------------------------------ enter/leave */
@@ -296,7 +482,7 @@ export default class Main extends Page {
   }
 
   onLeave(tl) {
-    tl.to([this.duoEl, this.about].filter(Boolean), { opacity: 0, duration: 0.45, ease: 'power2.in' }, 0);
+    tl.to([this.duoEl, this.about, this.show, this.finale].filter(Boolean), { opacity: 0, duration: 0.45, ease: 'power2.in' }, 0);
   }
 
   destroy() {
@@ -304,8 +490,14 @@ export default class Main extends Page {
     /* Never leave the scroll locked behind us. */
     if (this.state === 'toAbout' || this.state === 'toHome') this.lenis?.start();
     this.cue?.removeEventListener('click', this.onCue);
+    if (this.onButtonMove) window.removeEventListener('pointermove', this.onButtonMove);
+    if (this.buttonSpring) gsap.ticker.remove(this.buttonSpring);
     gsap.killTweensOf([this.cue, this.journey, ...this.heroLines()]);
     this.aboutTl?.kill();
+    this.showTl?.kill();
+    this.water?.destroy();
+    this.planets?.destroy();
+    this.finaleIO?.disconnect();
     this.scatter.destroy();
     this.duo?.destroy();
     this.fx.destroy();

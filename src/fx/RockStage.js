@@ -46,12 +46,34 @@ export default class RockStage {
     this.chunkGeos = Array.from({ length: 8 }, (_, i) => makeAsteroid({ seed: 101 + i * 13, detail: 1, chunk: true, rough: 1.5 }));
     this.chunkMat = rockMaterial(true, { bump: 1.1, seed: 9.1 });
 
+    this.warm();
+
     this.chunks = [];
     this.flying = new Set();
     /* Anything else that needs frames drawn (e.g. the scattered fragments) holds the stage open. */
     this.holders = new Set();
     this.running = false;
     this.resize();
+  }
+
+  /**
+   * Compile the rock shaders before anything is thrown — otherwise the
+   * first throw stalls while the GPU builds them.
+   */
+  warm() {
+    const temp = [new Mesh(this.rockGeo, this.rockMat), new Mesh(this.chunkGeos[0], this.chunkMat)];
+    temp.forEach((m) => { m.position.z = -5000; this.scene.add(m); });
+    const done = () => temp.forEach((m) => this.scene.remove(m));
+    try {
+      const p = this.renderer.compileAsync ? this.renderer.compileAsync(this.scene, this.camera) : null;
+      if (p) p.then(done, done);
+      else {
+        this.renderer.compile(this.scene, this.camera);
+        done();
+      }
+    } catch {
+      done();
+    }
   }
 
   resize() {

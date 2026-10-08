@@ -2,7 +2,7 @@ import gsap from 'gsap';
 
 /**
  * A full-screen 2D canvas above the page for short-lived effects —
- * the dust and grit of thrown rocks, impacts, blood mist. It only ticks while
+ * the dust and grit of thrown rocks, impacts, sparks and arcs. It only ticks while
  * at least one effect is alive, so it costs nothing when idle.
  *
  * An effect is any object with `update(dt, ctx, layer)` returning false
@@ -23,7 +23,7 @@ export default class FxLayer {
   }
 
   resize() {
-    this.dpr = Math.min(window.devicePixelRatio || 1, 2);
+    this.dpr = Math.min(window.devicePixelRatio || 1, 1.5);
     this.w = window.innerWidth;
     this.h = window.innerHeight;
     this.canvas.width = Math.round(this.w * this.dpr);

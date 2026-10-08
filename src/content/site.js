@@ -10,6 +10,8 @@ export const studio = {
   description:
     'A two-person studio building websites, software and automation for businesses that deserve better than a template.',
   email: 'hello@thenerds.studio',
+  /* The header's way to the contact page. */
+  contactLabel: "Let's talk",
   location: 'Ahmedabad, IN — working remotely',
   available: 'January 2027',
   year: '2026',
@@ -49,7 +51,8 @@ export const main = {
  *          brows = inner brow ends, browsOuter = outer ends,
  *          mouth = centre of the mouth, corners = its two corners
  *          (always listed left, then right)
- *   hit    where an incoming rock strikes and the blood starts
+ *   hit    where an incoming rock strikes (and the neon shorts out)
+ *   crown  top of the head, where the dizzy stars circle
  *   hand   where a thrown rock leaves from
  */
 export const team = [
@@ -69,6 +72,7 @@ export const team = [
       corners: [[0.44, 0.594], [0.56, 0.594]]
     },
     hit: [0.5, 0.355],
+    crown: [0.5, 0.13],
     hand: [0.86, 0.84],
     photos: ['/media/team/prem-1.svg', '/media/team/prem-2.svg', '/media/team/prem-3.svg']
   },
@@ -88,14 +92,39 @@ export const team = [
       corners: [[0.445, 0.6], [0.555, 0.6]]
     },
     hit: [0.5, 0.355],
+    crown: [0.5, 0.13],
     hand: [0.14, 0.84],
     photos: ['/media/team/meet-1.svg', '/media/team/meet-2.svg', '/media/team/meet-3.svg']
   }
 ];
 
+/* Contact page at `/contact/`. */
+export const contact = {
+  title: ['Got an idea?', "Let's talk."],
+  lead:
+    "Tell us what you're building — a website, a tool, an automation, or just a hunch you can't shake. We read everything and reply within two working days.",
+  details: [
+    { label: 'Response time', value: 'Within 48 hours' },
+    { label: 'Based in', value: 'Ahmedabad, IN — working remotely' },
+    { label: 'Available', value: 'January 2027' }
+  ]
+};
+
+/* Home-page showcase: the projects, given a section of their own. */
+export const showcase = {
+  title: ['Things we', 'built lately'],
+  more: 'All work'
+};
+
+/* The closing section of the landing page, under the planet shower. */
+export const finale = {
+  title: ['Connect to us'],
+  text: 'placeholder',
+  button: 'Contact us'
+};
+
 /* Work index at `/work/` — the card stack. */
 export const workIndex = {
-  overline: 'Independent studio — est. 2026',
   title: ['Built to be', 'Remembered'],
   intro:
     'We design and build high-performance websites for local businesses — with more going on beneath the surface.',
@@ -103,7 +132,7 @@ export const workIndex = {
 };
 
 export const info = {
-  title: ['Two people,', 'One workshop'],
+  title: ['Two nerds,', 'zero templates'],
   lead:
     'We are a small studio. That is the point — you talk to the people writing the code, every single time.',
   body: [
@@ -131,7 +160,9 @@ export const projects = [
       'A scroll-driven site for a neighbourhood salon, where every section reveals itself as you move down the page. Built around short intro films and a booking flow that takes three taps.',
     deliverables: ['Art direction', 'Scroll animation', 'Booking integration', 'Hosting'],
     link: 'https://example.com',
-    shots: 3
+    shots: 3,
+    /* Plays inside the ink when the card is hovered. Placeholder clip for now. */
+    video: '/media/sample/preview.mp4'
   },
   {
     slug: 'harbour-coffee',
@@ -144,7 +175,9 @@ export const projects = [
       'A storefront for a two-location roastery, with a menu that updates itself from the till system and a pickup-ordering flow that works on a phone in one hand.',
     deliverables: ['Brand site', 'Menu sync', 'Online ordering', 'Analytics'],
     link: 'https://example.com',
-    shots: 3
+    shots: 3,
+    /* Plays inside the ink when the card is hovered. Placeholder clip for now. */
+    video: '/media/sample/preview.mp4'
   },
   {
     slug: 'mesa-kitchen',
@@ -157,7 +190,9 @@ export const projects = [
       'A restaurant site built to make people hungry. Full-bleed food photography treated with a custom WebGL grade, and a reservation system wired straight into the floor plan.',
     deliverables: ['Front-end build', 'WebGL image grade', 'Reservations', 'CMS'],
     link: 'https://example.com',
-    shots: 3
+    shots: 3,
+    /* Plays inside the ink when the card is hovered. Placeholder clip for now. */
+    video: '/media/sample/preview.mp4'
   },
   {
     slug: 'atlas-fitness',
@@ -170,7 +205,9 @@ export const projects = [
       'A booking platform for a studio running forty classes a week. Members see a schedule that loads instantly; staff see a dashboard that replaced three spreadsheets.',
     deliverables: ['Product design', 'Booking platform', 'Staff dashboard', 'Automation'],
     link: 'https://example.com',
-    shots: 3
+    shots: 3,
+    /* Plays inside the ink when the card is hovered. Placeholder clip for now. */
+    video: '/media/sample/preview.mp4'
   },
   {
     slug: 'verde-grocer',
@@ -183,7 +220,9 @@ export const projects = [
       'A grocer with eight hundred products and no time to manage a website. We built the storefront and the automation that keeps stock, pricing and delivery slots in sync on their own.',
     deliverables: ['Storefront', 'Inventory sync', 'Delivery slots', 'Infrastructure'],
     link: 'https://example.com',
-    shots: 3
+    shots: 3,
+    /* Plays inside the ink when the card is hovered. Placeholder clip for now. */
+    video: '/media/sample/preview.mp4'
   }
 ];
 

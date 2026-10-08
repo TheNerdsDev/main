@@ -5,7 +5,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { studio, main, team, workIndex, info, projects, getNext } from '../src/content/site.js';
+import { studio, main, team, workIndex, info, contact, showcase, finale, projects, getNext } from '../src/content/site.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -55,32 +55,27 @@ ${body}
 
 /* ------------------------------------------------------------- partials */
 
+/* A label as rolling letters: on hover each letter rolls up and its twin
+   rolls in from below, in a ripple (same as the About Us button). */
+const roll = (text) =>
+  `<span class="roll" aria-hidden="true">${[...text]
+    .map((c, i) => {
+      const ch = c === ' ' ? '&nbsp;' : esc(c);
+      return `<span class="roll-char" style="--i: ${i}" data-c="${c === ' ' ? '\u00a0' : esc(c)}">${ch}</span>`;
+    })
+    .join('')}</span>`;
+
+const navItem = (href, label, on) =>
+  `<a class="nav-link roll-link${on ? ' is-current' : ''}" href="${href}" data-link aria-label="${esc(label)}"${on ? ' aria-current="page"' : ''}>${roll(label)}</a>`;
+
 const header = (current) => `  <header class="site-header">
-    <a class="logo link" href="/" data-link><span class="line-inner">${esc(studio.wordmark)}</span></a>
+    <a class="logo roll-link" href="/" data-link aria-label="${esc(studio.wordmark)} — home">${roll(studio.wordmark)}</a>
     <nav class="nav" aria-label="Primary">
-      <a class="nav-link link${current === 'info' ? ' is-current' : ''}" href="/info/" data-link><span class="line-inner">Info</span></a>
-      <span class="nav-comma" aria-hidden="true">,</span>
-      <a class="nav-link link${current === 'projects' ? ' is-current' : ''}" href="/work/" data-link><span class="line-inner">Work</span></a>
-      <span class="nav-comma" aria-hidden="true">,</span>
-      <button class="nav-link link" type="button" data-email="${esc(studio.email)}"><span class="line-inner">Contact</span></button>
-      <span class="copied" aria-hidden="true">Email copied</span>
+      ${navItem('/work/', 'Work', current === 'projects')}
+      ${navItem('/info/', 'Info', current === 'info')}
+      ${navItem('/contact/', studio.contactLabel || 'Contact', current === 'contact')}
     </nav>
   </header>`;
-
-const footer = () => `  <footer class="site-footer">
-    <dl class="metas footer-metas">
-      <div class="meta meta-email">
-        <dt class="label">Contact</dt>
-        <dd><button class="text link" type="button" data-email="${esc(studio.email)}"><span class="line-inner">${esc(studio.email)}</span></button></dd>
-        <span class="copied" aria-hidden="true">Email copied</span>
-      </div>
-      <div class="meta meta-available">
-        <dt class="label">Available</dt>
-        <dd class="text">${esc(studio.available)}</dd>
-      </div>
-    </dl>
-    <span class="copyright">&copy; ${esc(studio.year)}</span>
-  </footer>`;
 
 const mediaBlock = (src, alt, extra = '') =>
   `<div class="media-wrapper" data-media ${extra}><img class="media" src="${src}" alt="${esc(alt)}" loading="lazy" decoding="async" /></div>`;
@@ -103,7 +98,8 @@ const sketch = (m, other) => {
   return `        <div class="sketch sketch-${m.id}" data-sketch="${m.id}" style="--neon: ${m.colour}">
           <button class="sketch-hit" type="button" aria-label="${esc(m.name)}: throw a meteor at ${esc(other.name)}"></button>
           <div class="sketch-body">
-            <svg class="sketch-svg" viewBox="0 0 ${w} ${h}" aria-hidden="true">
+            <div class="sketch-svg">
+            <svg class="sketch-vector" viewBox="0 0 ${w} ${h}" aria-hidden="true">
               <defs>
                 <filter id="neon-${m.id}" x="-12%" y="-12%" width="124%" height="124%" color-interpolation-filters="sRGB">
                   <feImage class="eye-map" x="0" y="0" width="${w}" height="${h}" preserveAspectRatio="none" result="eyeMap" />
@@ -131,10 +127,49 @@ const sketch = (m, other) => {
               </defs>
               <image href="${m.sketch}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet" filter="url(#neon-${m.id})" />
             </svg>
-            <canvas class="sketch-blood" aria-hidden="true"></canvas>
+            </div>
           </div>
           <span class="sketch-name">${esc(m.name)}</span>
         </div>`;
+};
+
+/* The work, given a section of its own on the landing page: a pinned
+   reel that the scroll pulls sideways (see Main.js). */
+const showcaseSection = () => {
+  const pad = (n) => String(n).padStart(2, '0');
+  const cards = projects
+    .map((p, i) => `          <a class="show-card" href="/work/${p.slug}/" data-link data-cursor="View"${p.video ? ` data-video="${esc(p.video)}"` : ''} style="--accent: ${p.accent}">
+            <span class="show-card-inner">
+              <span class="show-card-media"><img class="show-card-img" src="/media/${p.slug}/featured.jpg" alt="${esc(p.name)}" loading="lazy" decoding="async" /></span>
+              <span class="show-card-meta">
+                <span class="show-card-no">${pad(i + 1)}</span>
+                <span class="show-card-name">${esc(p.name)}</span>
+                <span class="show-card-year">${esc(p.year)}</span>
+              </span>
+              <span class="show-card-excerpt">${esc(p.excerpt)} &middot; ${esc(p.role)}</span>
+            </span>
+          </a>`)
+    .join('\n');
+
+  return `    <section class="showcase" id="work" aria-labelledby="showcase-title">
+      <div class="showcase-stage">
+        <div class="showcase-head">
+          <div class="showcase-heading">
+            <h2 class="showcase-title" id="showcase-title">${showcase.title.map((l) => `<span class="line"><span class="line-inner">${esc(l)}</span></span>`).join(' ')}</h2>
+            <a class="showcase-all" href="/work/" data-link data-cursor="Open">
+              <span class="showcase-all-text">${esc(showcase.more)}</span>
+              <span class="showcase-all-sub">${projects.length} projects</span>
+              <svg class="showcase-all-arrow" viewBox="0 0 48 48" aria-hidden="true"><path d="M10 38 38 10M16 10h22v22" /></svg>
+            </a>
+          </div>
+          <span class="showcase-count" aria-hidden="true"><span class="showcase-count-now">01</span> / ${pad(projects.length)}</span>
+        </div>
+        <div class="showcase-track">
+${cards}
+        </div>
+        <div class="showcase-progress" aria-hidden="true"><span class="showcase-progress-bar"></span></div>
+      </div>
+    </section>`;
 };
 
 const mainPage = () => {
@@ -147,13 +182,14 @@ const mainPage = () => {
   ).join('\n');
 
   /* Each letter carries a copy of itself (data-c) for the hover roll. */
-  const buttonChars = [...main.about.button]
+  const rollChars = (text) => [...text]
     .map((c, i) => {
       const ch = c === ' ' ? '&nbsp;' : esc(c);
       const copy = c === ' ' ? '\u00a0' : esc(c);
       return `<span class="about-button-char" style="--i: ${i}" data-c="${copy}">${ch}</span>`;
     })
     .join('');
+  const buttonChars = rollChars(main.about.button);
 
   const frame = (m, side) => `      <figure class="about-frame about-frame-${side}" data-frame="${m.id}" style="--neon: ${m.colour}">
         <div class="about-photos">
@@ -188,25 +224,6 @@ ${header('main')}
       </div>
 
       <div class="duo" data-duo>
-        <svg class="duo-defs" width="0" height="0" aria-hidden="true" focusable="false">
-          <!-- Wet blood: melt the drawn circles into one liquid surface
-               (blur + alpha threshold), shade it as a raised bead of liquid,
-               then lay a glossy highlight on top. -->
-          <filter id="blood-goo" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="2.4" result="soft" />
-            <feColorMatrix in="soft" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 26 -11" result="goo" />
-            <feGaussianBlur in="goo" stdDeviation="2" result="bump" />
-            <feDiffuseLighting in="bump" surfaceScale="3" diffuseConstant="1.2" lighting-color="#ffffff" result="shade">
-              <feDistantLight azimuth="235" elevation="40" />
-            </feDiffuseLighting>
-            <feComposite in="goo" in2="shade" operator="arithmetic" k1="1" k2="0" k3="0" k4="0" result="shaded" />
-            <feSpecularLighting in="bump" surfaceScale="4.5" specularConstant="1.35" specularExponent="30" lighting-color="#fff0f0" result="spec">
-              <feDistantLight azimuth="235" elevation="46" />
-            </feSpecularLighting>
-            <feComposite in="spec" in2="goo" operator="in" result="gloss" />
-            <feComposite in="shaded" in2="gloss" operator="arithmetic" k1="0" k2="1" k3="0.8" k4="0" />
-          </filter>
-        </svg>
 ${sketch(prem, meet)}
 ${sketch(meet, prem)}
         <div class="duo-actions" role="group" aria-label="Space rocks">
@@ -223,15 +240,33 @@ ${actions}
 ${frame(meet, 'left')}
         <div class="about-body">
           <p class="about-text">${team.reduce((t, m) => t.replace(m.name,`<span class="about-name" style="color: ${m.colour}">${m.name}</span>`), esc(main.about.text))}</p>
-          <a class="about-button" href="/info/" data-link aria-label="${esc(main.about.button)}">
-            <span class="about-button-text" aria-hidden="true">${buttonChars}</span>
-          </a>
+          <div class="about-cta">
+            <a class="about-button" href="/info/" data-link aria-label="${esc(main.about.button)}">
+              <span class="about-button-text" aria-hidden="true">${buttonChars}</span>
+            </a>
+          </div>
         </div>
 ${frame(prem, 'right')}
       </div>
     </section>
 
-${footer()}
+${showcaseSection()}
+
+    <!-- The finale: planets shower down from the seam above and pile up
+         along the bottom (fx/PlanetShower.js). -->
+    <section class="finale" id="connect" aria-labelledby="finale-title">
+      <canvas class="planet-canvas" aria-hidden="true"></canvas>
+      <div class="finale-body">
+        <h2 class="finale-title" id="finale-title">${finale.title.map((l) => `<span class="line"><span class="line-inner">${esc(l)}</span></span>`).join(' ')}</h2>
+        <p class="finale-text">${esc(finale.text)}</p>
+        <div class="finale-cta">
+          <a class="about-button finale-button" href="/contact/" data-link aria-label="${esc(finale.button)}">
+            <span class="about-button-text" aria-hidden="true">${rollChars(finale.button)}</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
   </div>
 </div>`
   });
@@ -275,7 +310,6 @@ const projectsPage = () => {
 ${header('projects')}
 
     <div class="text-wrapper">
-      <span class="overline"><span class="line-inner">${esc(workIndex.overline)}</span></span>
       <h1 class="title" data-split>
         ${splitTitle(workIndex.title)}
       </h1>
@@ -298,7 +332,6 @@ ${previews}
       </aside>
     </section>
 
-${footer()}
   </div>
 </div>`
   });
@@ -354,7 +387,6 @@ ${shots}
       </a>
     </div>
 
-${footer()}
   </div>
 </div>`
   });
@@ -389,7 +421,6 @@ const infoPage = () => {
   <div class="page-content" id="page-content" tabindex="-1">
 ${header('info')}
 
-    <a class="back link" href="/" data-link><span class="line-inner"><span class="back-arrow" aria-hidden="true">&larr;</span>Index</span></a>
 
     <h1 class="title" data-split>
         ${splitTitle(info.title)}
@@ -420,7 +451,52 @@ ${services}
       <ul class="social-list">${social}</ul>
     </section>
 
-${footer()}
+  </div>
+</div>`
+  });
+};
+
+/* -------------------------------------------------------------- contact */
+
+const contactPage = () => {
+  const details = contact.details
+    .map((d) => `        <div class="contact-detail"><dt class="label">${esc(d.label)}</dt><dd class="text">${esc(d.value)}</dd></div>`)
+    .join('\n');
+  const social = studio.social
+    .map((s) => `<li><a class="text link" href="${esc(s.url)}" target="_blank" rel="noopener noreferrer"><span class="line-inner">${esc(s.label)} &nearr;</span></a></li>`)
+    .join('');
+
+  return shell({
+    title: `${studio.name} — Contact`,
+    description: contact.lead,
+    pageId: 'contact',
+    body: `<div class="page" id="contact" data-page="contact">
+  <div class="page-content" id="page-content" tabindex="-1">
+${header('contact')}
+
+    <h1 class="title" data-split>
+        ${splitTitle(contact.title)}
+    </h1>
+
+    <div class="contact-grid">
+      <p class="lead" data-split-lines>${esc(contact.lead)}</p>
+
+      <div class="contact-email">
+        <span class="label">Write to us</span>
+        <button class="contact-address" type="button" data-email="${esc(studio.email)}">
+          <span class="contact-address-text">${esc(studio.email)}</span>
+          <span class="contact-address-hint">Click to copy</span>
+        </button>
+        <span class="copied" aria-live="polite">Copied to your clipboard</span>
+        <a class="contact-mail link" href="mailto:${esc(studio.email)}"><span class="line-inner">Or open it in your mail app &rarr;</span></a>
+      </div>
+
+      <dl class="contact-details">
+${details}
+        <div class="contact-detail"><dt class="label">Elsewhere</dt><dd><ul class="social-list">${social}</ul></dd></div>
+      </dl>
+    </div>
+
   </div>
 </div>`
   });
@@ -439,6 +515,7 @@ console.log('Generating pages…');
 write('', mainPage());
 write('work', projectsPage());
 write('info', infoPage());
+write('contact', contactPage());
 projects.forEach((p) => write(join('work', p.slug), workPage(p)));
 
 /* favicon */
@@ -449,4 +526,4 @@ writeFileSync(
   'utf8'
 );
 console.log('  ✓ public/favicon.svg');
-console.log(`Done — ${projects.length + 3} pages.`);
+console.log(`Done — ${projects.length + 4} pages.`);

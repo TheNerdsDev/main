@@ -96,7 +96,7 @@ export class RockThrow {
 
 /**
  * What the burst leaves in the air: a cloud of pulverised rock dust that
- * billows back towards the thrower, fast grit, and a fine mist of blood.
+ * billows back towards the thrower, and fast grit.
  * The big fragments are 3D, on the RockStage.
  */
 export class RockImpact {
@@ -126,14 +126,6 @@ export class RockImpact {
       };
     });
 
-    this.mist = Array.from({ length: 46 }, () => {
-      const a = fwd + rand(-0.9, 0.9);
-      const v = rand(120, 520) * scale;
-      return {
-        x: this.x, y: this.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - rand(30, 140),
-        r: rand(0.5, 1.7) * scale, life: 0, max: rand(0.5, 1.1)
-      };
-    });
   }
 
   update(dt, ctx) {
@@ -167,21 +159,8 @@ export class RockImpact {
       ctx.stroke();
     }
 
-    /* Blood mist along the line of travel. */
-    this.mist = this.mist.filter((p) => (p.life += dt) < p.max);
-    ctx.fillStyle = '#7a0410';
-    for (const p of this.mist) {
-      const k = p.life / p.max;
-      p.vx *= 1 - 1.4 * dt; p.vy *= 1 - 1.4 * dt; p.vy += 1100 * dt;
-      p.x += p.vx * dt; p.y += p.vy * dt;
-      const sp = Math.hypot(p.vx, p.vy);
-      ctx.globalAlpha = 0.85 * (1 - k * k);
-      ctx.beginPath();
-      ctx.ellipse(p.x, p.y - sy, p.r * (1 + sp / 600), p.r, Math.atan2(p.vy, p.vx), 0, Math.PI * 2);
-      ctx.fill();
-    }
     ctx.globalAlpha = 1;
 
-    return this.dust.length || this.grit.length || this.mist.length;
+    return this.dust.length || this.grit.length;
   }
 }

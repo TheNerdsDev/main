@@ -92,7 +92,6 @@ export default class World {
       uRes:        { value: new Vector2(store.width * store.dpr, store.height * store.dpr) },
       uDpr:        { value: store.dpr },
       uInkAmount:  { value: store.isTouch ? 0.35 : 1 },
-      uCurve:      { value: 0 },
       uFade:       { value: 1 },
       uIntro:      { value: 0 },
       tInk:        { value: null },
@@ -157,16 +156,6 @@ export default class World {
     });
     tween(this.uniforms.uAccent);
     tween(this.compositeMaterial.uniforms.uAccent);
-  }
-
-  setCurve(on) {
-    store.isCurveMode = on;
-    gsap.to(this.uniforms.uCurve, {
-      value: on ? 1 : 0,
-      duration: 1.4,
-      ease: 'power3.inOut',
-      overwrite: 'auto'
-    });
   }
 
   reveal() {

@@ -5,7 +5,7 @@
   position: relative;
   overflow: hidden;
   aspect-ratio: var(--ar);
-  background: rgba(244, 243, 238, 0.04);
+  background: rgba(var(--c-ink-rgb), 0.04);
 }
 .media {
   position: absolute; inset: 0;
@@ -14,26 +14,6 @@
 }
 html.webgl .media { visibility: hidden; }
 html.webgl .media-wrapper { background: none; }
-
-/* =================================================================
-   CURVE TOGGLE
-   ================================================================= */
-.curve-toggle {
-  position: fixed;
-  top: var(--unit); right: var(--unit);
-  z-index: 14;
-  width: 4rem; height: 4rem;
-  display: flex; align-items: center; justify-content: center;
-  border: 1px solid var(--c-line);
-  border-radius: 50%;
-  color: var(--c-ink);
-  transition: border-color 0.4s var(--ease-out), transform 0.5s var(--ease-out);
-}
-.curve-toggle:hover { border-color: var(--c-ink); transform: scale(1.08); }
-.curve-toggle svg { width: 1.7rem; height: 1.7rem; overflow: visible; }
-.curve-toggle path { stroke: currentColor; stroke-width: 1.4; fill: none; }
-.curve-toggle.is-active { background: var(--c-ink); color: var(--c-bg); border-color: var(--c-ink); }
-.site-header { padding-right: 5.6rem; }
 
 /* =================================================================
    WORK INDEX (card stack)
@@ -47,12 +27,6 @@ html.webgl .media-wrapper { background: none; }
 }
 /* Long display words must not hit the mask's clipping edge. */
 #projects .title { font-size: 9.6rem; }
-#projects .overline {
-  display: block;
-  margin-bottom: 3.2rem;
-  color: var(--c-dim);
-  overflow: hidden;
-}
 #projects .title { margin-bottom: 2.4rem; }
 #projects .title .line + .line { margin-top: 0.6rem; }
 #projects .text { max-width: 36rem; color: var(--c-dim); }
@@ -121,7 +95,7 @@ html.webgl .media-wrapper { background: none; }
   padding: 0.4rem 0;
   font-size: 1.8rem;
   font-weight: 500;
-  color: rgba(244, 243, 238, 0.78);
+  color: rgba(var(--c-ink-rgb), 0.78);
   white-space: nowrap;
   transition: color 0.4s var(--ease-out);
 }
@@ -267,18 +241,78 @@ html.webgl .media-wrapper { background: none; }
 }
 
 /* =================================================================
+   CONTACT
+   ================================================================= */
+#contact .page-content { padding: 18rem 0 6rem; }
+#contact .title { padding: 0 var(--unit); margin-bottom: 8rem; }
+#contact .title .line + .line { margin-top: 0.6rem; }
+
+#contact .contact-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7rem calc(var(--unit) * 2);
+  padding: 0 var(--unit);
+  margin-bottom: 10rem;
+  align-items: start;
+}
+#contact .lead { grid-column: 1; max-width: 54rem; font-size: 2.4rem; line-height: 136%; }
+
+#contact .contact-email {
+  grid-column: 2; grid-row: 1 / span 2;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1.6rem;
+}
+#contact .contact-address {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1rem;
+  width: 100%;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--c-line);
+  text-align: left;
+  transition: border-color 0.5s var(--ease-out);
+}
+#contact .contact-address-text {
+  font-size: 5.2rem;
+  line-height: 1.05;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  word-break: break-all;
+  transition: color 0.4s var(--ease-out);
+}
+#contact .contact-address-hint { font-size: 1.3rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--c-dim); }
+#contact .contact-address:hover .contact-address-text,
+#contact .contact-address:focus-visible .contact-address-text { color: #0ACD88; }
+#contact .contact-address:hover,
+#contact .contact-address:focus-visible { border-color: #0ACD88; outline: none; }
+#contact .contact-email .copied { position: static; color: #0ACD88; opacity: 0; }
+#contact .contact-mail { color: var(--c-dim); }
+
+#contact .contact-details { grid-column: 1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3.6rem var(--unit); }
+#contact .contact-detail .label { margin-bottom: 1rem; }
+#contact .social-list { display: flex; flex-wrap: wrap; gap: 0.6rem 2.4rem; }
+
+@media screen and (max-width: 1099px) {
+  #contact .contact-grid { grid-template-columns: 1fr; }
+  #contact .contact-email { grid-column: 1; grid-row: auto; }
+  #contact .contact-address-text { font-size: 4rem; }
+}
+@media screen and (max-width: 767px) {
+  #contact .page-content { padding-top: 14rem; }
+  #contact .title { font-size: 4.9rem; margin-bottom: 5rem; }
+  #contact .lead { font-size: 2rem; }
+  #contact .contact-address-text { font-size: 2.8rem; }
+  #contact .contact-details { grid-template-columns: 1fr; }
+}
+
+/* =================================================================
    NO-WEBGL FALLBACK
    ================================================================= */
 html.no-webgl .canvas,
 html.no-webgl .overlay,
 html.no-webgl .loader,
-html.no-webgl .curve-toggle,
 html.no-webgl .copied { display: none !important; }
 
 html.no-webgl body { background: var(--c-bg); }
 html.no-webgl .media { visibility: visible; }
 html.no-webgl .site-header,
-html.no-webgl .site-footer,
 html.no-webgl .back { mix-blend-mode: normal; }
 html.no-webgl #projects .text-wrapper,
 html.no-webgl #projects .project-index {
@@ -293,8 +327,7 @@ html.no-webgl #projects .projects {
 }
 html.no-webgl #projects .project-item { position: static; width: auto; margin: 0 0 6rem; transform: none !important; }
 html.no-webgl #projects .project-index { display: none; }
-html.no-webgl .site-header, html.no-webgl .site-footer { position: static; }
-html.no-webgl .site-footer { padding: 4rem var(--unit); border-top: 1px solid var(--c-line); margin-top: 6rem; }
+html.no-webgl .site-header { position: static; }
 html.no-webgl .back { position: static; display: inline-block; margin: 0 var(--unit) 3rem; }
 
 /* =================================================================
@@ -308,20 +341,6 @@ html.no-webgl .back { position: static; display: inline-block; margin: 0 var(--u
 }
 
 
-/* =================================================================
-   FOOTER — fixed on the home viewport, in flow on scrolling pages
-   ================================================================= */
-#work .site-footer,
-#info .site-footer {
-  position: relative;
-  inset: auto;
-  margin-top: 10rem;
-  padding-top: 4rem;
-  padding-left: var(--unit);
-  padding-right: var(--unit);
-  border-top: 1px solid var(--c-line);
-  mix-blend-mode: normal;
-}
 #work .page-content { padding-bottom: 6rem; }
 #info .page-content { padding-bottom: 6rem; }
 
@@ -336,22 +355,17 @@ html.no-webgl .back { position: static; display: inline-block; margin: 0 var(--u
   #work .title { font-size: 4.6rem; }
   #info .title { font-size: 4.9rem; }
 
-  /* Footer belongs in the flow on a scrolling phone page. */
-  #projects .site-footer {
-    position: relative;
-    inset: auto;
-    margin-top: 4rem;
-    padding: 3.2rem var(--unit) 0;
-    border-top: 1px solid var(--c-line);
-    mix-blend-mode: normal;
-  }
   #projects .projects { padding-bottom: 4rem; }
 
   .site-header { padding-right: 0; }
-  .curve-toggle { display: none; }
 }
 
 /* Tablets: the same wrap risk at a smaller display size. */
 @media screen and (min-width: 768px) and (max-width: 1099px) {
   #projects .title { font-size: 7.4rem; }
 }
+
+/* No footer: the scrolling pages just get some breathing room at the end. */
+#work .page-content,
+#info .page-content,
+#contact .page-content { padding-bottom: 10rem; }
