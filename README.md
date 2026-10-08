@@ -94,8 +94,9 @@ the bottom of `src/styles/pages.css`.
    axial tilt and turning at its real relative rate (Venus and Uranus
    backwards). They're rendered from real maps with physically based
    materials: Earth with terrain relief, glossy oceans, city lights on its
-   night side, a drifting cloud layer and an atmosphere; Saturn's rings and
-   planet shadowing each other; Jupiter's bands sliding past each other.
+   night side, a drifting cloud layer and an atmosphere; Saturn and Uranus with
+   their rings; Jupiter's bands sliding past each other. No cast shadows:
+   planets in the pile don't darken one another.
    Moving the pointer through the pile nudges it; pressing and dragging
    (mouse or touch) swipes planets away with the drag — they glide on, then
    fall and settle. Scroll back up and the pile stays put; leave the section

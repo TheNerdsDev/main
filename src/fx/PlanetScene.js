@@ -2,7 +2,7 @@ import {
   WebGLRenderer, Scene, OrthographicCamera, DirectionalLight, HemisphereLight,
   SphereGeometry, RingGeometry, InstancedMesh, MeshStandardMaterial, ShaderMaterial,
   TextureLoader, Vector3, Vector2, Quaternion, Matrix4, Color,
-  SRGBColorSpace, ACESFilmicToneMapping, PCFSoftShadowMap, RepeatWrapping,
+  SRGBColorSpace, ACESFilmicToneMapping, RepeatWrapping,
   DoubleSide, BackSide, AdditiveBlending, DynamicDrawUsage
 } from 'three';
 
@@ -22,7 +22,7 @@ import {
  *    thin dusty rim.
  *  - Venus: its cloud deck, slowly streaming.
  *  - Jupiter: bands that drift at different speeds by latitude.
- *  - Saturn: ring mesh in its equator, ring and planet shadowing each other.
+ *  - Saturn: ring mesh in its equator.
  *  - Uranus (tipped on its side, faint rings) and Neptune, with soft haze.
  *
  * Every body has its real axial tilt and turns at its real relative rate
@@ -199,7 +199,7 @@ const ringGeometry = ([inner, outer], segments) => {
 export default class PlanetScene {
   /**
    * canvas   where to draw
-   * small    phones and small screens: 1K maps, lighter geometry and shadows
+   * small    phones and small screens: 1K maps, lighter geometry
    */
   constructor(canvas, { small = false } = {}) {
     this.small = small;
@@ -208,22 +208,13 @@ export default class PlanetScene {
     this.renderer.outputColorSpace = SRGBColorSpace;
     this.renderer.toneMapping = ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.12;
-    this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = PCFSoftShadowMap;
 
     this.scene = new Scene();
     this.camera = new OrthographicCamera(0, 1, 0, -1, -2000, 2000);
     this.camera.position.z = 1000;
 
-    /* The key light, where the Sun would be, casting the shadows. */
+    /* The key light, where the Sun would be. No cast shadows: planets don't darken each other. */
     this.light = new DirectionalLight(0xfff1de, 3.4);
-    this.light.castShadow = true;
-    this.light.shadow.mapSize.set(small ? 1024 : 2048, small ? 1024 : 2048);
-    this.light.shadow.bias = -0.0004;
-    this.light.shadow.normalBias = 0.6;
-    this.light.shadow.radius = 3;
-    /* Shadows darken, they don't black out (a ring's shadow lets some light through). */
-    this.light.shadow.intensity = 0.72;
     this.scene.add(this.light, this.light.target);
     /* A faint fill, cool from above and dark below, for the night sides. */
     this.scene.add(new HemisphereLight(0x8fa4ff, 0x05060f, 0.12));
@@ -270,11 +261,9 @@ export default class PlanetScene {
     const sphereLight = new SphereGeometry(1, light[0], light[1]);
     this.geometries = [sphere, sphereLight];
 
-    const make = (key, geometry, material, { cast = true, receive = true, count } = {}) => {
+    const make = (key, geometry, material, { count } = {}) => {
       const mesh = new InstancedMesh(geometry, material, count ?? capacity[key] ?? 0);
       mesh.instanceMatrix.setUsage(DynamicDrawUsage);
-      mesh.castShadow = cast;
-      mesh.receiveShadow = receive;
       mesh.frustumCulled = false;
       mesh.count = 0;
       this.scene.add(mesh);
@@ -298,8 +287,8 @@ export default class PlanetScene {
     enhance(earth, shared, { night: true, clouds: tex.earthClouds, rim: [0x5d9bff, 0.55] });
     M[EARTH] = make(EARTH, sphere, earth, { count: cap(EARTH) });
     const clouds = std({ color: 0xffffff, alphaMap: tex.earthClouds, transparent: true, depthWrite: false, roughness: 1 });
-    M.earthClouds = make(EARTH, sphere, clouds, { cast: false, count: cap(EARTH) });
-    M.earthAir = make(EARTH, sphereLight, atmosphere(0x6aa8ff, 1.075, 1.15), { cast: false, receive: false, count: cap(EARTH) });
+    M.earthClouds = make(EARTH, sphere, clouds, { count: cap(EARTH) });
+    M.earthAir = make(EARTH, sphereLight, atmosphere(0x6aa8ff, 1.075, 1.15), { count: cap(EARTH) });
 
     /* Rocky worlds */
     const moon = std({ map: tex.moon, normalMap: tex.moonNormal, normalScale: new Vector2(1.6, 1.6), roughness: 0.96 });
@@ -309,13 +298,13 @@ export default class PlanetScene {
     const mars = std({ map: tex.mars, normalMap: tex.marsNormal, normalScale: new Vector2(1.4, 1.4), roughness: 0.92 });
     enhance(mars, shared, { rim: [0xd99a6c, 0.28] });
     M[MARS] = make(MARS, sphereLight, mars, { count: cap(MARS) });
-    M.marsAir = make(MARS, sphereLight, atmosphere(0xe0a37a, 1.03, 0.45), { cast: false, receive: false, count: cap(MARS) });
+    M.marsAir = make(MARS, sphereLight, atmosphere(0xe0a37a, 1.03, 0.45), { count: cap(MARS) });
 
     /* Venus: nothing but cloud from outside */
     const venus = std({ map: tex.venus, roughness: 0.88 });
     enhance(venus, shared, { rim: [0xffdca0, 0.5] });
     M[VENUS] = make(VENUS, sphere, venus, { count: cap(VENUS) });
-    M.venusAir = make(VENUS, sphereLight, atmosphere(0xffd9a0, 1.06, 0.8), { cast: false, receive: false, count: cap(VENUS) });
+    M.venusAir = make(VENUS, sphereLight, atmosphere(0xffd9a0, 1.06, 0.8), { count: cap(VENUS) });
 
     /* Giants */
     const jupiter = std({ map: tex.jupiter, roughness: 0.9 });
@@ -332,12 +321,12 @@ export default class PlanetScene {
     M[URANUS] = make(URANUS, sphere, uranus, { count: cap(URANUS) });
     const uRing = std({ map: tex.uranusRing, side: DoubleSide, transparent: true, alphaTest: 0.02, roughness: 0.9, depthWrite: false });
     const uRingGeo = ringGeometry(URANUS_RING, this.small ? 72 : 120);
-    M.uranusRing = make(URANUS, uRingGeo, uRing, { cast: false, count: cap(URANUS) });
-    M.uranusAir = make(URANUS, sphereLight, atmosphere(0xaef0ff, 1.035, 0.55), { cast: false, receive: false, count: cap(URANUS) });
+    M.uranusRing = make(URANUS, uRingGeo, uRing, { count: cap(URANUS) });
+    M.uranusAir = make(URANUS, sphereLight, atmosphere(0xaef0ff, 1.035, 0.55), { count: cap(URANUS) });
     const neptune = std({ map: tex.neptune, roughness: 0.9 });
     enhance(neptune, shared, { rim: [0x7fa8ff, 0.5] });
     M[NEPTUNE] = make(NEPTUNE, sphere, neptune, { count: cap(NEPTUNE) });
-    M.neptuneAir = make(NEPTUNE, sphereLight, atmosphere(0x6f97ff, 1.035, 0.65), { cast: false, receive: false, count: cap(NEPTUNE) });
+    M.neptuneAir = make(NEPTUNE, sphereLight, atmosphere(0x6f97ff, 1.035, 0.65), { count: cap(NEPTUNE) });
 
     this.geometries.push(ringGeo, uRingGeo);
   }
@@ -353,19 +342,10 @@ export default class PlanetScene {
     c.top = 0;
     c.bottom = -h;
     c.updateProjectionMatrix();
-    /* The light looks at the middle of the section; its shadow box covers it all. */
+    /* The light looks at the middle of the section. */
     const target = this.v.set(w / 2, -h / 2, 0);
     this.light.target.position.copy(target);
     this.light.position.copy(target).addScaledVector(SUN, 1500);
-    const span = Math.hypot(w, h) * 0.6;
-    const sc = this.light.shadow.camera;
-    sc.left = -span;
-    sc.right = span;
-    sc.top = span;
-    sc.bottom = -span;
-    sc.near = 100;
-    sc.far = 3000;
-    sc.updateProjectionMatrix();
   }
 
   /** Per-body tilt, decided once: the planet's axial tilt, leaning left or right, seen from a little above. */
