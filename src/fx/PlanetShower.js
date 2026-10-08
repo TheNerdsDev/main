@@ -1,5 +1,5 @@
 import gsap from 'gsap';
-import PlanetScene, { MERCURY, VENUS, EARTH, MOON, MARS, JUPITER, SATURN, URANUS, NEPTUNE } from './PlanetScene.js';
+import PlanetScene, { ringShape, MERCURY, VENUS, EARTH, MOON, MARS, JUPITER, SATURN, URANUS, NEPTUNE } from './PlanetScene.js';
 
 /*
  * The finale: a shower of tiny planets.
@@ -22,21 +22,87 @@ import PlanetScene, { MERCURY, VENUS, EARTH, MOON, MARS, JUPITER, SATURN, URANUS
    far too extreme, so the scale is squeezed: the giants clearly biggest,
    then Earth and Venus, Mars, then Mercury and the Moon. */
 const BODIES = [
-  [JUPITER, 42, 7],
-  [SATURN, 35, 5],
-  [URANUS, 26, 6],
-  [NEPTUNE, 25, 6],
-  [EARTH, 19, 13],
-  [VENUS, 18, 11],
-  [MARS, 13, 17],
-  [MERCURY, 9.5, 20],
-  [MOON, 8, 22]
+  [JUPITER, 42, 6],
+  [SATURN, 35, 4],
+  [URANUS, 26, 4],
+  [NEPTUNE, 25, 5],
+  [EARTH, 19, 11],
+  [VENUS, 18, 9],
+  [MARS, 13, 14],
+  [MERCURY, 9.5, 17],
+  [MOON, 8, 19]
 ];
-/* Collision radius as a share of the drawn one: ringed planets keep
-   their neighbours out of their rings. */
-const REACH = { [SATURN]: 1.5, [URANUS]: 1.12 };
+/* Everything drawn a little larger than the table above. */
+const GROW = 1.15;
+/* Collision shapes sit just outside what's drawn, so atmospheres and ring
+   edges never touch. */
+const PAD = 1.04;
+
+/**
+ * A body's collision shape: capsules (segments with a radius, relative to
+ * its centre). A planet is one circle — a zero-length capsule; a ringed
+ * planet adds a capsule along its ring's on-screen ellipse, so neighbours
+ * rest against the ring instead of sliding into it. Also sets the bounding
+ * radius `r` and the half-extents `ex`, `ey` used against the walls.
+ */
+function shape(b) {
+  const disc = b.size * PAD;
+  b.prims = [[0, 0, 0, 0, disc]];
+  b.ex = b.ey = b.r = disc;
+  const ring = ringShape(b.type, b.seed);
+  if (!ring) return;
+  const c = Math.max(ring.minor, 0.14) * b.size * PAD;
+  const L = Math.max(0, ring.major * b.size * PAD - c);
+  const hx = ring.ux * L;
+  const hy = ring.uy * L;
+  b.prims.push([-hx, -hy, hx, hy, c]);
+  b.r = Math.max(disc, L + c);
+  b.ex = Math.max(disc, Math.abs(hx) + c);
+  b.ey = Math.max(disc, Math.abs(hy) + c);
+}
+
+/* Closest points between segments p1–q1 and p2–q2 (Ericson, Real-Time
+   Collision Detection 5.1.9). Writes them into OUT = [x1, y1, x2, y2]. */
+const OUT = [0, 0, 0, 0];
+function closest(p1x, p1y, q1x, q1y, p2x, p2y, q2x, q2y) {
+  const d1x = q1x - p1x, d1y = q1y - p1y;
+  const d2x = q2x - p2x, d2y = q2y - p2y;
+  const rx = p1x - p2x, ry = p1y - p2y;
+  const a = d1x * d1x + d1y * d1y;
+  const e = d2x * d2x + d2y * d2y;
+  const f = d2x * rx + d2y * ry;
+  let sv = 0, t = 0;
+  if (a <= 1e-9 && e <= 1e-9) {
+    sv = t = 0;
+  } else if (a <= 1e-9) {
+    t = Math.min(Math.max(f / e, 0), 1);
+  } else {
+    const c = d1x * rx + d1y * ry;
+    if (e <= 1e-9) {
+      sv = Math.min(Math.max(-c / a, 0), 1);
+    } else {
+      const b = d1x * d2x + d1y * d2y;
+      const den = a * e - b * b;
+      sv = den > 1e-9 ? Math.min(Math.max((b * f - c * e) / den, 0), 1) : 0;
+      t = (b * sv + f) / e;
+      if (t < 0) {
+        t = 0;
+        sv = Math.min(Math.max(-c / a, 0), 1);
+      } else if (t > 1) {
+        t = 1;
+        sv = Math.min(Math.max((b - c) / a, 0), 1);
+      }
+    }
+  }
+  OUT[0] = p1x + d1x * sv;
+  OUT[1] = p1y + d1y * sv;
+  OUT[2] = p2x + d2x * t;
+  OUT[3] = p2y + d2y * t;
+}
 
 const GRAVITY = 2300;   // px/s²
+const ITERATIONS = 6;   // constraint passes per substep
+const STEP = 1 / 240;   // physics time step, s
 const SHOWER = 2.1;     // seconds over which the bodies are let go
 
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -147,8 +213,8 @@ export default class PlanetShower {
     if (changed && this.bodies.length) {
       /* Keep everyone inside the new box; they'll settle again. */
       for (const b of this.bodies) {
-        b.x = Math.min(Math.max(b.x, b.r), w - b.r);
-        b.y = Math.min(b.y, h - b.r);
+        b.x = Math.min(Math.max(b.x, b.ex), w - b.ex);
+        b.y = Math.min(b.y, h - b.ey);
       }
       this.awake = true;
     }
@@ -165,23 +231,20 @@ export default class PlanetShower {
     for (const [type, radius, count] of BODIES) {
       const n = Math.max(1, Math.round(count * howMany));
       for (let i = 0; i < n; i++) {
-        const size = radius * unit * rand(0.93, 1.07);
-        const r = size * (REACH[type] || 1);
-        list.push({
-          type,
-          size,
-          r,
+        const size = radius * GROW * unit * rand(0.93, 1.07);
+        const b = { type, size, seed: Math.random() };
+        shape(b);
+        list.push(Object.assign(b, {
           m: size * size,
-          x: rand(r, W - r),
-          y: -r - rand(0, 60),
+          x: rand(b.ex, W - b.ex),
+          y: -b.ey - rand(0, 60),
           vx: rand(-70, 70),
           vy: rand(0, 160),
           rot: rand(0, Math.PI * 2),
-          seed: Math.random(),
           /* Big ones a touch earlier, so the small ones rain on top. */
           at: Math.random() * SHOWER * (0.35 + 0.65 * (1 - Math.min(1, radius / 42))),
           live: false
-        });
+        }));
       }
     }
     this.bodies = list;
@@ -275,6 +338,7 @@ export default class PlanetShower {
       }
       b.px = b.x;
       b.py = b.y;
+      b.rest = false;
       /* Falling, up to a terminal speed (keeps a fast body from burying itself in the pile). */
       b.vy = Math.min(b.vy + GRAVITY * dt, 1500);
       b.vx *= 1 - 0.1 * dt;
@@ -284,7 +348,7 @@ export default class PlanetShower {
     }
 
     const n = bodies.length;
-    for (let it = 0; it < 6; it++) {
+    for (let it = 0; it < ITERATIONS; it++) {
       for (let i = 0; i < n; i++) {
         const a = bodies[i];
         if (!a.live) continue;
@@ -293,26 +357,61 @@ export default class PlanetShower {
           if (!b.live) continue;
           const dx = b.x - a.x;
           const dy = b.y - a.y;
-          const min = a.r + b.r;
+          const reach = a.r + b.r;
           const d2 = dx * dx + dy * dy;
-          if (d2 >= min * min || d2 < 1e-6) continue;
-          const d = Math.sqrt(d2);
-          const nx = dx / d;
-          const ny = dy / d;
+          if (d2 >= reach * reach) continue;
+          /* The deepest overlap between their capsules, and its direction. */
+          let depth = -Infinity, nx = 0, ny = 0;
+          if (a.prims.length === 1 && b.prims.length === 1) {
+            /* Two plain planets: circles, the common case. */
+            const d = Math.sqrt(d2);
+            depth = reach - d;
+            if (d > 1e-6) {
+              nx = dx / d;
+              ny = dy / d;
+            } else ny = 1;
+          } else for (const pa of a.prims) {
+            for (const pb of b.prims) {
+              closest(a.x + pa[0], a.y + pa[1], a.x + pa[2], a.y + pa[3],
+                b.x + pb[0], b.y + pb[1], b.x + pb[2], b.y + pb[3]);
+              let ex = OUT[2] - OUT[0];
+              let ey = OUT[3] - OUT[1];
+              let e = Math.hypot(ex, ey);
+              const over = pa[4] + pb[4] - e;
+              if (over <= depth) continue;
+              if (e < 1e-6) {
+                /* Centred on each other: part them along the line between centres, or straight up. */
+                e = Math.hypot(dx, dy);
+                ex = e > 1e-6 ? dx : 0;
+                ey = e > 1e-6 ? dy : 1;
+                e = e > 1e-6 ? e : 1;
+              }
+              depth = over;
+              nx = ex / e;
+              ny = ey / e;
+            }
+          }
           const wa = 1 / a.m;
           const wb = 1 / b.m;
-          const corr = (min - d) / (wa + wb);
-          a.x -= nx * corr * wa;
-          a.y -= ny * corr * wa;
-          b.x += nx * corr * wb;
-          b.y += ny * corr * wb;
+          if (depth > 0) {
+            const corr = depth / (wa + wb);
+            a.x -= nx * corr * wa;
+            a.y -= ny * corr * wa;
+            b.x += nx * corr * wb;
+            b.y += ny * corr * wb;
+          }
+          /* Resting on something: the upper of the two is supported. */
+          if (depth > -0.5) {
+            if (ny > 0.3) a.rest = true;
+            else if (ny < -0.3) b.rest = true;
+          }
         }
       }
       for (const b of bodies) {
         if (!b.live) continue;
-        if (b.y > H - b.r) b.y = H - b.r;
-        if (b.x < b.r) b.x = b.r;
-        else if (b.x > W - b.r) b.x = W - b.r;
+        if (b.y > H - b.ey) b.y = H - b.ey;
+        if (b.x < b.ex) b.x = b.ex;
+        else if (b.x > W - b.ex) b.x = W - b.ex;
       }
     }
 
@@ -330,15 +429,18 @@ export default class PlanetShower {
           b.vy *= 1600 / sp;
         }
       } else b.kick -= dt;
-      const floor = b.y >= H - b.r - 0.01;
+      const floor = b.y >= H - b.ey - 0.01;
       /* A hard landing bounces; anything gentler just stops. */
       if (floor && b.landing > 260) b.vy = -b.landing * 0.3;
       /* Rolling resistance and friction against the floor and the pile. */
       if (floor) b.vx *= 1 - Math.min(1, 5 * dt);
       const mx = b.x - b.px;
-      b.rot -= mx / b.r;
+      b.rot -= mx / b.size;
       const speed = Math.hypot(mx, b.y - b.py) / dt;
       if (speed < 3) b.vx *= 0.5;
+      /* Friction for a body resting on others: slow sideways drift dies
+         away, so nothing creeps down a ring's slope forever. */
+      else if (b.rest && !(b.kick > 0) && speed < 60) b.vx *= 1 - Math.min(1, 14 * dt);
     }
   }
 
@@ -399,10 +501,17 @@ export default class PlanetShower {
     }
 
     if (this.awake) {
-      this.clock += dt;
-      const sub = 4;
-      for (let i = 0; i < sub; i++) this.step(dt / sub);
-      this.settle(dt);
+      /* Fixed steps: the solver takes velocity from movement over the step,
+         so an uneven step would feed jitter into the pile and keep it from
+         ever resting. Leftover time carries over to the next frame. */
+      this.acc = Math.min((this.acc || 0) + dt, STEP * 16);
+      while (this.acc >= STEP) {
+        this.acc -= STEP;
+        this.clock += STEP;
+        this.step(STEP);
+        this.settle(STEP);
+        if (!this.awake) break;
+      }
     }
     this.draw();
   };

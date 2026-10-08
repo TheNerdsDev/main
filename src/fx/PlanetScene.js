@@ -12,12 +12,11 @@ import {
  * Each kind of body is one InstancedMesh (plus, where it has them, an
  * instanced cloud shell, atmosphere shell or ring), so a hundred-odd planets
  * cost a couple of dozen draw calls. Materials are physically based and
- * use real maps (Solar System Scope, CC BY 4.0; NASA Black Marble):
+ * use real maps (Solar System Scope, CC BY 4.0):
  *
- *  - Earth: day colour, terrain normals, glossy oceans / matte land, city
- *    lights that only show on the night side, a separate cloud shell that
- *    drifts faster than the ground and darkens it a little where it passes,
- *    and an atmosphere that glows at the limb, strongest on the lit side.
+ *  - Earth: day colour, terrain normals, glossy oceans / matte land, a
+ *    separate cloud shell that drifts faster than the ground and darkens it
+ *    a little where it passes, and an atmosphere that glows at the limb.
  *  - Mercury, the Moon, Mars: cratered relief from normal maps; Mars with a
  *    thin dusty rim.
  *  - Venus: its cloud deck, slowly streaming.
@@ -27,8 +26,8 @@ import {
  *
  * Every body has its real axial tilt and turns at its real relative rate
  * (Venus and Uranus backwards), scaled so even Jupiter turns calmly. One
- * warm key light stands where the Sun would be, with a faint fill so the
- * night sides aren't pitch black.
+ * warm key light shines from just beside the viewer, so every planet shows
+ * its whole face — no night side — with a soft fill evening out the edges.
  */
 
 export const MERCURY = 1, VENUS = 2, EARTH = 3, MOON = 4, MARS = 5, JUPITER = 6, SATURN = 7, URANUS = 8, NEPTUNE = 9;
@@ -55,13 +54,12 @@ const Y_AXIS = new Vector3(0, 1, 0);
 const Z_AXIS = new Vector3(0, 0, 1);
 
 /* Where the light comes from (towards the light), as the Sun used to be: up-left, in front. */
-const SUN = new Vector3(-0.74, 0.5, 0.45).normalize();
+const SUN = new Vector3(-0.08, 0.1, 1).normalize();
 
 const texturesFor = (q) => ({
   earthDay: `/textures/planets/${q}/earth_day.jpg`,
   earthNormal: `/textures/planets/${q}/earth_normal.jpg`,
   earthRough: `/textures/planets/${q}/earth_rough.jpg`,
-  earthNight: `/textures/planets/${q}/earth_night.jpg`,
   earthClouds: `/textures/planets/${q}/earth_clouds.jpg`,
   moon: `/textures/planets/${q}/moon.jpg`,
   moonNormal: `/textures/planets/${q}/moon_normal.jpg`,
@@ -78,7 +76,7 @@ const texturesFor = (q) => ({
   neptune: `/textures/planets/${q}/neptune.jpg`
 });
 /* Colour maps are sRGB; normals, roughness and cloud cover are data. */
-const COLOUR = new Set(['earthDay', 'earthNight', 'moon', 'mercury', 'mars', 'venus', 'jupiter', 'saturn', 'saturnRing', 'uranus', 'uranusRing', 'neptune']);
+const COLOUR = new Set(['earthDay', 'moon', 'mercury', 'mars', 'venus', 'jupiter', 'saturn', 'saturnRing', 'uranus', 'uranusRing', 'neptune']);
 /* Maps that scroll sideways need to wrap. */
 const WRAP = new Set(['venus', 'jupiter', 'earthClouds']);
 
@@ -117,8 +115,7 @@ const atmosphere = (colour, scale, strength) => new ShaderMaterial({
          outer edge to -uLimb where it meets the planet's edge. */
       float t = clamp(-n.z / uLimb, 0.0, 1.0);
       float glow = pow(t, 1.6) * (1.0 - smoothstep(0.92, 1.0, t) * 0.4);
-      float lit = 0.12 + 0.88 * smoothstep(-0.35, 0.75, dot(normalize(n.xy + 1e-4), normalize(uSun.xy)));
-      float a = glow * lit * uStrength;
+      float a = glow * 0.7 * uStrength;
       gl_FragColor = vec4(uColor * a, a);
     }`,
   side: BackSide,
@@ -129,12 +126,11 @@ const atmosphere = (colour, scale, strength) => new ShaderMaterial({
 
 /**
  * Small additions to the standard material, all lit by the same key light:
- *   night   city lights on the dark side only
  *   clouds  faint shadows of the cloud shell on the ground
  *   rim     a soft haze at the limb (atmospheres seen edge-on)
  *   flow    Jupiter's bands sliding past each other
  */
-const enhance = (material, shared, { night, clouds, rim, flow } = {}) => {
+const enhance = (material, shared, { clouds, rim, flow } = {}) => {
   material.onBeforeCompile = (sh) => {
     sh.uniforms.uSun = shared.sun;
     sh.uniforms.uTime = shared.time;
@@ -164,22 +160,15 @@ const enhance = (material, shared, { night, clouds, rim, flow } = {}) => {
         float cloudShade = texture2D( uClouds, vMapUv + vec2( uCloudShift + 0.004, 0.003 ) ).r;
         diffuseColor.rgb *= 1.0 - 0.3 * cloudShade;`);
     }
-    /* Night lights and limb haze share one spot in the shader: patch it once. */
-    if (night || rim) {
-      const lights = night ? /* glsl */`
-        #ifdef USE_EMISSIVEMAP
-          vec4 emissiveColor = texture2D( emissiveMap, vEmissiveMapUv );
-          float nightSide = 1.0 - smoothstep( -0.2, 0.15, dot( normal, uSun ) );
-          totalEmissiveRadiance *= emissiveColor.rgb * nightSide;
-        #endif` : '#include <emissivemap_fragment>';
-      const haze = rim ? /* glsl */`
+    if (rim) {
+      fs = fs.replace('#include <emissivemap_fragment>', /* glsl */`
+        #include <emissivemap_fragment>
         float fres = pow( 1.0 - clamp( normal.z, 0.0, 1.0 ), 3.0 );
-        totalEmissiveRadiance += uRim * fres * uRimStrength * smoothstep( -0.25, 0.6, dot( normal, uSun ) );` : '';
-      fs = fs.replace('#include <emissivemap_fragment>', lights + haze);
+        totalEmissiveRadiance += uRim * fres * uRimStrength;`);
     }
     sh.fragmentShader = fs;
   };
-  material.customProgramCacheKey = () => JSON.stringify({ n: !!night, c: !!clouds, r: !!rim, f: !!flow });
+  material.customProgramCacheKey = () => JSON.stringify({ c: !!clouds, r: !!rim, f: !!flow });
 };
 
 /** A ring in the planet's equatorial plane, with UVs running across the ring (inner → outer). */
@@ -195,6 +184,35 @@ const ringGeometry = ([inner, outer], segments) => {
   g.rotateX(-Math.PI / 2);
   return g;
 };
+
+/** A body's tilt: inclined towards us, then leaning by its axial tilt (direction from its seed). */
+function tiltFor(type, seed) {
+  const lean = (SPIN[type][0] * Math.PI) / 180 * (seed < 0.5 ? 1 : -1);
+  /* Uranus lies on its side; swing its pole part-way towards us so its
+     rings open into a tall ellipse instead of a thin edge-on line. */
+  const yaw = type === URANUS ? 0.85 * (seed < 0.5 ? 1 : -1) : 0;
+  return new Quaternion().setFromAxisAngle(X_AXIS, INCLINE)
+    .multiply(new Quaternion().setFromAxisAngle(Y_AXIS, yaw))
+    .multiply(new Quaternion().setFromAxisAngle(Z_AXIS, lean));
+}
+
+/**
+ * The on-screen outline of a ringed planet's ring, in units of the planet's
+ * radius: the ring is a flat disc, seen as an ellipse whose long axis lies
+ * across its pole. Returns { ux, uy } (long axis, screen space, y down),
+ * `major` and `minor` semi-axes — or null for a body without rings.
+ */
+export function ringShape(type, seed) {
+  const ring = type === SATURN ? SATURN_RING : type === URANUS ? URANUS_RING : null;
+  if (!ring) return null;
+  const n = new Vector3(0, 1, 0).applyQuaternion(tiltFor(type, seed));
+  const len = Math.hypot(n.x, n.y);
+  /* Long axis perpendicular to the pole's direction on screen (world y is up, screen y down). */
+  const ux = len > 1e-4 ? -n.y / len : 1;
+  const uy = len > 1e-4 ? -n.x / len : 0;
+  const major = ring[1];
+  return { ux, uy, major, minor: major * Math.abs(n.z) };
+}
 
 export default class PlanetScene {
   /**
@@ -213,11 +231,11 @@ export default class PlanetScene {
     this.camera = new OrthographicCamera(0, 1, 0, -1, -2000, 2000);
     this.camera.position.z = 1000;
 
-    /* The key light, where the Sun would be. No cast shadows: planets don't darken each other. */
+    /* The key light, from just beside the viewer: every planet fully lit, no cast shadows. */
     this.light = new DirectionalLight(0xfff1de, 3.4);
     this.scene.add(this.light, this.light.target);
-    /* A faint fill, cool from above and dark below, for the night sides. */
-    this.scene.add(new HemisphereLight(0x8fa4ff, 0x05060f, 0.12));
+    /* A soft fill, so the very edges of each disc don't fall off to black. */
+    this.scene.add(new HemisphereLight(0xe8eeff, 0x4a4f63, 0.45));
 
     this.shared = { sun: { value: SUN.clone() }, time: { value: 0 }, cloudShift: { value: 0 } };
     this.ready = false;
@@ -279,12 +297,9 @@ export default class PlanetScene {
       normalMap: tex.earthNormal,
       normalScale: new Vector2(1.1, 1.1),
       roughnessMap: tex.earthRough,
-      roughness: 1,
-      emissiveMap: tex.earthNight,
-      emissive: new Color(0xffffff),
-      emissiveIntensity: 1.6
+      roughness: 1
     });
-    enhance(earth, shared, { night: true, clouds: tex.earthClouds, rim: [0x5d9bff, 0.55] });
+    enhance(earth, shared, { clouds: tex.earthClouds, rim: [0x5d9bff, 0.55] });
     M[EARTH] = make(EARTH, sphere, earth, { count: cap(EARTH) });
     const clouds = std({ color: 0xffffff, alphaMap: tex.earthClouds, transparent: true, depthWrite: false, roughness: 1 });
     M.earthClouds = make(EARTH, sphere, clouds, { count: cap(EARTH) });
@@ -350,15 +365,7 @@ export default class PlanetScene {
 
   /** Per-body tilt, decided once: the planet's axial tilt, leaning left or right, seen from a little above. */
   tiltOf(b) {
-    if (!b.tilt) {
-      const lean = (SPIN[b.type][0] * Math.PI) / 180 * (b.seed < 0.5 ? 1 : -1);
-      /* Uranus lies on its side; swing its pole part-way towards us so its
-         rings open into a tall ellipse instead of a thin edge-on line. */
-      const yaw = b.type === URANUS ? 0.85 * (b.seed < 0.5 ? 1 : -1) : 0;
-      b.tilt = new Quaternion().setFromAxisAngle(X_AXIS, INCLINE)
-        .multiply(new Quaternion().setFromAxisAngle(Y_AXIS, yaw))
-        .multiply(new Quaternion().setFromAxisAngle(Z_AXIS, lean));
-    }
+    if (!b.tilt) b.tilt = tiltFor(b.type, b.seed);
     return b.tilt;
   }
 
