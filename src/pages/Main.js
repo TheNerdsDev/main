@@ -7,7 +7,7 @@ import Duo from '../fx/Duo.js';
 import RockStage from '../fx/RockStage.js';
 import Scatter from '../fx/Scatter.js';
 import { Crumble } from '../fx/Zap.js';
-import DropReveal from '../fx/DropReveal.js';
+import WaterReveal from '../fx/WaterReveal.js';
 import { PALETTE } from '../gl/World.js';
 import { clamp } from '../fx/particles.js';
 
@@ -66,10 +66,10 @@ export default class Main extends Page {
     this.showBar = q('.showcase-progress-bar');
     this.showX = 0;
     this.showIn = -1;
-    /* Hovering a card rains water drops on it, each one uncovering a little
-       more of the project's video. */
+    /* Hovering a card floods it with water from the pointer outwards, and
+       the project's video plays under it. */
     const showStage = q('.showcase-stage');
-    if (showStage && DropReveal.supported()) this.drops = new DropReveal(showStage, this.showCards);
+    if (showStage && WaterReveal.supported()) this.water = new WaterReveal(showStage, this.showCards);
 
     this.fx = new FxLayer();
     this.stage = new RockStage();
@@ -451,7 +451,7 @@ export default class Main extends Page {
     gsap.killTweensOf([this.cue, this.journey, ...this.heroLines()]);
     this.aboutTl?.kill();
     this.showTl?.kill();
-    this.drops?.destroy();
+    this.water?.destroy();
     this.scatter.destroy();
     this.duo?.destroy();
     this.fx.destroy();

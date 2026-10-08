@@ -289,13 +289,6 @@ html.webgl .media-wrapper { background: none; }
 #contact .contact-detail .label { margin-bottom: 1rem; }
 #contact .social-list { display: flex; flex-wrap: wrap; gap: 0.6rem 2.4rem; }
 
-#contact .site-footer {
-  position: relative; inset: auto;
-  padding: 4rem var(--unit) 0;
-  border-top: 1px solid var(--c-line);
-  mix-blend-mode: normal;
-}
-
 @media screen and (max-width: 1099px) {
   #contact .contact-grid { grid-template-columns: 1fr; }
   #contact .contact-email { grid-column: 1; grid-row: auto; }
@@ -320,7 +313,6 @@ html.no-webgl .copied { display: none !important; }
 html.no-webgl body { background: var(--c-bg); }
 html.no-webgl .media { visibility: visible; }
 html.no-webgl .site-header,
-html.no-webgl .site-footer,
 html.no-webgl .back { mix-blend-mode: normal; }
 html.no-webgl #projects .text-wrapper,
 html.no-webgl #projects .project-index {
@@ -335,8 +327,7 @@ html.no-webgl #projects .projects {
 }
 html.no-webgl #projects .project-item { position: static; width: auto; margin: 0 0 6rem; transform: none !important; }
 html.no-webgl #projects .project-index { display: none; }
-html.no-webgl .site-header, html.no-webgl .site-footer { position: static; }
-html.no-webgl .site-footer { padding: 4rem var(--unit); border-top: 1px solid var(--c-line); margin-top: 6rem; }
+html.no-webgl .site-header { position: static; }
 html.no-webgl .back { position: static; display: inline-block; margin: 0 var(--unit) 3rem; }
 
 /* =================================================================
@@ -350,20 +341,6 @@ html.no-webgl .back { position: static; display: inline-block; margin: 0 var(--u
 }
 
 
-/* =================================================================
-   FOOTER — fixed on the home viewport, in flow on scrolling pages
-   ================================================================= */
-#work .site-footer,
-#info .site-footer {
-  position: relative;
-  inset: auto;
-  margin-top: 10rem;
-  padding-top: 4rem;
-  padding-left: var(--unit);
-  padding-right: var(--unit);
-  border-top: 1px solid var(--c-line);
-  mix-blend-mode: normal;
-}
 #work .page-content { padding-bottom: 6rem; }
 #info .page-content { padding-bottom: 6rem; }
 
@@ -378,15 +355,6 @@ html.no-webgl .back { position: static; display: inline-block; margin: 0 var(--u
   #work .title { font-size: 4.6rem; }
   #info .title { font-size: 4.9rem; }
 
-  /* Footer belongs in the flow on a scrolling phone page. */
-  #projects .site-footer {
-    position: relative;
-    inset: auto;
-    margin-top: 4rem;
-    padding: 3.2rem var(--unit) 0;
-    border-top: 1px solid var(--c-line);
-    mix-blend-mode: normal;
-  }
   #projects .projects { padding-bottom: 4rem; }
 
   .site-header { padding-right: 0; }
@@ -396,3 +364,8 @@ html.no-webgl .back { position: static; display: inline-block; margin: 0 var(--u
 @media screen and (min-width: 768px) and (max-width: 1099px) {
   #projects .title { font-size: 7.4rem; }
 }
+
+/* No footer: the scrolling pages just get some breathing room at the end. */
+#work .page-content,
+#info .page-content,
+#contact .page-content { padding-bottom: 10rem; }

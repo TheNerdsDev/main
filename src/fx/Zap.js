@@ -1,5 +1,7 @@
 import { rand, clamp, lerp, drawGlow, drawDust } from './particles.js';
 
+const STAR_GLOW = [255, 214, 90];
+
 /** A jagged bolt from (x, y) heading `ang`, as a list of points. */
 const bolt = (x, y, ang, len, kinks) => {
   const pts = [[x, y]];
@@ -163,13 +165,13 @@ export class Zap {
         ctx.save();
         ctx.translate(x, y);
         ctx.rotate(t * s.spin);
-        ctx.globalAlpha = alpha * (0.55 + 0.45 * (depth + 1) / 2);
-        ctx.shadowColor = 'rgba(255, 214, 90, 0.9)';
-        ctx.shadowBlur = 10;
+        const op = alpha * (0.55 + 0.45 * (depth + 1) / 2);
+        /* A cached glow sprite rather than shadowBlur (which blurs on every draw). */
+        drawGlow(ctx, STAR_GLOW, 0, 0, size * 2.4, op * 0.55);
+        ctx.globalAlpha = op;
         starPath(ctx, size);
         ctx.fillStyle = '#FFE27A';
         ctx.fill();
-        ctx.shadowBlur = 0;
         starPath(ctx, size * 0.42);
         ctx.fillStyle = '#FFFBEA';
         ctx.fill();

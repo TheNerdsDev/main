@@ -5,6 +5,7 @@ import { RockThrow, RockImpact } from './Rock.js';
 import { Zap } from './Zap.js';
 import { eyeMap } from './eyeMap.js';
 import { faceMap } from './faceMap.js';
+import NeonSketch from './NeonSketch.js';
 import { hexToRgb, clamp } from './particles.js';
 
 /* Sketch viewBox width — matches the markup in generate-pages.mjs. */
@@ -68,7 +69,8 @@ export default class Duo {
     this.members = team.map((m) => {
       const root = el.querySelector(`[data-sketch="${m.id}"]`);
       const h = VIEW_W / m.aspect;
-      setHref(root.querySelector('.eye-map'), eyeMap(VIEW_W, h, m.eyes, m.eyeR));
+      const eyeUrl = eyeMap(VIEW_W, h, m.eyes, m.eyeR);
+      setHref(root.querySelector('.eye-map'), eyeUrl);
 
       const faces = {};
       if (m.face) {
@@ -89,11 +91,25 @@ export default class Duo {
       gasp.textContent = '!';
       root.querySelector('.sketch-body').appendChild(gasp);
 
+      /* Drawn on the GPU, so a reacting face costs next to nothing; the SVG
+         filter stays as the fallback. */
+      const host = root.querySelector('.sketch-svg');
+      const neon = faces.hurt
+        ? new NeonSketch(host, {
+          src: m.sketch,
+          view: [VIEW_W, h],
+          colour: m.colour,
+          ink: m.ink,
+          maps: { eye: eyeUrl, hurt: faces.hurt.url, angry: faces.angry.url, sad: faces.sad.url }
+        })
+        : null;
+
       return {
         ...m,
         root,
+        neon,
         body: root.querySelector('.sketch-body'),
-        svg: root.querySelector('.sketch-svg'),
+        svg: host,
         hitBtn: root.querySelector('.sketch-hit'),
         gasp,
         faces,
@@ -373,6 +389,7 @@ export default class Duo {
     if (!faces.hurt) return;
     const next = faces[mood] || faces.angry;
     setHref(m.mapB, next.url);
+    m.neon?.setMood(mood);
 
     gsap.timeline()
       .set(after, { v: 0 })
@@ -393,7 +410,7 @@ export default class Duo {
     this.H = this.el.offsetHeight;
     const page = this.el.closest('.page') || document;
     this.texts = [...page.querySelectorAll(TEXT)];
-    const nav = page.querySelector('.site-header');
+    const nav = document.querySelector('.site-header');
     this.ceiling = nav ? nav.getBoundingClientRect().bottom + 10 : 0;
     this.members.forEach((m) => {
       m.cx = m.root.offsetLeft + m.root.offsetWidth / 2;
@@ -409,8 +426,15 @@ export default class Duo {
     this.last = now;
     const t = now / 1000;
 
-    /* Push the eye / expression strengths into the filters only when they change. */
+    /* Push the eye / expression strengths to the sketch — the GPU one if
+       it's up, otherwise into the SVG filter (only when they change). */
     for (const m of this.members) {
+      if (m.neon?.ready) {
+        const [e, h, md] = m.warps;
+        m.neon.set(e.v, h.v, md.v);
+        m.neon.render();
+        continue;
+      }
       for (const w of m.warps) {
         if (!w.node) continue;
         const v = Math.round(w.v * 10) / 10;
@@ -542,6 +566,7 @@ export default class Duo {
   resize() {
     this.measure();
     this.rocks.resize();
+    this.members.forEach((m) => m.neon?.resize());
   }
 
   destroy() {
@@ -552,6 +577,7 @@ export default class Duo {
     this.members.forEach((m) => {
       m.humCall?.kill();
       gsap.killTweensOf([m.root, m.body, m.svg, m.gasp, ...m.warps]);
+      m.neon?.destroy();
     });
   }
 }

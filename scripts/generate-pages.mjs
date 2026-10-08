@@ -55,29 +55,27 @@ ${body}
 
 /* ------------------------------------------------------------- partials */
 
+/* A label as rolling letters: on hover each letter rolls up and its twin
+   rolls in from below, in a ripple (same as the About Us button). */
+const roll = (text) =>
+  `<span class="roll" aria-hidden="true">${[...text]
+    .map((c, i) => {
+      const ch = c === ' ' ? '&nbsp;' : esc(c);
+      return `<span class="roll-char" style="--i: ${i}" data-c="${c === ' ' ? '\u00a0' : esc(c)}">${ch}</span>`;
+    })
+    .join('')}</span>`;
+
+const navItem = (href, label, on) =>
+  `<a class="nav-link roll-link${on ? ' is-current' : ''}" href="${href}" data-link aria-label="${esc(label)}"${on ? ' aria-current="page"' : ''}>${roll(label)}</a>`;
+
 const header = (current) => `  <header class="site-header">
-    <a class="logo link" href="/" data-link><span class="line-inner">${esc(studio.wordmark)}</span></a>
+    <a class="logo roll-link" href="/" data-link aria-label="${esc(studio.wordmark)} — home">${roll(studio.wordmark)}</a>
     <nav class="nav" aria-label="Primary">
-      <a class="nav-link link${current === 'projects' ? ' is-current' : ''}" href="/work/" data-link><span class="line-inner">Work</span></a>
-      <a class="nav-link link${current === 'info' ? ' is-current' : ''}" href="/info/" data-link><span class="line-inner">Info</span></a>
-      <a class="nav-link link${current === 'contact' ? ' is-current' : ''}" href="/contact/" data-link><span class="line-inner">Contact</span></a>
+      ${navItem('/work/', 'Work', current === 'projects')}
+      ${navItem('/info/', 'Info', current === 'info')}
+      ${navItem('/contact/', studio.contactLabel || 'Contact', current === 'contact')}
     </nav>
   </header>`;
-
-const footer = () => `  <footer class="site-footer">
-    <dl class="metas footer-metas">
-      <div class="meta meta-email">
-        <dt class="label">Contact</dt>
-        <dd><button class="text link" type="button" data-email="${esc(studio.email)}"><span class="line-inner">${esc(studio.email)}</span></button></dd>
-        <span class="copied" aria-hidden="true">Email copied</span>
-      </div>
-      <div class="meta meta-available">
-        <dt class="label">Available</dt>
-        <dd class="text">${esc(studio.available)}</dd>
-      </div>
-    </dl>
-    <span class="copyright">&copy; ${esc(studio.year)}</span>
-  </footer>`;
 
 const mediaBlock = (src, alt, extra = '') =>
   `<div class="media-wrapper" data-media ${extra}><img class="media" src="${src}" alt="${esc(alt)}" loading="lazy" decoding="async" /></div>`;
@@ -100,7 +98,8 @@ const sketch = (m, other) => {
   return `        <div class="sketch sketch-${m.id}" data-sketch="${m.id}" style="--neon: ${m.colour}">
           <button class="sketch-hit" type="button" aria-label="${esc(m.name)}: throw a meteor at ${esc(other.name)}"></button>
           <div class="sketch-body">
-            <svg class="sketch-svg" viewBox="0 0 ${w} ${h}" aria-hidden="true">
+            <div class="sketch-svg">
+            <svg class="sketch-vector" viewBox="0 0 ${w} ${h}" aria-hidden="true">
               <defs>
                 <filter id="neon-${m.id}" x="-12%" y="-12%" width="124%" height="124%" color-interpolation-filters="sRGB">
                   <feImage class="eye-map" x="0" y="0" width="${w}" height="${h}" preserveAspectRatio="none" result="eyeMap" />
@@ -128,6 +127,7 @@ const sketch = (m, other) => {
               </defs>
               <image href="${m.sketch}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet" filter="url(#neon-${m.id})" />
             </svg>
+            </div>
           </div>
           <span class="sketch-name">${esc(m.name)}</span>
         </div>`;
@@ -251,7 +251,6 @@ ${frame(prem, 'right')}
 
 ${showcaseSection()}
 
-${footer()}
   </div>
 </div>`
   });
@@ -317,7 +316,6 @@ ${previews}
       </aside>
     </section>
 
-${footer()}
   </div>
 </div>`
   });
@@ -373,7 +371,6 @@ ${shots}
       </a>
     </div>
 
-${footer()}
   </div>
 </div>`
   });
@@ -408,7 +405,6 @@ const infoPage = () => {
   <div class="page-content" id="page-content" tabindex="-1">
 ${header('info')}
 
-    <a class="back link" href="/" data-link><span class="line-inner"><span class="back-arrow" aria-hidden="true">&larr;</span>Index</span></a>
 
     <h1 class="title" data-split>
         ${splitTitle(info.title)}
@@ -439,7 +435,6 @@ ${services}
       <ul class="social-list">${social}</ul>
     </section>
 
-${footer()}
   </div>
 </div>`
   });
@@ -486,7 +481,6 @@ ${details}
       </dl>
     </div>
 
-${footer()}
   </div>
 </div>`
   });

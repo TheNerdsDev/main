@@ -10,6 +10,8 @@ export const studio = {
   description:
     'A two-person studio building websites, software and automation for businesses that deserve better than a template.',
   email: 'hello@thenerds.studio',
+  /* The header's way to the contact page. */
+  contactLabel: "Let's talk",
   location: 'Ahmedabad, IN — working remotely',
   available: 'January 2027',
   year: '2026',

@@ -34,7 +34,7 @@ Nearly everything lives in **one file**: `src/content/site.js`.
 
 | What | Where |
 |---|---|
-| Studio name, email, availability, socials | `studio` in `src/content/site.js` |
+| Studio name, email, header's contact label, socials | `studio` in `src/content/site.js` |
 | Landing page headline, subtext, About copy, button label, the four rocks | `main` |
 | The two of us: sketches, neon colours, eye / hit points, About photos | `team` |
 | The work reel on the landing page (heading, link label) | `showcase` |
@@ -81,12 +81,11 @@ the bottom of `src/styles/pages.css`.
    About Us button play in.
 3. **Work.** A pinned reel: the scroll pulls the projects sideways past you,
    each card linking to its case study. Hover a card and it comes forward
-   while the others step back and dim — and water drops start falling on
-   it: each lands with a splat and a ripple, and where it lies the project's
-   video shows through it, bent by the drop like a lens. More drops follow
-   the pointer and fill the dry gaps, beads run together, and the water
-   takes the whole card with the video playing on loop; move away and it
-   dries back. An "All work" box beside the
+   while the others step back and dim — and water spreads across it from
+   the point where the pointer came in. The uneven front bends the
+   thumbnail like a lens as it passes; behind it the thumbnail washes away
+   into the project's video, which starts playing as the water arrives and
+   loops once the card is covered. Move away and the water drains back. An "All work" box beside the
    heading opens the full card stack at `/work/`. On phones it becomes a plain vertical list.
 
 ### Swapping in your own sketches
@@ -117,7 +116,7 @@ The placeholder images are generated abstracts. Swap in real screenshots at the
 same paths and nothing else needs touching:
 
 ```
-public/media/<slug>/featured.jpg   # index card + case-study hero
+public/media/<slug>/featured.jpg   # card thumbnail (e.g. a dashboard screenshot) + case-study hero
 public/media/<slug>/01.jpg         # detail shots
 public/media/<slug>/02.jpg
 public/media/<slug>/03.jpg
@@ -128,7 +127,7 @@ Regenerate the placeholders any time with `python3 scripts/generate_media.py`.
 
 ### Project videos
 
-Each project's `video` (in `projects`) plays under the water drops when its card
+Each project's `video` (in `projects`) plays under the spreading water when its card
 on the landing page is hovered. They all point at one placeholder clip for
 now, `public/media/sample/preview.mp4` — a 10-second excerpt of *Big Buck
 Bunny* (© Blender Foundation, peach.blender.org, CC BY 3.0). Swap in a
@@ -168,7 +167,8 @@ src/
     RockStage.js       3D layer for the thrown rock and its fragments
     Rock.js            Throw path + impact dust and grit
     Zap.js             Neon short-circuit + dizzy stars on a hit; the collision's dust
-    DropReveal.js      Water-drop hover on the work cards, revealing each project's video
+    WaterReveal.js     Water spreading from the pointer over a work card, revealing its video
+    NeonSketch.js      The neon sketches drawn on the GPU (face warps + glow in one cheap pass)
     faceMap.js         Hurt / angry / sad expressions as displacement maps
     eyeMap.js          Displacement map that widens the eyes in shock
     particles.js       Shared sprites, heat ramp and helpers
@@ -202,6 +202,8 @@ Each frame:
 - **Duotone → colour on hover.** Index cards are graded to a two-tone blue;
   hovering fades in the project's own accent colour and zooms the plane.
 - **Scroll-velocity bend.** Plane edges lag behind the centre as you scroll.
+- **Header.** A frosted-glass bar; its links roll their letters on hover and
+  turn green (the same effect as the About Us button). No footer.
 - **Cursor.** On mouse / trackpad devices the pointer is a small star with an
   orbit that trails it; it opens up over links, turns into a dashed target over
   a rock, and steps aside for the text caret in form fields.

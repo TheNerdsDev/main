@@ -35,6 +35,7 @@ export default class App {
   constructor() {
     this.canvas = document.querySelector('.canvas');
     this.pageEl = document.querySelector('.page');
+    this.hoistHeader(this.pageEl);
 
     store.html.classList.add('webgl');
 
@@ -93,6 +94,7 @@ export default class App {
 
     /* 2 — swap the DOM. */
     outgoing.destroy();
+    this.hoistHeader(nextPageEl);
     this.pageEl.replaceWith(nextPageEl);
     this.pageEl = nextPageEl;
     document.title = title;
@@ -113,6 +115,30 @@ export default class App {
   }
 
   /* ---------------------------------------------------------- extras */
+
+  /**
+   * The header lives outside the page: one bar for the whole visit, so it
+   * doesn't flicker between pages — and so its frosted glass can see (and
+   * blur) the page beneath it. Inside a page's own stacking layer, the
+   * backdrop blur has nothing to work with and text shows through.
+   * Each incoming page's header only tells us which link is current.
+   */
+  hoistHeader(pageEl) {
+    const incoming = pageEl.querySelector('.site-header');
+    if (!incoming) return;
+    if (!this.header) {
+      this.header = incoming;
+      document.body.insertBefore(incoming, document.body.firstChild);
+      return;
+    }
+    const current = [...incoming.querySelectorAll('a')].map((a) => a.classList.contains('is-current'));
+    [...this.header.querySelectorAll('a')].forEach((a, i) => {
+      a.classList.toggle('is-current', !!current[i]);
+      if (current[i]) a.setAttribute('aria-current', 'page');
+      else a.removeAttribute('aria-current');
+    });
+    incoming.remove();
+  }
 
   bindCopyButtons(root) {
     root.querySelectorAll('[data-email]').forEach((btn) => {
