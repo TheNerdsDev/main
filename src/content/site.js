@@ -116,6 +116,13 @@ export const showcase = {
   more: 'All work'
 };
 
+/* The closing section of the landing page, under the planet shower. */
+export const finale = {
+  title: ['Connect to us'],
+  text: 'placeholder',
+  button: 'Contact us'
+};
+
 /* Work index at `/work/` — the card stack. */
 export const workIndex = {
   title: ['Built to be', 'Remembered'],

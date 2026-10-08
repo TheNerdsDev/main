@@ -598,6 +598,60 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
   transform: scaleX(0);
 }
 
+/* ------------------------------------------------------------ finale */
+
+/* The last screen: planets pile up along its floor (fx/PlanetShower.js),
+   the heading and button sit above the pile. */
+#main .finale {
+  position: relative;
+  z-index: 4;
+  height: 100vh;
+  height: 100svh;
+  min-height: 56rem;
+  overflow: hidden;
+}
+#main .planet-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+}
+#main .finale-body {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  padding: 0 var(--unit) 18vh;
+  text-align: center;
+  /* The pile underneath still feels the pointer; only the button takes clicks. */
+  pointer-events: none;
+}
+#main .finale-title {
+  font-family: 'Anton', 'Arial Narrow', sans-serif;
+  font-weight: 400;
+  font-size: 10rem;
+  line-height: 0.92;
+  letter-spacing: 0.012em;
+  text-transform: uppercase;
+}
+#main .finale-text { font-size: 1.8rem; line-height: 1.5; color: var(--c-dim); max-width: 48rem; }
+#main .finale-cta { margin-top: 2.6rem; pointer-events: auto; }
+/* About Us, scaled up: same outline, glow, letter roll and lean. */
+#main .finale-button { padding: 2.4rem 6.4rem; }
+#main .finale-button .about-button-text { font-size: 2rem; }
+
+/* It arrives with each shower. */
+#main .finale-title .line-inner { transform: translateY(110%); transition: transform 1.1s var(--ease-out); }
+#main .finale-text,
+#main .finale-cta { opacity: 0; translate: 0 2rem; transition: opacity 0.9s var(--ease-out), translate 0.9s var(--ease-out); }
+#main .finale.is-in .finale-title .line-inner { transform: none; }
+#main .finale.is-in .finale-text { opacity: 1; translate: 0 0; transition-delay: 0.25s; }
+#main .finale.is-in .finale-cta { opacity: 1; translate: 0 0; transition-delay: 0.4s; }
+
 /* ---------------------------------------------------------- fallback */
 
 /* No WebGL / no JS: everything is simply visible, last photo on top. */
@@ -672,3 +726,14 @@ html.no-webgl #main .duo-actions { display: none; }
 html.no-webgl #main .showcase-stage { position: static; height: auto; padding: 8rem 0; }
 html.no-webgl #main .showcase-track { width: auto; overflow-x: auto; }
 html.no-webgl #main .showcase-progress { display: none; }
+
+/* Finale on small screens. */
+@media screen and (max-width: 767px) {
+  #main .finale-title { font-size: 5.6rem; }
+  #main .finale-button { padding: 2rem 4.4rem; }
+  #main .finale-button .about-button-text { font-size: 1.6rem; }
+}
+html.no-webgl #main .planet-canvas { display: none; }
+html.no-webgl #main .finale-title .line-inner { transform: none; }
+html.no-webgl #main .finale-text,
+html.no-webgl #main .finale-cta { opacity: 1; translate: 0 0; }

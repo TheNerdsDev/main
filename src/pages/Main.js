@@ -8,6 +8,7 @@ import RockStage from '../fx/RockStage.js';
 import Scatter from '../fx/Scatter.js';
 import { Crumble } from '../fx/Zap.js';
 import WaterReveal from '../fx/WaterReveal.js';
+import PlanetShower from '../fx/PlanetShower.js';
 import { PALETTE } from '../gl/World.js';
 import { clamp } from '../fx/particles.js';
 
@@ -56,6 +57,8 @@ export default class Main extends Page {
     this.aboutText = q('.about-text');
     this.frames = [...this.el.querySelectorAll('.about-frame')];
     this.button = q('.about-button');
+    this.finale = q('.finale');
+    this.finaleButton = q('.finale-button');
     this.buttonWrap = q('.about-cta');
     this.buttonText = q('.about-button-text');
     this.show = q('.showcase');
@@ -100,60 +103,100 @@ export default class Main extends Page {
     };
     this.cue?.addEventListener('click', this.onCue);
     this.bindButtonShake();
+    this.buildFinale();
 
     this.measure();
   }
 
   /**
-   * About Us is magnetic: once the cursor comes within reach, the button
-   * leans after it — following its movement, but never more than PULL px
-   * from home — and eases back when the cursor leaves. (Hover also grows
-   * it; see the CSS.)
+   * The About Us and Contact us buttons are magnetic: once the cursor comes
+   * within reach, a button leans after it — following its movement, but
+   * never more than PULL px from home — and eases back when the cursor
+   * leaves. (Hover also grows it; see the CSS.)
    */
   bindButtonShake() {
-    const btn = this.button;
-    if (!btn || !window.matchMedia('(hover: hover)').matches) return;
+    if (!window.matchMedia('(hover: hover)').matches) return;
     const PULL = 22;
-    const s = { x: 0, y: 0, tx: 0, ty: 0, on: false };
+    const springs = [this.button, this.finaleButton].filter(Boolean).map((btn) => ({
+      btn, x: 0, y: 0, tx: 0, ty: 0
+    }));
+    if (!springs.length) return;
+    let on = false;
     this.onButtonMove = (e) => {
-      const r = btn.getBoundingClientRect();
-      if (!r.width) return;
-      /* Where it sits without the lean, so the pull doesn't feed on itself. */
-      const cx = r.left + r.width / 2 - s.x;
-      const cy = r.top + r.height / 2 - s.y;
-      const dx = e.clientX - cx;
-      const dy = e.clientY - cy;
-      const reach = r.width / 2 + 70;
-      const d = Math.hypot(dx, dy);
-      if (d < reach) {
-        /* Follows the cursor, softly capped at the edge of its radius. */
-        const k = (PULL * Math.tanh(d / (reach * 0.5))) / Math.max(d, 1);
-        s.tx = dx * k;
-        s.ty = dy * k;
-      } else {
-        s.tx = 0;
-        s.ty = 0;
+      for (const s of springs) {
+        const r = s.btn.getBoundingClientRect();
+        if (!r.width) continue;
+        /* Where it sits without the lean, so the pull doesn't feed on itself. */
+        const cx = r.left + r.width / 2 - s.x;
+        const cy = r.top + r.height / 2 - s.y;
+        const dx = e.clientX - cx;
+        const dy = e.clientY - cy;
+        const reach = r.width / 2 + 70;
+        const d = Math.hypot(dx, dy);
+        if (d < reach) {
+          /* Follows the cursor, softly capped at the edge of its radius. */
+          const k = (PULL * Math.tanh(d / (reach * 0.5))) / Math.max(d, 1);
+          s.tx = dx * k;
+          s.ty = dy * k;
+        } else {
+          s.tx = 0;
+          s.ty = 0;
+        }
       }
-      if (!s.on && (s.tx || s.ty)) {
-        s.on = true;
+      if (!on && springs.some((s) => s.tx || s.ty)) {
+        on = true;
         gsap.ticker.add(this.buttonSpring);
       }
     };
     this.buttonSpring = () => {
       const k = 1 - Math.pow(1 - 0.16, gsap.ticker.deltaRatio(60));
-      s.x += (s.tx - s.x) * k;
-      s.y += (s.ty - s.y) * k;
-      btn.style.setProperty('--nx', `${s.x.toFixed(2)}px`);
-      btn.style.setProperty('--ny', `${s.y.toFixed(2)}px`);
-      if (!s.tx && !s.ty && Math.abs(s.x) + Math.abs(s.y) < 0.05) {
-        s.x = s.y = 0;
-        btn.style.removeProperty('--nx');
-        btn.style.removeProperty('--ny');
+      let busy = false;
+      for (const s of springs) {
+        s.x += (s.tx - s.x) * k;
+        s.y += (s.ty - s.y) * k;
+        if (!s.tx && !s.ty && Math.abs(s.x) + Math.abs(s.y) < 0.05) {
+          if (s.x || s.y) {
+            s.x = s.y = 0;
+            s.btn.style.removeProperty('--nx');
+            s.btn.style.removeProperty('--ny');
+          }
+          continue;
+        }
+        busy = true;
+        s.btn.style.setProperty('--nx', `${s.x.toFixed(2)}px`);
+        s.btn.style.setProperty('--ny', `${s.y.toFixed(2)}px`);
+      }
+      if (!busy) {
         gsap.ticker.remove(this.buttonSpring);
-        s.on = false;
+        on = false;
       }
     };
     window.addEventListener('pointermove', this.onButtonMove, { passive: true });
+  }
+
+  /**
+   * The closing section: a planet shower each time it scrolls into view
+   * (from above), and the heading and button arriving with it. Without
+   * WebGL2 (or with reduced motion) the text simply shows.
+   */
+  buildFinale() {
+    if (!this.finale) return;
+    const reveal = () => {
+      this.finale.classList.remove('is-in');
+      void this.finale.offsetWidth;
+      this.finale.classList.add('is-in');
+    };
+    const canvas = this.finale.querySelector('.planet-canvas');
+    if (canvas && PlanetShower.supported()) {
+      this.planets = new PlanetShower(this.finale, canvas, { onShower: reveal });
+    }
+    if (!this.planets || this.planets.dead) {
+      canvas?.remove();
+      this.finaleIO = new IntersectionObserver((entries) => {
+        if (entries.some((e) => e.isIntersecting)) this.finale.classList.add('is-in');
+      }, { threshold: 0.3 });
+      this.finaleIO.observe(this.finale);
+    }
   }
 
   get lenis() { return this.app?.scroll?.lenis; }
@@ -405,6 +448,7 @@ export default class Main extends Page {
     this.fx.resize();
     this.stage.resize();
     this.duo?.resize();
+    this.planets?.resize();
   }
 
   /* ------------------------------------------------------ enter/leave */
@@ -438,7 +482,7 @@ export default class Main extends Page {
   }
 
   onLeave(tl) {
-    tl.to([this.duoEl, this.about, this.show].filter(Boolean), { opacity: 0, duration: 0.45, ease: 'power2.in' }, 0);
+    tl.to([this.duoEl, this.about, this.show, this.finale].filter(Boolean), { opacity: 0, duration: 0.45, ease: 'power2.in' }, 0);
   }
 
   destroy() {
@@ -452,6 +496,8 @@ export default class Main extends Page {
     this.aboutTl?.kill();
     this.showTl?.kill();
     this.water?.destroy();
+    this.planets?.destroy();
+    this.finaleIO?.disconnect();
     this.scatter.destroy();
     this.duo?.destroy();
     this.fx.destroy();

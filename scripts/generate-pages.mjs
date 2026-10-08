@@ -5,7 +5,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { studio, main, team, workIndex, info, contact, showcase, projects, getNext } from '../src/content/site.js';
+import { studio, main, team, workIndex, info, contact, showcase, finale, projects, getNext } from '../src/content/site.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -182,13 +182,14 @@ const mainPage = () => {
   ).join('\n');
 
   /* Each letter carries a copy of itself (data-c) for the hover roll. */
-  const buttonChars = [...main.about.button]
+  const rollChars = (text) => [...text]
     .map((c, i) => {
       const ch = c === ' ' ? '&nbsp;' : esc(c);
       const copy = c === ' ' ? '\u00a0' : esc(c);
       return `<span class="about-button-char" style="--i: ${i}" data-c="${copy}">${ch}</span>`;
     })
     .join('');
+  const buttonChars = rollChars(main.about.button);
 
   const frame = (m, side) => `      <figure class="about-frame about-frame-${side}" data-frame="${m.id}" style="--neon: ${m.colour}">
         <div class="about-photos">
@@ -250,6 +251,21 @@ ${frame(prem, 'right')}
     </section>
 
 ${showcaseSection()}
+
+    <!-- The finale: planets shower down from the seam above and pile up
+         along the bottom (fx/PlanetShower.js). -->
+    <section class="finale" id="connect" aria-labelledby="finale-title">
+      <canvas class="planet-canvas" aria-hidden="true"></canvas>
+      <div class="finale-body">
+        <h2 class="finale-title" id="finale-title">${finale.title.map((l) => `<span class="line"><span class="line-inner">${esc(l)}</span></span>`).join(' ')}</h2>
+        <p class="finale-text">${esc(finale.text)}</p>
+        <div class="finale-cta">
+          <a class="about-button finale-button" href="/contact/" data-link aria-label="${esc(finale.button)}">
+            <span class="about-button-text" aria-hidden="true">${rollChars(finale.button)}</span>
+          </a>
+        </div>
+      </div>
+    </section>
 
   </div>
 </div>`

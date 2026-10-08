@@ -38,6 +38,7 @@ Nearly everything lives in **one file**: `src/content/site.js`.
 | Landing page headline, subtext, About copy, button label, the four rocks | `main` |
 | The two of us: sketches, neon colours, eye / hit points, About photos | `team` |
 | The work reel on the landing page (heading, link label) | `showcase` |
+| The closing section (heading, text, button) | `finale` |
 | Work index headline and intro | `workIndex` |
 | Contact page heading, lead and details | `contact` |
 | About page copy, services, stack | `info` |
@@ -85,7 +86,16 @@ the bottom of `src/styles/pages.css`.
    the point where the pointer came in. The uneven front bends the
    thumbnail like a lens as it passes; behind it the thumbnail washes away
    into the project's video, which starts playing as the water arrives and
-   loops once the card is covered. Move away and the water drains back. An "All work" box beside the
+   loops once the card is covered. Move away and the water drains back.
+4. **Connect.** The last screen. As it scrolls in, a shower of tiny planets
+   pours down from the seam above it — the Sun, ringed Saturn, banded
+   Jupiter, Earth with its oceans and clouds, Mars, the ice giants, Mercury
+   and the Moon, sized in the real order but squeezed so nothing gets huge —
+   falls under gravity, bounces and piles up along the bottom. Drag the
+   pointer through the pile and the planets near it get shoved the way you
+   move. Scroll back up and the pile stays put; leave the section and come
+   back down for a fresh shower. Above the pile: the heading, a line of
+   text and a big Contact us button (the About Us button, scaled up). An "All work" box beside the
    heading opens the full card stack at `/work/`. On phones it becomes a plain vertical list.
 
 ### Swapping in your own sketches
@@ -169,6 +179,7 @@ src/
     Zap.js             Neon short-circuit + dizzy stars on a hit; the collision's dust
     WaterReveal.js     Water spreading from the pointer over a work card, revealing its video
     NeonSketch.js      The neon sketches drawn on the GPU (face warps + glow in one cheap pass)
+    PlanetShower.js    The closing planet shower: physics, pointer shoves, instanced GPU planets
     faceMap.js         Hurt / angry / sad expressions as displacement maps
     eyeMap.js          Displacement map that widens the eyes in shock
     particles.js       Shared sprites, heat ramp and helpers
