@@ -98,7 +98,12 @@ the bottom of `src/styles/pages.css`.
    bands sliding past each other. Lit from the upper left with a strong
    fill, so each planet shades softly to its lower right (never black). No
    cast shadows, and no overlaps: ringed planets collide along their rings,
-   so the pile rests against them instead of sliding into them.
+   so the pile rests against them instead of sliding into them. The pile
+   fits the screen: planet size follows the section's area and the count
+   makes up the rest, so it fills about the bottom 30% on a phone, a tablet
+   or a monitor alike (on portrait screens the heading sits just above it).
+   Resize the window or turn the phone and a fresh pile falls for the new
+   size.
    Moving the pointer through the pile nudges it; pressing and dragging
    (mouse or touch) swipes planets away with the drag — they glide on, then
    fall and settle. Scroll back up and the pile stays put; leave the section
@@ -241,7 +246,9 @@ Each frame:
   hovering fades in the project's own accent colour and zooms the plane.
 - **Scroll-velocity bend.** Plane edges lag behind the centre as you scroll.
 - **Header.** A frosted-glass bar; its links roll their letters on hover and
-  turn green (the same effect as the About Us button). No footer.
+  turn green (the same effect as the About Us button). On phones the links
+  fold behind a three-line menu button and open as a full-screen panel. No
+  footer.
 - **Cursor.** On mouse / trackpad devices the pointer is a small star with an
   orbit that trails it; it opens up over links, turns into a dashed target over
   a rock, and steps aside for the text caret in form fields.

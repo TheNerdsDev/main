@@ -735,6 +735,21 @@ html.no-webgl #main .showcase-progress { display: none; }
   #main .finale-button { padding: 2rem 4.4rem; }
   #main .finale-button .about-button-text { font-size: 1.6rem; }
 }
+/* Tall (portrait) screens — phones, tablets: centred, the heading would
+   float far above the pile, so it's set down to sit just over it instead.
+   The pile fills about the bottom 30% on every screen (fx/PlanetShower.js). */
+@media screen and (orientation: portrait) {
+  #main .finale-body {
+    justify-content: flex-end;
+    padding-bottom: calc(34vh + 4rem);
+    padding-bottom: calc(34svh + 4rem);
+  }
+  /* No planets (no WebGL, or reduced motion): keep it centred. */
+  #main .finale:not(:has(.planet-canvas)) .finale-body {
+    justify-content: center;
+    padding-bottom: 18vh;
+  }
+}
 html.no-webgl #main .planet-canvas { display: none; }
 html.no-webgl #main .finale-title .line-inner { transform: none; }
 html.no-webgl #main .finale-text,

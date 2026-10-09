@@ -106,6 +106,21 @@ const STEP = 1 / 240;   // physics time step, s
 const SHOWER = 2.1;     // seconds over which the bodies are let go
 
 const rand = (a, b) => a + Math.random() * (b - a);
+const clamp = (v, a, b) => Math.min(Math.max(v, a), b);
+
+/**
+ * How the shower fits a section of w × h. Planet size follows the square
+ * root of its area against the 1280 × 720 the table above is drawn for —
+ * smaller on a phone, bigger on a large monitor — and the count makes up
+ * the rest, so the pile fills the same share of the section's height on
+ * every screen (a tall phone gets as deep a pile as a laptop).
+ */
+const FILL = 1.25;      // bodies per table entry at the reference size (sets how deep the pile is)
+const plan = (w, h) => {
+  const area = (w * h) / (1280 * 720);
+  const unit = clamp(Math.sqrt(area), 0.5, 1.7);
+  return { unit, howMany: clamp((FILL * area) / (unit * unit), 0.6, 1.8) };
+};
 
 export default class PlanetShower {
   static supported() {
@@ -116,7 +131,7 @@ export default class PlanetShower {
   /** How many of each kind can ever fall at once (the widest screens). */
   static capacity() {
     const cap = {};
-    for (const [type, , count] of BODIES) cap[type] = Math.round(count * 1.5);
+    for (const [type, , count] of BODIES) cap[type] = Math.round(count * 1.8);
     return cap;
   }
 
@@ -130,6 +145,7 @@ export default class PlanetShower {
     this.canvas = canvas;
     this.onShower = onShower;
     this.bodies = [];
+    this.order = [];
     this.armed = true;
     this.awake = false;
     this.time = 0;
@@ -199,6 +215,10 @@ export default class PlanetShower {
       } else this.stop();
     }, { rootMargin: '100% 0px 100% 0px' });
     this.io.observe(section);
+    /* Watch the section's own size, so any change (window, rotation,
+       devtools) refits the pile, whoever else notices it. */
+    this.ro = new ResizeObserver(() => this.resize());
+    this.ro.observe(section);
     this.resize();
   }
 
@@ -210,23 +230,44 @@ export default class PlanetShower {
     this.W = w;
     this.H = h;
     this.scene.resize(w, h);
-    if (changed && this.bodies.length) {
-      /* Keep everyone inside the new box; they'll settle again. */
-      for (const b of this.bodies) {
-        b.x = Math.min(Math.max(b.x, b.ex), w - b.ex);
-        b.y = Math.min(b.y, h - b.ey);
-      }
-      this.awake = true;
+    if (!changed || !this.bodies.length) return;
+    /* A real change of screen (a phone turned, a window going from phone
+       width to laptop): this pile was planned for another size. Once the
+       resizing stops, rain a fresh one sized for this screen if the section
+       is in view; otherwise clear it, and the next visit brings a fresh
+       shower anyway. */
+    const next = plan(w, h);
+    const shifted = Math.abs(next.unit / this.plan.unit - 1) > 0.1
+      || Math.abs(next.howMany / this.plan.howMany - 1) > 0.1;
+    clearTimeout(this.refit);
+    if (shifted) {
+      this.refit = setTimeout(() => {
+        if (this.dead) return;
+        const r = this.section.getBoundingClientRect();
+        if (r.top < window.innerHeight && r.bottom > 0 && this.scene.ready) this.shower({ reveal: false });
+        else {
+          this.bodies = [];
+          this.order = [];
+          this.awake = false;
+        }
+      }, 250);
     }
+    /* Meanwhile (or for a small change, for good): keep everyone inside
+       the new box; they'll settle again. */
+    for (const b of this.bodies) {
+      b.x = Math.min(Math.max(b.x, b.ex), w - b.ex);
+      b.y = Math.min(b.y, h - b.ey);
+    }
+    this.awake = true;
   }
 
   /* ------------------------------------------------------------ shower */
 
-  shower() {
+  /** reveal: also replay the heading's entrance (not when it's only refitting a resized screen). */
+  shower({ reveal = true } = {}) {
     const W = this.W;
-    const unit = Math.min(Math.max(W / 1280, 0.55), 1.4);
-    /* Narrow screens get fewer bodies so the pile is the same depth. */
-    const howMany = Math.min(Math.max(W / 1280, 0.4), 1.5);
+    this.plan = plan(W, this.H);
+    const { unit, howMany } = this.plan;
     const list = [];
     for (const [type, radius, count] of BODIES) {
       const n = Math.max(1, Math.round(count * howMany));
@@ -248,10 +289,11 @@ export default class PlanetShower {
       }
     }
     this.bodies = list;
+    this.order = list.slice();
     this.clock = 0;
     this.still = 0;
     this.awake = true;
-    this.onShower?.();
+    if (reveal) this.onShower?.();
   }
 
   /** The pointer moved through the pile at (x, y) with velocity (vx, vy). */
@@ -347,14 +389,32 @@ export default class PlanetShower {
       b.y += b.vy * dt;
     }
 
-    const n = bodies.length;
+    /* Broad phase: bodies sorted by their left edge (an insertion sort —
+       the order barely changes from one step to the next; ones not yet
+       falling go last). A pair only needs testing while their spans
+       overlap across, which skips most of them. */
+    const order = this.order;
+    for (const b of order) b.lo = b.live ? b.x - b.r : Infinity;
+    for (let i = 1; i < order.length; i++) {
+      const b = order[i];
+      let j = i - 1;
+      while (j >= 0 && order[j].lo > b.lo) {
+        order[j + 1] = order[j];
+        j--;
+      }
+      order[j + 1] = b;
+    }
+
+    const n = order.length;
     for (let it = 0; it < ITERATIONS; it++) {
       for (let i = 0; i < n; i++) {
-        const a = bodies[i];
-        if (!a.live) continue;
+        const a = order[i];
+        if (!a.live) break;
+        /* (A little slack: everyone shifts slightly over the passes.) */
+        const right = a.x + a.r + 4;
         for (let j = i + 1; j < n; j++) {
-          const b = bodies[j];
-          if (!b.live) continue;
+          const b = order[j];
+          if (b.lo > right) break;
           const dx = b.x - a.x;
           const dy = b.y - a.y;
           const reach = a.r + b.r;
@@ -522,7 +582,9 @@ export default class PlanetShower {
 
   destroy() {
     this.stop();
+    clearTimeout(this.refit);
     this.io?.disconnect();
+    this.ro?.disconnect();
     this.section.removeEventListener('pointerdown', this.onDown);
     this.section.removeEventListener('pointermove', this.onMove);
     this.section.removeEventListener('pointerup', this.onUp);

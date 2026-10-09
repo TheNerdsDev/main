@@ -356,8 +356,6 @@ html.no-webgl .back { position: static; display: inline-block; margin: 0 var(--u
   #info .title { font-size: 4.9rem; }
 
   #projects .projects { padding-bottom: 4rem; }
-
-  .site-header { padding-right: 0; }
 }
 
 /* Tablets: the same wrap risk at a smaller display size. */

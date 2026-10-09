@@ -41,6 +41,7 @@ export default class App {
 
     this.scroll = new Scroll();
     this.scroll.stop();
+    this.bindMenu();
 
     this.world = new World(this.canvas);
     this.loader = new Loader();
@@ -138,6 +139,43 @@ export default class App {
       else a.removeAttribute('aria-current');
     });
     incoming.remove();
+  }
+
+  /**
+   * Phones: the three-line button opens the links as a panel under the
+   * bar. Following a link, Escape, or widening past the phone layout
+   * closes it; the page doesn't scroll underneath while it's open.
+   */
+  bindMenu() {
+    const header = this.header;
+    const btn = header?.querySelector('.menu-toggle');
+    if (!btn) return;
+    this.setMenu = (open) => {
+      if (open === header.classList.contains('is-open')) return;
+      header.classList.toggle('is-open', open);
+      btn.setAttribute('aria-expanded', String(open));
+      btn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+      /* Only hand scrolling back if the menu was what stopped it. */
+      if (open && store.html.classList.contains('loaded')) {
+        this.scroll.stop();
+        this.menuHeldScroll = true;
+      } else if (!open && this.menuHeldScroll) {
+        this.menuHeldScroll = false;
+        this.scroll.start();
+      }
+    };
+    btn.addEventListener('click', () => this.setMenu(!header.classList.contains('is-open')));
+    header.addEventListener('click', (e) => {
+      if (e.target.closest('a')) this.setMenu(false);
+    });
+    window.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || !header.classList.contains('is-open')) return;
+      this.setMenu(false);
+      btn.focus();
+    });
+    window.matchMedia('(max-width: 767px)').addEventListener('change', (e) => {
+      if (!e.matches) this.setMenu(false);
+    });
   }
 
   bindCopyButtons(root) {

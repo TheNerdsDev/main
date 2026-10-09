@@ -70,7 +70,11 @@ const navItem = (href, label, on) =>
 
 const header = (current) => `  <header class="site-header">
     <a class="logo roll-link" href="/" data-link aria-label="${esc(studio.wordmark)} — home">${roll(studio.wordmark)}</a>
-    <nav class="nav" aria-label="Primary">
+    <!-- Phones: the links fold into a panel behind this (core/App.js bindMenu). -->
+    <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Open menu">
+      <span class="menu-toggle-line"></span><span class="menu-toggle-line"></span><span class="menu-toggle-line"></span>
+    </button>
+    <nav class="nav" id="site-nav" aria-label="Primary">
       ${navItem('/work/', 'Work', current === 'projects')}
       ${navItem('/info/', 'Info', current === 'info')}
       ${navItem('/contact/', studio.contactLabel || 'Contact', current === 'contact')}
