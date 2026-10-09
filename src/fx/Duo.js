@@ -445,6 +445,11 @@ export default class Duo {
       }
     }
 
+    /* Broken up (About and everything below it): the rocks are hidden and
+       stand still, so skip placing them — it read layout and wrote four
+       transforms every frame while the work reel was scrolling. */
+    if (this.gone) return;
+
     const [a, b] = this.members;
     if (!a.size) return;
     const o = this.orb;

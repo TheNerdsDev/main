@@ -377,6 +377,11 @@ export default class Main extends Page {
       this.showTravel = this.showPinned ? Math.max(0, this.showTrack.scrollWidth - window.innerWidth) : 0;
       this.show.style.height = this.showPinned ? `${Math.round(window.innerHeight * 1.25 + this.showTravel)}px` : '';
       if (!this.showPinned) this.showTrack.style.transform = '';
+      /* Where each card's centre sits along the track. Read once here, not
+         every frame: reading layout right after writing the track's
+         transform forced a style recalculation per card per frame. */
+      this.showCentres = this.showCards.map((c) => c.offsetLeft + c.offsetWidth / 2);
+      this.showQ = null;
     }
     if (!this.about) return;
     /* The page's real scroll, not store.scroll: on a reload the browser
@@ -399,7 +404,12 @@ export default class Main extends Page {
     if (!this.showPinned) return;
 
     const q = clamp((scroll - this.showTop) / Math.max(1, this.showTravel), 0, 1);
-    this.showX = ease(this.showX, -q * this.showTravel);
+    const x = ease(this.showX, -q * this.showTravel);
+    /* At rest (or off screen, where it rests at either end) nothing is
+       written, so there's no style work at all. */
+    if (x === this.showX && q === this.showQ) return;
+    this.showX = x;
+    this.showQ = q;
     this.showTrack.style.transform = `translate3d(${this.showX.toFixed(1)}px, 0, 0)`;
     this.showBar.style.transform = `scaleX(${q.toFixed(4)})`;
 
@@ -415,7 +425,7 @@ export default class Main extends Page {
     this.showCards.forEach((card, i) => {
       const img = this.showImgs[i];
       if (!img) return;
-      const c = card.offsetLeft + card.offsetWidth / 2 + this.showX;
+      const c = this.showCentres[i] + this.showX;
       if (c < -vw * 0.5 || c > vw * 1.5) return;
       img.style.transform = `translate3d(${(((c - vw / 2) / vw) * -7).toFixed(2)}%, 0, 0) scale(1.14)`;
     });

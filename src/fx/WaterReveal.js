@@ -211,6 +211,38 @@ export default class WaterReveal {
     });
 
     this.running = false;
+    /* Get each thumbnail ready off the main thread while nothing's going
+       on, so the first hover doesn't stall uploading a full-size photo. */
+    const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 200));
+    this.cards.forEach((c) => idle(() => this.prepThumb(c)));
+  }
+
+  /**
+   * The thumbnail as a bitmap no wider than the water ever needs (the card
+   * is at most ~0.6k px wide, ×1.5 for the canvas's pixel ratio), decoded
+   * and scaled by the browser off the main thread.
+   */
+  async prepThumb(c) {
+    if (c.bitmap || c.prepping || this.dead || !c.img || !window.createImageBitmap) return;
+    c.prepping = true;
+    try {
+      const img = c.img;
+      if (!img.complete || !img.naturalWidth) {
+        await new Promise((resolve, reject) => {
+          img.addEventListener('load', resolve, { once: true });
+          img.addEventListener('error', reject, { once: true });
+        });
+      }
+      /* (naturalWidth is density-corrected with srcset, so it can't say
+         how many pixels there really are; the aspect ratio still holds.) */
+      const w = 1024;
+      c.bitmap = await createImageBitmap(c.img, {
+        resizeWidth: w,
+        resizeHeight: Math.round((c.img.naturalHeight * w) / c.img.naturalWidth),
+        resizeQuality: 'high'
+      });
+    } catch { /* falls back to uploading the image itself */ }
+    c.prepping = false;
   }
 
   build(gl) {
@@ -257,6 +289,9 @@ export default class WaterReveal {
   enter(c, at) {
     if (this.dead) return;
     this.ensureVideo(c);
+    this.prepThumb(c);
+    /* Read once per hover, not every frame. */
+    c.radius = parseFloat(getComputedStyle(c.media).borderTopLeftRadius) || 0;
     c.target = 1;
     c.pointer = at;
     /* A fresh pour starts where the pointer came in; if the water hasn't
@@ -284,6 +319,16 @@ export default class WaterReveal {
     v.src = c.url;
     v.play().catch(() => {});
     c.video = v;
+    /* Upload a frame only when the video has a new one (a 30fps clip on a
+       60–120Hz screen otherwise re-uploads the same frame 2–4 times). */
+    if ('requestVideoFrameCallback' in v) {
+      c.fresh = true;
+      const onFrame = () => {
+        c.fresh = true;
+        if (c.video === v) v.requestVideoFrameCallback(onFrame);
+      };
+      v.requestVideoFrameCallback(onFrame);
+    }
   }
 
   texture(unit) {
@@ -386,7 +431,7 @@ export default class WaterReveal {
       gl.uniform1f(this.u.uTime, c.clock);
       gl.uniform1f(this.u.uCalm, Math.min(1, c.full / 1.4));
       gl.uniform1f(this.u.uSeed, c.seed);
-      gl.uniform1f(this.u.uRadius, parseFloat(getComputedStyle(c.media).borderTopLeftRadius) || 0);
+      gl.uniform1f(this.u.uRadius, c.radius || 0);
 
       /* The video frame. */
       const v = c.video;
@@ -394,9 +439,10 @@ export default class WaterReveal {
       c.vtex ||= this.texture(0);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, c.vtex);
-      if (ready) {
+      if (ready && c.fresh !== false) {
         try {
           gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, v);
+          if (c.fresh) c.fresh = false;
         } catch { /* a frame that can't be read yet */ }
       }
       gl.uniform1f(this.u.uReady, ready ? 1 : 0);
@@ -407,9 +453,13 @@ export default class WaterReveal {
       c.ttex ||= this.texture(1);
       gl.activeTexture(gl.TEXTURE1);
       gl.bindTexture(gl.TEXTURE_2D, c.ttex);
-      if (!c.thumbReady && c.img?.complete && c.img.naturalWidth) {
+      /* The prepared bitmap if it's there; the image itself only if it
+         can't be prepared (still preparing: the water shows no thumbnail
+         for a frame or two rather than stalling). */
+      const thumb = c.bitmap || (!c.prepping && c.img?.complete && c.img.naturalWidth ? c.img : null);
+      if (!c.thumbReady && thumb) {
         try {
-          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c.img);
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, thumb);
           c.thumbReady = true;
         } catch { /* not decodable yet */ }
       }
@@ -430,6 +480,7 @@ export default class WaterReveal {
     this.stop();
     this.handlers?.forEach((off) => off());
     this.cards?.forEach((c) => {
+      c.bitmap?.close();
       if (c.video) {
         c.video.pause();
         c.video.removeAttribute('src');

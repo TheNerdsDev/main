@@ -2,7 +2,7 @@
  * Generates every route's index.html from src/content/site.js.
  * Run with `npm run pages` (wired into predev / prebuild).
  */
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { studio, main, team, workIndex, info, contact, showcase, finale, projects, getNext } from '../src/content/site.js';
@@ -141,10 +141,16 @@ const sketch = (m, other) => {
    reel that the scroll pulls sideways (see Main.js). */
 const showcaseSection = () => {
   const pad = (n) => String(n).padStart(2, '0');
+  /* A 960px WebP alongside the full photo when there is one
+     (scripts/media-variants.py): the card shows at most ~36vw (photo
+     overscan and hover zoom included), full width on phones. */
+  const srcset = (slug) => existsSync(join(root, 'public', 'media', slug, 'featured-960.webp'))
+    ? ` srcset="/media/${slug}/featured-960.webp 960w, /media/${slug}/featured.jpg 1600w" sizes="(max-width: 767px) 100vw, 36vw"`
+    : '';
   const cards = projects
     .map((p, i) => `          <a class="show-card" href="/work/${p.slug}/" data-link data-cursor="View"${p.video ? ` data-video="${esc(p.video)}"` : ''} style="--accent: ${p.accent}">
             <span class="show-card-inner">
-              <span class="show-card-media"><img class="show-card-img" src="/media/${p.slug}/featured.jpg" alt="${esc(p.name)}" loading="lazy" decoding="async" /></span>
+              <span class="show-card-media"><img class="show-card-img" src="/media/${p.slug}/featured.jpg"${srcset(p.slug)} alt="${esc(p.name)}" loading="lazy" decoding="async" /></span>
               <span class="show-card-meta">
                 <span class="show-card-no">${pad(i + 1)}</span>
                 <span class="show-card-name">${esc(p.name)}</span>
