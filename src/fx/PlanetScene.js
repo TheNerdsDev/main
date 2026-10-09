@@ -26,8 +26,9 @@ import {
  *
  * Every body has its real axial tilt and turns at its real relative rate
  * (Venus and Uranus backwards), scaled so even Jupiter turns calmly. One
- * warm key light shines from just beside the viewer, so every planet shows
- * its whole face — no night side — with a soft fill evening out the edges.
+ * warm key light comes from the upper left, so each planet shades off
+ * towards its lower right; a strong fill keeps that shade soft — it never
+ * goes much below 40% of the lit side, and there's no black night side.
  */
 
 export const MERCURY = 1, VENUS = 2, EARTH = 3, MOON = 4, MARS = 5, JUPITER = 6, SATURN = 7, URANUS = 8, NEPTUNE = 9;
@@ -54,7 +55,7 @@ const Y_AXIS = new Vector3(0, 1, 0);
 const Z_AXIS = new Vector3(0, 0, 1);
 
 /* Where the light comes from (towards the light), as the Sun used to be: up-left, in front. */
-const SUN = new Vector3(-0.08, 0.1, 1).normalize();
+const SUN = new Vector3(-0.62, 0.46, 0.63).normalize();
 
 const texturesFor = (q) => ({
   earthDay: `/textures/planets/${q}/earth_day.jpg`,
@@ -231,11 +232,11 @@ export default class PlanetScene {
     this.camera = new OrthographicCamera(0, 1, 0, -1, -2000, 2000);
     this.camera.position.z = 1000;
 
-    /* The key light, from just beside the viewer: every planet fully lit, no cast shadows. */
-    this.light = new DirectionalLight(0xfff1de, 3.4);
+    /* The key light, from the upper left. No cast shadows: planets don't darken each other. */
+    this.light = new DirectionalLight(0xfff1de, 3.2);
     this.scene.add(this.light, this.light.target);
-    /* A soft fill, so the very edges of each disc don't fall off to black. */
-    this.scene.add(new HemisphereLight(0xe8eeff, 0x4a4f63, 0.45));
+    /* A strong, near-neutral fill: the shaded side stays soft, never black. */
+    this.scene.add(new HemisphereLight(0xf2f4ff, 0x8a8fa3, 0.85));
 
     this.shared = { sun: { value: SUN.clone() }, time: { value: 0 }, cloudShift: { value: 0 } };
     this.ready = false;
