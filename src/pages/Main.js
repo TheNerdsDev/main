@@ -87,9 +87,11 @@ export default class Main extends Page {
     this.buildAbout();
     this.buildShowcase();
 
-    /* Where we are: 'home' | 'toAbout' | 'about' | 'toHome'. */
+    /* Where we are: 'home' | 'toAbout' | 'about' | 'toHome'. Nothing glides
+       until the page has entered (see onEnter). */
     this.state = 'home';
     this.journey = { f: 0 };
+    this.entered = false;
 
     /* Hidden until the page enters — they power on in onEnter(). */
     gsap.set(this.el.querySelectorAll('.sketch-svg, .sketch-name'), { opacity: 0 });
@@ -211,6 +213,7 @@ export default class Main extends Page {
   goAbout() {
     if (!this.lenis) return;
     this.state = 'toAbout';
+    this.glideEnd = performance.now() + (GLIDE + 0.6) * 1000;
     this.lenis.stop();
 
     /* The heading and subtext drift up, blur and fade — on their own time. */
@@ -238,6 +241,7 @@ export default class Main extends Page {
   goHome() {
     if (!this.lenis) return;
     this.state = 'toHome';
+    this.glideEnd = performance.now() + (GLIDE + 0.6) * 1000;
     this.lenis.stop();
 
     /* The rocks return to orbit as the sketches come back into view. */
@@ -259,6 +263,33 @@ export default class Main extends Page {
         this.lenis.start();
       }
     });
+  }
+
+  /**
+   * Already at (or past) About without gliding there — the page loaded
+   * mid-scroll (the browser restores the position on reload), or the
+   * scroll jumped (End key, scrollbar): settle straight into the About
+   * state, the welcome copy away and the rocks travelling with the viewer.
+   */
+  atAbout() {
+    gsap.killTweensOf([this.journey, ...this.heroLines()]);
+    this.state = 'about';
+    this.journey.f = 1;
+    gsap.set(this.heroLines(), { y: -70, opacity: 0, filter: 'blur(12px)' });
+    if (this.cue) gsap.set(this.cue, { opacity: 0, y: 14 });
+  }
+
+  /**
+   * A glide that never reported back — something restarted the scroll
+   * mid-way, which cancels Lenis's animation and its onComplete. Finish
+   * it so the page can't stay stuck between states (welcome copy gone,
+   * rocks on the travelling orbit, no way home).
+   */
+  finishGlide() {
+    const toAbout = this.state === 'toAbout';
+    this.lenis?.scrollTo(toAbout ? this.aboutTop : 0, { immediate: true, force: true });
+    this.state = toAbout ? 'about' : 'home';
+    this.lenis?.start();
   }
 
   /* ---------------------------------------------------------- about */
@@ -348,9 +379,12 @@ export default class Main extends Page {
       if (!this.showPinned) this.showTrack.style.transform = '';
     }
     if (!this.about) return;
-    this.aboutTop = this.about.getBoundingClientRect().top + store.scroll;
+    /* The page's real scroll, not store.scroll: on a reload the browser
+       restores the position before Lenis has reported it. */
+    const y = window.scrollY;
+    this.aboutTop = this.about.getBoundingClientRect().top + y;
     this.aboutH = this.about.offsetHeight;
-    if (this.show) this.showTop = this.show.getBoundingClientRect().top + store.scroll;
+    if (this.show) this.showTop = this.show.getBoundingClientRect().top + y;
   }
 
   /** Scroll-driven reel: reveal, sideways travel, counter, progress, parallax. */
@@ -396,9 +430,17 @@ export default class Main extends Page {
     const follow = 1 - Math.pow(1 - FOLLOW, gsap.ticker.deltaRatio(60));
     const ease = (from, to) => (Math.abs(to - from) < 0.0005 ? to : from + (to - from) * follow);
 
-    /* The guided moves between the two pages. */
-    if (this.state === 'home' && scroll > 3) this.goAbout();
-    else if (this.state === 'about' && scroll < this.aboutTop - 3) this.goHome();
+    /* The guided moves between the two pages — only once the page has
+       entered and the scroll is live (a glide started earlier would be
+       cancelled when the app starts the scroll). Arriving already at or
+       past About (a reload mid-page, a jump) skips the glide. */
+    if (this.entered) {
+      if (this.state === 'home' && scroll > 3) {
+        if (scroll >= this.aboutTop - 3) this.atAbout();
+        else this.goAbout();
+      } else if (this.state === 'about' && scroll < this.aboutTop - 3) this.goHome();
+      else if ((this.state === 'toAbout' || this.state === 'toHome') && performance.now() > this.glideEnd) this.finishGlide();
+    }
 
     const end = this.aboutTop + this.aboutH - vh;
 
@@ -454,6 +496,7 @@ export default class Main extends Page {
   /* ------------------------------------------------------ enter/leave */
 
   onEnter(tl) {
+    this.entered = true;
     /* The scroll cue draws itself downward. */
     tl.to(this.el.querySelectorAll('.scroll-cue-track'), { scaleY: 1, duration: 1.6, ease: 'expo.out' }, 0.7)
       .to(this.el.querySelectorAll('.scroll-cue-head, .scroll-cue-label'), { opacity: 1, duration: 0.8, ease: 'power2.out', stagger: 0.1 }, 1.2);

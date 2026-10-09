@@ -16,6 +16,8 @@ export default class Scroll {
     });
 
     this.prev = 0;
+    /* Start from wherever the page actually is (a reload can restore a scroll position). */
+    store.scroll = window.scrollY;
 
     this.lenis.on('scroll', ({ scroll, velocity }) => {
       store.scroll = scroll;
