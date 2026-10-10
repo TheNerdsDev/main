@@ -179,11 +179,8 @@ h1 {
   gap: 2.4rem;
   background: var(--c-bg);
 }
-.loader-icon { width: 7.2rem; height: 7.2rem; }
-.loader-icon-inner { width: 100%; height: 100%; overflow: visible; }
-.loader-dot { fill: var(--c-ink); }
-.loader-dot-a { transform-origin: 24px 24px; }
-.loader-dot-b { fill-opacity: 0.5; transform-origin: 24px 24px; }
+.loader-logo { width: min(52rem, 78vw); color: var(--c-ink); }
+.loader .loader-logo-mark { width: 100%; height: auto; }
 .loader-progress-wrapper { overflow: hidden; }
 .loader-progress-inner {
   display: block;
@@ -208,7 +205,7 @@ h1 {
   top: 0; left: 0; right: 0;
   z-index: 12;
   display: flex; align-items: center; justify-content: space-between;
-  padding: 1.4rem var(--unit);
+  padding: 1.1rem var(--unit);
   /* Frosted glass in the site's own background colour, untinted: the sky
      glows through it, anything passing beneath is blurred past reading. */
   background: rgba(var(--c-bg-rgb), 0.42);
@@ -216,7 +213,16 @@ h1 {
   backdrop-filter: blur(24px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
-.logo { font-weight: 600; letter-spacing: -0.01em; }
+/* The logo (traced from the brand artwork, content/logo.js). The rocket
+   that leaves the R is white with a difference blend: white against the
+   sky, dark over the letters — like the cut-out it flies out of. */
+.logo { display: inline-flex; align-items: center; color: var(--c-ink); }
+.logo-mark { display: block; height: 4rem; width: auto; overflow: visible; }
+@media screen and (max-width: 767px) { .logo-mark { height: 3.6rem; } }
+.logo-plug,
+.logo-rocket { visibility: hidden; }
+.logo-rocket { fill: #fff; mix-blend-mode: difference; }
+.logo:focus-visible { outline: 1px solid #0ACD88; outline-offset: 0.6rem; }
 .nav { position: relative; display: flex; align-items: center; gap: 2.8rem; }
 
 /* Header links: the letters roll on hover and turn green. */

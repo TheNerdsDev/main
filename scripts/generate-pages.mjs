@@ -6,6 +6,7 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { studio, main, team, workIndex, info, contact, showcase, finale, projects, getNext } from '../src/content/site.js';
+import { logoSvg } from '../src/content/logo.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -32,12 +33,8 @@ const shell = ({ title, description, pageId, body, bodyClass = '' }) => `<!docty
 <a class="skip-link" href="#page-content">Skip to content</a>
 
 <div class="loader" role="status" aria-live="polite" aria-label="Loading">
-  <div class="loader-icon">
-    <svg class="loader-icon-inner" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-      <circle class="loader-dot loader-dot-a" cx="18" cy="24" r="11" />
-      <circle class="loader-dot loader-dot-b" cx="30" cy="24" r="11" />
-    </svg>
-  </div>
+  <!-- The logo; its rocket rides the trail as loading runs (core/Loader.js). -->
+  <div class="loader-logo">${logoSvg({ id: 'loader-logo', className: 'logo-mark loader-logo-mark' })}</div>
   <div class="loader-progress-wrapper">
     <span class="loader-progress-inner"><span class="loader-progress">0</span>%</span>
   </div>
@@ -69,7 +66,8 @@ const navItem = (href, label, on) =>
   `<a class="nav-link roll-link${on ? ' is-current' : ''}" href="${href}" data-link aria-label="${esc(label)}"${on ? ' aria-current="page"' : ''}>${roll(label)}</a>`;
 
 const header = (current) => `  <header class="site-header">
-    <a class="logo roll-link" href="/" data-link aria-label="${esc(studio.wordmark)} — home">${roll(studio.wordmark)}</a>
+    <!-- Hover: the letters jump one by one and the rocket flies a lap (fx/LogoRocket.js). -->
+    <a class="logo" href="/" data-link aria-label="${esc(studio.wordmark)} — home">${logoSvg({ id: 'site-logo' })}</a>
     <!-- Phones: the links fold into a panel behind this (core/App.js bindMenu). -->
     <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Open menu">
       <span class="menu-toggle-line"></span><span class="menu-toggle-line"></span><span class="menu-toggle-line"></span>

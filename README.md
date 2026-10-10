@@ -249,6 +249,14 @@ Each frame:
   turn green (the same effect as the About Us button). On phones the links
   fold behind a three-line menu button and open as a full-screen panel. No
   footer.
+- **Logo.** The brand artwork traced into SVG (`scripts/trace-logo.py` →
+  `src/content/logo.js`; re-run it if `scripts/brand/the-nerds.webp`
+  changes), one path per letter. Hover it and the letters jump one after
+  another like dominoes while the rocket blasts out of the R, comes back
+  round along its trail and settles in again, leaving tricolour clouds —
+  saffron, white, green — behind it (`fx/LogoRocket.js`). The loading
+  screen shows it large: the letters rise in and the rocket rides the trail
+  as loading runs, docking in the R at 100%.
 - **Cursor.** On mouse / trackpad devices the pointer is a small star with an
   orbit that trails it; it opens up over links, turns into a dashed target over
   a rock, and steps aside for the text caret in form fields.

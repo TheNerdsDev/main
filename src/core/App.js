@@ -6,6 +6,7 @@ import Loader from './Loader.js';
 import Router from './Router.js';
 import World from '../gl/World.js';
 import Cursor from './Cursor.js';
+import LogoRocket from '../fx/LogoRocket.js';
 import { createPage } from '../pages/index.js';
 import { projects } from '../content/site.js';
 
@@ -42,6 +43,7 @@ export default class App {
     this.scroll = new Scroll();
     this.scroll.stop();
     this.bindMenu();
+    this.bindLogo();
 
     this.world = new World(this.canvas);
     this.loader = new Loader();
@@ -139,6 +141,21 @@ export default class App {
       else a.removeAttribute('aria-current');
     });
     incoming.remove();
+  }
+
+  /**
+   * The header logo: hover (or tap, or keyboard focus) and its letters jump
+   * one by one while the rocket flies a lap and settles back in the R.
+   */
+  bindLogo() {
+    const mark = this.header?.querySelector('.logo-mark');
+    if (!mark) return;
+    this.logoRocket = new LogoRocket(mark);
+    const link = mark.closest('a');
+    link.addEventListener('pointerenter', () => this.logoRocket.play());
+    link.addEventListener('focus', () => {
+      if (link.matches(':focus-visible')) this.logoRocket.play();
+    });
   }
 
   /**
