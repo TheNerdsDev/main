@@ -311,16 +311,24 @@ export default class Main extends Page {
     this.auto = null;
   }
 
+  /** The logo, from anywhere down the page: all the way back to the welcome. */
+  toTop() {
+    if (this.state === 'about' || this.state === 'toAbout') this.goHome();
+  }
+
   /**
-   * Scrolled back above the text: carry the viewer home — back up through
-   * the photos and the collision first (the pieces gather, the rocks come
-   * apart), then the glide.
+   * Scrolled back above the text, or the logo: carry the viewer home —
+   * back up through the photos and the collision first (the pieces
+   * gather, the rocks come apart), then the glide. From further down
+   * (the work, the finale) that rewind runs a little longer.
    */
   goHome() {
     if (!this.lenis) return;
     this.stopAuto();
     this.state = 'toHome';
-    const wait = store.scroll > this.aboutTop + 3 ? UNSMASH : 0;
+    const back = store.scroll - this.aboutTop;
+    const span = Math.max(1, this.handBack - this.aboutTop);
+    const wait = back > 3 ? Math.min(UNSMASH * Math.sqrt(Math.max(1, back / span)), UNSMASH * 1.8) : 0;
     this.glideEnd = performance.now() + (wait + GLIDE + 0.6) * 1000;
     this.lenis.stop();
 
@@ -346,7 +354,7 @@ export default class Main extends Page {
       }
     });
     if (!wait) glide();
-    else this.lenis.scrollTo(this.aboutTop, { duration: UNSMASH, easing: glideEase, force: true, onComplete: glide });
+    else this.lenis.scrollTo(this.aboutTop, { duration: wait, easing: glideEase, force: true, onComplete: glide });
   }
 
   /**

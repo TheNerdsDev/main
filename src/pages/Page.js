@@ -78,6 +78,9 @@ export default class Page {
     this.el.querySelectorAll('[data-split] .line-inner').forEach((el) => this.lines.push(el));
   }
 
+  /** Back to the top: a link to this same page (the logo) was followed. */
+  toTop() { this.app?.scroll?.lenis.scrollTo(0); }
+
   loop() {}
   destroy() { gsap.killTweensOf([...this.lines, ...this.fades]); }
 }
