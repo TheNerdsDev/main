@@ -151,6 +151,8 @@ export default class App {
   /**
    * The header logo: hover (or tap, or keyboard focus) and its letters jump
    * one by one while the rocket flies a lap and settles back in the R.
+   * Clicked on the page it links to (the router ignores a link to where you
+   * already are), it glides you back up to the top.
    */
   bindLogo() {
     const mark = this.header?.querySelector('.logo-mark');
@@ -160,6 +162,15 @@ export default class App {
     link.addEventListener('pointerenter', () => this.logoRocket.play());
     link.addEventListener('focus', () => {
       if (link.matches(':focus-visible')) this.logoRocket.play();
+    });
+    link.addEventListener('click', (e) => {
+      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      if (new URL(link.href).pathname !== window.location.pathname || !this.page?.goTop) return;
+      e.preventDefault();
+      /* Close the phone menu first: closing it hands the scroll back, which
+         would cut the glide short. */
+      this.setMenu?.(false);
+      this.page.goTop();
     });
   }
 

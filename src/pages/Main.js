@@ -32,6 +32,10 @@ import { clamp } from '../fx/particles.js';
  */
 const GLIDE = 1.3;
 const glideEase = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+/* The header logo's way home (goTop): the view is yanked away (PULL s),
+   then the welcome screen drops in and springs to rest (DROP s). */
+const PULL = 0.5;
+const DROP = 0.95;
 
 /* The scroll through About (0 → 1), in order: the waiting rocks are
    drawn together and meet at COLLIDE, their pieces scatter and have
@@ -350,6 +354,108 @@ export default class Main extends Page {
   }
 
   /**
+   * The header logo, clicked from anywhere down the page: straight back to
+   * the welcome screen, without replaying everything in between. The view
+   * is yanked down and away, speed lines streaming past, as if the page
+   * were hauled back up in one pull. Behind that it cuts to the top, and
+   * the welcome screen drops in from above and springs to rest; the
+   * heading settles in after it, and the rocks fade back into orbit last.
+   */
+  goTop() {
+    if (!this.lenis || !this.entered || this.state === 'toHome') return;
+    if (this.state === 'home' && store.scroll < 3) return;
+    const content = this.el.querySelector('.page-content');
+    if (!content) return;
+    this.stopAuto();
+    this.pullTl?.kill();
+    gsap.killTweensOf([this.journey, this.cue, ...this.heroLines()].filter(Boolean));
+    this.state = 'toHome';
+    this.lenis.stop();
+    this.glideEnd = performance.now() + (PULL + DROP + 0.6) * 1000;
+
+    const vh = store.height;
+    /* The rocks' layer is fixed but inside the page, so moving the page
+       would carry it off; the canvases are outside it and wouldn't move.
+       All of them step out for the pull and come back once it's done. */
+    const rocks = this.duoEl?.querySelector('.duo-actions');
+    const canvases = [this.stage.canvas, this.fx.canvas];
+    const streaks = this.pullStreaks();
+    const lines = [...streaks.children];
+    const rain = () => lines.forEach((l) => {
+      const h = l.offsetHeight;
+      gsap.fromTo(l, { y: -h }, {
+        y: vh + h, duration: gsap.utils.random(0.26, 0.48), ease: 'none',
+        repeat: -1, delay: gsap.utils.random(0, 0.25)
+      });
+    });
+    const home = () => {
+      this.state = 'home';
+      this.lenis.start();
+    };
+
+    const tl = gsap.timeline({
+      onComplete: () => {
+        gsap.killTweensOf(lines);
+        gsap.set([rocks, ...canvases].filter(Boolean), { clearProps: 'opacity' });
+        this.pullTl = null;
+      }
+    });
+    this.pullTl = tl;
+
+    /* 1 — pulled: everything in view rushes down and out of sight. */
+    if (rocks) tl.set(rocks, { opacity: 0 }, 0);
+    tl.to(canvases, { opacity: 0, duration: 0.2, ease: 'power1.in' }, 0)
+      .add(rain, 0)
+      .to(streaks, { opacity: 1, duration: 0.25, ease: 'power1.out' }, 0.04)
+      .to(content, { y: vh * 0.32, opacity: 0, duration: PULL, ease: 'power3.in' }, 0)
+      .add(() => this.world?.fadeTo(0.6, PULL), 0)
+
+      /* 2 — out of sight, straight to the top: the welcome screen as it
+         was, the rocks back home and About rewound (loop() follows). */
+      .add(() => {
+        this.lenis.scrollTo(0, { immediate: true, force: true });
+        this.journey.f = 0;
+        this.rockP = 0;
+        gsap.set(content, { y: -vh * 0.22 });
+        gsap.set(this.heroLines(), { y: -70, opacity: 0, filter: 'blur(12px)' });
+      }, PULL)
+
+      /* 3 — it drops in from above, overshoots a touch and springs back. */
+      .to(content, { y: 0, duration: DROP, ease: 'back.out(1.5)' }, PULL)
+      .to(content, { opacity: 1, duration: 0.35, ease: 'power1.out' }, PULL)
+      .to(streaks, { opacity: 0, duration: 0.45, ease: 'power2.out' }, PULL + 0.1)
+      .add(() => this.world?.fadeTo(1, 0.8), PULL)
+      .to(this.heroLines(), {
+        y: 0, opacity: 1, filter: 'blur(0px)',
+        duration: 0.9, ease: 'power3.out', stagger: 0.06
+      }, PULL + 0.2)
+      .set(content, { clearProps: 'transform,opacity' }, PULL + DROP)
+      .add(home, PULL + DROP)
+      .to(canvases, { opacity: 1, duration: 0.3, ease: 'power1.out' }, PULL + DROP);
+    if (this.cue) tl.to(this.cue, { opacity: 1, y: 0, duration: 0.8, ease: 'power2.out' }, PULL + 0.5);
+    if (rocks) tl.to(rocks, { opacity: 1, duration: 0.55, ease: 'power2.out' }, PULL + DROP);
+  }
+
+  /** Speed lines for goTop: thin streaks raining past, made once. */
+  pullStreaks() {
+    if (this.streakEl) return this.streakEl;
+    const el = document.createElement('div');
+    el.className = 'pull-streaks';
+    el.setAttribute('aria-hidden', 'true');
+    const n = 18;
+    for (let i = 0; i < n; i++) {
+      const s = document.createElement('i');
+      s.style.left = `${((i + Math.random() * 0.8) / n) * 100}%`;
+      s.style.height = `${16 + Math.random() * 26}vh`;
+      s.style.opacity = (0.35 + Math.random() * 0.65).toFixed(2);
+      el.appendChild(s);
+    }
+    document.body.appendChild(el);
+    this.streakEl = el;
+    return el;
+  }
+
+  /**
    * Already at (or past) About without gliding there — the page loaded
    * mid-scroll (the browser restores the position on reload), or the
    * scroll jumped (End key, scrollbar): settle straight into the About
@@ -635,6 +741,11 @@ export default class Main extends Page {
     if (this.onButtonMove) window.removeEventListener('pointermove', this.onButtonMove);
     if (this.buttonSpring) gsap.ticker.remove(this.buttonSpring);
     gsap.killTweensOf([this.cue, this.journey, ...this.heroLines()]);
+    this.pullTl?.kill();
+    if (this.streakEl) {
+      gsap.killTweensOf(this.streakEl.children);
+      this.streakEl.remove();
+    }
     this.stopAuto();
     this.aboutTl?.kill();
     this.showTl?.kill();

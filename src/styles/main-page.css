@@ -22,6 +22,22 @@
 }
 .fx-canvas { z-index: 7; }
 
+/* Speed lines while the header logo pulls you back to the top (Main.js
+   goTop): thin streaks raining down past everything but the header. */
+.pull-streaks {
+  position: fixed; inset: 0;
+  z-index: 8;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+}
+.pull-streaks i {
+  position: absolute; top: 0;
+  width: 1px;
+  background: linear-gradient(to bottom, transparent, rgba(var(--c-ink-rgb), 0.55));
+  will-change: transform;
+}
+
 /* Sparks, glow and the orbiting actions are allowed past the sketches —
    but never past the page edge (`clip`, unlike `hidden`, leaves vertical
    overflow alone and doesn't create a scroll container). */
@@ -189,18 +205,14 @@ html.lenis-stopped { overflow: hidden; }
 }
 #main .sketch-hit:focus-visible { outline: 1px solid var(--neon); outline-offset: 0.4rem; }
 
-/* The name: a small neon-edged tag under the portrait, clear of its glowing
-   bottom edge, shown only while the portrait is hovered (or tapped, on a
-   touch screen; or focused from the keyboard). */
+/* The name, just the word: under the portrait, clear of its glowing bottom
+   edge, shown only while the portrait is hovered (or tapped, on a touch
+   screen; or focused from the keyboard). */
 #main .sketch-name {
   position: absolute;
   left: 50%; top: calc(100% + 1.4rem);
   transform: translateX(-50%);
-  padding: 0.6rem 1.6rem 0.6rem 1.9rem;   /* the extra left balances the trailing letter-spacing */
-  border: 1px solid var(--neon);
-  border-radius: 10rem;
-  background: rgba(var(--c-bg-rgb), 0.82);
-  box-shadow: 0 0 1.2rem -0.2rem var(--neon), inset 0 0 0.8rem -0.3rem var(--neon);
+  padding-left: 0.3em;   /* balances the trailing letter-spacing, so it sits centred */
   font-size: 1.5rem;
   font-weight: 600;
   line-height: 1;
@@ -219,6 +231,25 @@ html.lenis-stopped { overflow: hidden; }
 @media (hover: none) {
   #main .sketch:focus-within .sketch-name { opacity: 1; translate: 0 0; }
 }
+/* "Tap", riding the portrait's outline near the pointer (fx/Duo.js bindTap);
+   the cursor's own label style. */
+#main .sketch-tap {
+  position: absolute;
+  left: 0; top: 0;
+  z-index: 3;
+  translate: -50% -50%;
+  font-family: 'Syne Mono', monospace;
+  font-size: 1rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--c-ink);
+  text-shadow: 0 0 0.6rem rgba(var(--c-bg-rgb), 0.9);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s var(--ease-out);
+}
+#main .sketch.is-tapping .sketch-tap { opacity: 0.85; }
 
 #main .sketch-gasp {
   position: absolute;
@@ -720,7 +751,9 @@ html.no-webgl #main .duo-actions { display: none; }
   #main .scroll-cue { display: none; }
 
   #main .duo { position: relative; flex: 1 1 auto; width: 100%; height: auto; min-height: 0; margin-top: 2rem; }
-  #main .sketch { width: 38vw; }
+  /* Sized by the room left under the heading too (--duo-h, measured by
+     fx/Duo.js), so Prem never runs off the bottom of the screen. */
+  #main .sketch { width: min(38vw, var(--duo-h, 100vh) * 0.44); }
   #main .sketch-meet { top: 4%; right: 9%; }
   #main .sketch-prem { top: 44%; left: 9%; }
 
@@ -746,7 +779,7 @@ html.no-webgl #main .duo-actions { display: none; }
   #main .hero-intro { margin-top: 2rem; }
 
   #main .duo { margin-top: 1rem; }
-  #main .sketch { width: 46vw; }
+  #main .sketch { width: min(46vw, var(--duo-h, 100vh) * 0.44); }
   #main .sketch-meet { top: 3%; right: 4%; }
   #main .sketch-prem { top: 44%; left: 4%; }
   #main .sketch-gasp { font-size: 4.4rem; }
@@ -758,6 +791,37 @@ html.no-webgl #main .duo-actions { display: none; }
   #main .about-cta { margin-top: 3.2rem; }
   #main .about-button { padding: 1.4rem 3rem; }
   #main .about-body { align-items: center; }
+}
+
+/* ------------------------------------------- wide and short screens */
+
+/* Wide for their height, still upright (a small tablet, a short window):
+   one above the other, the pair would have to shrink to fit under the
+   heading. Side by side instead, Meet a step higher. */
+@media screen and (max-width: 1099px) and (orientation: portrait) and (min-aspect-ratio: 4/5),
+       screen and (max-width: 767px) and (orientation: portrait) and (min-aspect-ratio: 3/5) {
+  #main .sketch { width: min(38vw, var(--duo-h, 100vh) * 0.68, var(--duo-w, 100vw) * 0.4); }
+  #main .sketch-meet { top: 2%; right: 8%; }
+  #main .sketch-prem { top: 12%; left: 8%; }
+}
+
+/* On their side (tablets, phones) or a low window: the heading on top
+   would leave the sketches no room at all, so it's beside them, as on a
+   wide screen — everything sized by the height as well as the width. */
+@media screen and (max-width: 1099px) and (orientation: landscape) {
+  #main .hero-stage { flex-direction: row; }
+  #main .hero-text {
+    display: flex; flex-direction: column; justify-content: center;
+    flex: 0 0 50%;
+    padding: 6vh 0 0 calc(var(--unit) + 3vw);
+  }
+  #main .title { font-size: min(5.6vw, 10.5vh); }
+  #main .hero-intro { max-width: 40vw; margin-top: min(2.4vw, 4vh); font-size: min(1.7vw, 3.6vh); }
+  #main .duo { flex: 1 1 auto; height: auto; margin-top: 0; }
+  #main .sketch { width: min(22vw, var(--duo-h, 100vh) * 0.36); }
+  #main .sketch-meet { top: 15%; right: 8%; }
+  #main .sketch-prem { top: 50%; left: 2%; }
+  #main .duo-action { width: min(7vw, 13vh); height: min(7vw, 13vh); }
 }
 
 #main .hero-intro strong { font-weight: 700; color: var(--c-ink); }
