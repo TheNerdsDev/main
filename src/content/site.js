@@ -45,8 +45,7 @@ export const main = {
  *
  *   portrait       the neon portrait, as it normally looks (4:5, transparent)
  *   portraitAngry  the same, angry — shown when a rock hits, instead of the
- *                  expression animation; lined up with `portrait` so only the
- *                  face changes
+ *                  expression animation (same size and body position)
  *
  * Or, for a line sketch tinted and animated by the site (fx/NeonSketch.js):
  *   sketch the drawing; `aspect` its width ÷ height

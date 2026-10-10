@@ -177,7 +177,8 @@ html.lenis-stopped { overflow: hidden; }
   user-select: none;
 }
 #main .sketch-face-angry { opacity: 0; }
-#main .sketch:hover .sketch-svg { filter: brightness(1.25); }
+/* Line sketches glow brighter on hover; the finished portraits stay as they are. */
+#main .sketch:hover .sketch-svg:not(.sketch-portrait) { filter: brightness(1.25); }
 
 #main .sketch-hit {
   position: absolute;
@@ -188,16 +189,35 @@ html.lenis-stopped { overflow: hidden; }
 }
 #main .sketch-hit:focus-visible { outline: 1px solid var(--neon); outline-offset: 0.4rem; }
 
+/* The name: a small neon-edged tag under the portrait, clear of its glowing
+   bottom edge, shown only while the portrait is hovered (or tapped, on a
+   touch screen; or focused from the keyboard). */
 #main .sketch-name {
   position: absolute;
-  left: 50%; bottom: -1.2rem;
+  left: 50%; top: calc(100% + 1.4rem);
   transform: translateX(-50%);
-  font-size: 1.3rem;
-  letter-spacing: 0.24em;
+  padding: 0.6rem 1.6rem 0.6rem 1.9rem;   /* the extra left balances the trailing letter-spacing */
+  border: 1px solid var(--neon);
+  border-radius: 10rem;
+  background: rgba(var(--c-bg-rgb), 0.82);
+  box-shadow: 0 0 1.2rem -0.2rem var(--neon), inset 0 0 0.8rem -0.3rem var(--neon);
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.3em;
   text-transform: uppercase;
-  color: var(--neon);
-  text-shadow: 0 0 6px var(--neon), 0 0 18px var(--neon);
+  white-space: nowrap;
+  color: var(--c-ink);
+  text-shadow: 0 0 0.8rem var(--neon);
   pointer-events: none;
+  opacity: 0;
+  translate: 0 0.8rem;
+  transition: opacity 0.35s var(--ease-out), translate 0.45s var(--ease-out);
+}
+#main .sketch:hover .sketch-name,
+#main .sketch:has(.sketch-hit:focus-visible) .sketch-name { opacity: 1; translate: 0 0; }
+@media (hover: none) {
+  #main .sketch:focus-within .sketch-name { opacity: 1; translate: 0 0; }
 }
 
 #main .sketch-gasp {

@@ -115,6 +115,7 @@ export default class Duo {
         body: root.querySelector('.sketch-body'),
         svg: host,
         hitBtn: root.querySelector('.sketch-hit'),
+        calm: root.querySelector('.sketch-face:not(.sketch-face-angry)'),
         angry: root.querySelector('.sketch-face-angry'),
         gasp,
         faces,
@@ -413,14 +414,20 @@ export default class Duo {
   }
 
   /**
-   * A portrait's reaction: the angry picture the moment the rock lands,
-   * held as long as the drawn faces hold their mood, then back to calm.
+   * A portrait's reaction: the angry picture the moment the rock lands, held
+   * as long as the drawn faces hold their mood, then straight back to calm.
+   * Both are sudden cuts, one picture or the other — the portraits are
+   * partly see-through, so the hidden one is hidden outright, never left
+   * showing underneath.
    */
   scowl(m) {
-    gsap.killTweensOf(m.angry);
-    gsap.timeline()
-      .set(m.angry, { opacity: 1 })
-      .to(m.angry, { opacity: 0, duration: 0.45, ease: 'power2.inOut' }, 3.6);
+    m.scowlTl?.kill();
+    const show = (angry) => {
+      m.angry.style.opacity = angry ? '1' : '0';
+      m.calm.style.opacity = angry ? '0' : '1';
+    };
+    show(true);
+    m.scowlTl = gsap.delayedCall(3.6, () => show(false));
   }
 
   /* -------------------------------------------------------------- loop */
@@ -601,6 +608,7 @@ export default class Duo {
     this.rocks.destroy();
     this.members.forEach((m) => {
       m.humCall?.kill();
+      m.scowlTl?.kill();
       gsap.killTweensOf([m.root, m.body, m.svg, m.gasp, ...m.warps]);
       m.neon?.destroy();
     });

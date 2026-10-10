@@ -115,16 +115,16 @@ the bottom of `src/styles/pages.css`.
 
 Meet and Prem are finished neon portraits (`public/media/team/meet.webp`,
 `prem.webp`), each with an angry twin (`meet-angry.webp`, `prem-angry.webp`).
-When a rock hits someone, their picture switches to the angry one on impact,
-holds for a few seconds and fades back — the knock-back, the neon stutter,
-the lightning and the dizzy stars play as before. The angry picture is lined
-up with the calm one (same body, the face aligned on the glasses), so only
-the expression changes. Both are 4:5 and transparent (brightness is alpha:
-neon on black, minus the black).
+When a rock hits someone, their picture cuts to the angry one on impact,
+holds for a few seconds, then cuts straight back — one picture or the other,
+never both (the portraits are partly see-through, so the hidden one is
+hidden outright). The knock-back, the neon stutter, the lightning and the dizzy stars play as
+before. Both pictures are 4:5 and transparent (brightness is alpha: neon on
+black, minus the black).
 
 To swap a portrait, drop the files in and update the entry in `team`:
 
-- `portrait`, `portraitAngry` — the two pictures (4:5, lined up)
+- `portrait`, `portraitAngry` — the two pictures (4:5, same body position)
 - `hit` (where a rock strikes and the neon shorts out), `crown` (top of the
   head, where the dizzy stars circle) and `hand` (where a thrown rock leaves
   from), as fractions of the picture (0..1 from the top-left)

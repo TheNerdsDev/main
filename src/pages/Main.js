@@ -109,7 +109,7 @@ export default class Main extends Page {
     this.entered = false;
 
     /* Hidden until the page enters — they power on in onEnter(). */
-    gsap.set(this.el.querySelectorAll('.sketch-svg, .sketch-name'), { opacity: 0 });
+    gsap.set(this.el.querySelectorAll('.sketch-svg'), { opacity: 0 });
     gsap.set(this.el.querySelectorAll('.duo-action-rock'), { opacity: 0, scale: 0.3 });
     gsap.set(this.el.querySelectorAll('.scroll-cue-track'), { scaleY: 0 });
     gsap.set(this.el.querySelectorAll('.scroll-cue-head, .scroll-cue-label'), { opacity: 0 });
@@ -605,7 +605,6 @@ export default class Main extends Page {
     /* Each sketch powers on like a neon tube: a few failed strikes, then on. */
     this.el.querySelectorAll('.sketch').forEach((s, i) => {
       const svg = s.querySelector('.sketch-svg');
-      const name = s.querySelector('.sketch-name');
       const at = 0.6 + i * 0.35;
       tl.to(svg, {
         keyframes: [
@@ -615,7 +614,6 @@ export default class Main extends Page {
           { opacity: 1, duration: 0.3 }
         ]
       }, at);
-      tl.to(name, { opacity: 1, duration: 0.6, ease: 'power2.out' }, at + 0.5);
     });
 
     /* The rocks drift in out of the dark; their transform is handed back
