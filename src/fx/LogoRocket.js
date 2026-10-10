@@ -24,7 +24,7 @@ import { LOGO, SMOKE } from '../content/logo.js';
  * stream.
  */
 
-const DOCK = LOGO.dock;
+export const DOCK = LOGO.dock;
 
 /* The flight path, measured once so progress along it is even. */
 const PATH = LOGO.flight;
@@ -43,7 +43,7 @@ function pointAt(s) {
 }
 
 /** Position and heading (degrees) at progress t along the flight. */
-function along(t) {
+export function along(t) {
   const s = Math.min(Math.max(t, 0), 1) * TOTAL;
   const [x, y] = pointAt(s);
   /* Heading from a short chord, so the nose turns smoothly. */
@@ -53,10 +53,10 @@ function along(t) {
 }
 
 /* The trail is drawn up to just behind the rocket — all of it once docked. */
-const TRAIL_LAG = DOCK.x - LOGO.trailEnd;
+export const TRAIL_LAG = DOCK.x - LOGO.trailEnd;
 
 /* Exhaust clouds, in logo units (the logo is ~110 tall). */
-const PUFF = {
+export const PUFF = {
   every: 3,       // a puff per this much travel
   spread: 3.6,    // between the three streams
   r0: 2.6,        // radius as it leaves the tail…

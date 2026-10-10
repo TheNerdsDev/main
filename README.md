@@ -255,8 +255,11 @@ Each frame:
   another like dominoes while the rocket blasts out of the R, comes back
   round along its trail and settles in again, leaving tricolour clouds —
   saffron, white, green — behind it (`fx/LogoRocket.js`). The loading
-  screen shows it large: the letters rise in and the rocket rides the trail
-  as loading runs, docking in the R at 100%.
+  screen shows it large (`fx/LoaderLogo.js`): the letters rise in and the
+  rocket flies its trail, docking in the R once loading is done. Everything
+  there runs on the compositor (Web Animations, transform/opacity only), and
+  the page is built during the flight, so the heavy start-up work can't
+  make it stutter.
 - **Cursor.** On mouse / trackpad devices the pointer is a small star with an
   orbit that trails it; it opens up over links, turns into a dashed target over
   a rock, and steps aside for the text caret in form fields.

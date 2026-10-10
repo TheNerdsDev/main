@@ -63,10 +63,15 @@ export default class App {
     projects.forEach((p) => urls.push(`/media/${p.slug}/featured.jpg`));
 
     await this.loader.preload([...new Set(urls)]);
-    await this.loader.finish();
 
+    /* Build the page now, while the loader's rocket is still on its way:
+       this is the heaviest stretch of work (a long block of the main
+       thread), and the loader animates on the compositor, so it can't stall
+       it. The landing then plays on a quiet main thread. */
     this.page = createPage({ el: this.pageEl, world: this.world, app: this });
     this.world.media.create(this.pageEl, this.page.id);
+
+    await this.loader.finish();
 
     gsap.ticker.add(this.loop);
 

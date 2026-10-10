@@ -33,8 +33,9 @@ const shell = ({ title, description, pageId, body, bodyClass = '' }) => `<!docty
 <a class="skip-link" href="#page-content">Skip to content</a>
 
 <div class="loader" role="status" aria-live="polite" aria-label="Loading">
-  <!-- The logo; its rocket rides the trail as loading runs (core/Loader.js). -->
-  <div class="loader-logo">${logoSvg({ id: 'loader-logo', className: 'logo-mark loader-logo-mark' })}</div>
+  <!-- The logo, built in layers by fx/LoaderLogo.js: the letters rise in and the
+       rocket flies its trail while loading runs. -->
+  <div class="loader-logo" aria-hidden="true"></div>
   <div class="loader-progress-wrapper">
     <span class="loader-progress-inner"><span class="loader-progress">0</span>%</span>
   </div>
