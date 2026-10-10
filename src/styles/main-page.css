@@ -166,6 +166,17 @@ html.lenis-stopped { overflow: hidden; }
   width: 124%; height: 124%;
   pointer-events: none;
 }
+/* A finished neon portrait (team.portrait): the angry one waits on top and
+   shows when a rock hits (fx/Duo.js). */
+#main .sketch-face {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+#main .sketch-face-angry { opacity: 0; }
 #main .sketch:hover .sketch-svg { filter: brightness(1.25); }
 
 #main .sketch-hit {

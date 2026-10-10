@@ -111,27 +111,27 @@ the bottom of `src/styles/pages.css`.
    of text and a big Contact us button (the About Us button, scaled up). An "All work" box beside the
    heading opens the full card stack at `/work/`. On phones it becomes a plain vertical list.
 
-### Swapping in your own sketches
+### The two of us in the hero
 
-The sketches (`public/media/team/meet-sketch.png`, `prem-sketch.png`) are
-line portraits drawn from photos of Meet and Prem: the photo aligned so the
-eyes sit at the same spot, pencil lines from a difference of Gaussians,
-background removed, and one shared shoulder outline so both busts match.
-They're white on transparent (`ink: 'light'`); the neon colour comes from
-each person's `colour`. To swap one, drop the file in (PNG, JPG or SVG) and
-update its entry in `team`:
+Meet and Prem are finished neon portraits (`public/media/team/meet.webp`,
+`prem.webp`), each with an angry twin (`meet-angry.webp`, `prem-angry.webp`).
+When a rock hits someone, their picture switches to the angry one on impact,
+holds for a few seconds and fades back — the knock-back, the neon stutter,
+the lightning and the dizzy stars play as before. The angry picture is lined
+up with the calm one (same body, the face aligned on the glasses), so only
+the expression changes. Both are 4:5 and transparent (brightness is alpha:
+neon on black, minus the black).
 
-- `sketch` — the file path; `aspect` — width ÷ height of the drawing
-- `ink` — `'dark'` for pencil on white paper (the paper is keyed out),
-  `'light'` for light lines on a transparent or dark background
-- `eyes` — the centre of each eye, as fractions of the drawing (0..1 from the
-  top-left); `eyeR` is the eye radius as a fraction of the width
-- `face` — where the expressions pull: `brows` (inner brow ends),
-  `browsOuter` (outer ends), `mouth` (its centre) and `corners`. Measure
-  these on the new drawing — hurt, angry and sad are built from them
+To swap a portrait, drop the files in and update the entry in `team`:
+
+- `portrait`, `portraitAngry` — the two pictures (4:5, lined up)
 - `hit` (where a rock strikes and the neon shorts out), `crown` (top of the
   head, where the dizzy stars circle) and `hand` (where a thrown rock leaves
-  from)
+  from), as fractions of the picture (0..1 from the top-left)
+
+A line sketch tinted and animated by the site still works instead: give
+`sketch`, `aspect`, `ink` (`'light'` or `'dark'`), `eyes`/`eyeR` and `face`
+(the points the hurt / angry / sad expression warps pull on).
 
 Then run `npm run pages`. The neon colour comes from `colour`.
 

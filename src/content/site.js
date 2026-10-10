@@ -39,10 +39,17 @@ export const main = {
 };
 
 /**
- * The two of us. Every point is a fraction of the sketch image (0..1, from
- * the top-left), so swapping in a real sketch only means updating the file
- * path and re-measuring these points on the new drawing.
+ * The two of us. Every point is a fraction of the picture (0..1, from the
+ * top-left), so swapping in a new one only means updating the file path and
+ * re-measuring these points on it.
  *
+ *   portrait       the neon portrait, as it normally looks (4:5, transparent)
+ *   portraitAngry  the same, angry — shown when a rock hits, instead of the
+ *                  expression animation; lined up with `portrait` so only the
+ *                  face changes
+ *
+ * Or, for a line sketch tinted and animated by the site (fx/NeonSketch.js):
+ *   sketch the drawing; `aspect` its width ÷ height
  *   ink    'light' = light lines on a transparent/dark background
  *          'dark'  = pencil on white paper (the paper is keyed out)
  *   eyes   centres of both eyes — they widen, then squint, when hit
@@ -60,20 +67,11 @@ export const team = [
     id: 'prem',
     name: 'Prem',
     colour: '#39FF14',
-    /* Drawn from a photo; the points below are measured on the drawing. */
-    sketch: '/media/team/prem-sketch.png',
+    portrait: '/media/team/prem.webp',
+    portraitAngry: '/media/team/prem-angry.webp',
     aspect: 0.8,
-    ink: 'light',
-    eyes: [[0.4, 0.428], [0.5975, 0.428]],
-    eyeR: 0.11,
-    face: {
-      brows: [[0.475, 0.39], [0.525, 0.39]],
-      browsOuter: [[0.33, 0.392], [0.6625, 0.392]],
-      mouth: [0.5, 0.588],
-      corners: [[0.425, 0.584], [0.5675, 0.58]]
-    },
-    hit: [0.5, 0.34],
-    crown: [0.5, 0.135],
+    hit: [0.5, 0.46],
+    crown: [0.5, 0.3],
     hand: [0.86, 0.84],
     photos: ['/media/team/prem-1.svg', '/media/team/prem-2.svg', '/media/team/prem-3.svg']
   },
@@ -81,20 +79,11 @@ export const team = [
     id: 'meet',
     name: 'Meet',
     colour: '#2F8CFF',
-    /* Drawn from a photo; the points below are measured on the drawing. */
-    sketch: '/media/team/meet-sketch.png',
+    portrait: '/media/team/meet.webp',
+    portraitAngry: '/media/team/meet-angry.webp',
     aspect: 0.8,
-    ink: 'light',
-    eyes: [[0.405, 0.428], [0.595, 0.428]],
-    eyeR: 0.11,
-    face: {
-      brows: [[0.455, 0.374], [0.545, 0.374]],
-      browsOuter: [[0.35, 0.38], [0.65, 0.38]],
-      mouth: [0.5, 0.57],
-      corners: [[0.3675, 0.554], [0.63, 0.552]]
-    },
-    hit: [0.5, 0.34],
-    crown: [0.5, 0.2],
+    hit: [0.495, 0.405],
+    crown: [0.49, 0.235],
     hand: [0.14, 0.84],
     photos: ['/media/team/meet-1.svg', '/media/team/meet-2.svg', '/media/team/meet-3.svg']
   }

@@ -104,13 +104,17 @@ const INK = {
   dark:  '0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -0.6 -0.6 -0.6 0 1.6'
 };
 
+/* A finished neon portrait: the calm one, and the angry one stacked on top,
+   hidden until a rock hits (fx/Duo.js). */
+const portrait = (m) => `            <div class="sketch-svg sketch-portrait">
+              <img class="sketch-face" src="${m.portrait}" alt="" width="800" height="1000" decoding="async" />
+              <img class="sketch-face sketch-face-angry" src="${m.portraitAngry}" alt="" width="800" height="1000" decoding="async" fetchpriority="low" />
+            </div>`;
+
 const sketch = (m, other) => {
   const w = 400;
   const h = Math.round(w / m.aspect);
-  return `        <div class="sketch sketch-${m.id}" data-sketch="${m.id}" style="--neon: ${m.colour}">
-          <button class="sketch-hit" type="button" aria-label="${esc(m.name)}: throw a meteor at ${esc(other.name)}"></button>
-          <div class="sketch-body">
-            <div class="sketch-svg">
+  const art = m.portrait ? portrait(m) : `            <div class="sketch-svg">
             <svg class="sketch-vector" viewBox="0 0 ${w} ${h}" aria-hidden="true">
               <defs>
                 <filter id="neon-${m.id}" x="-12%" y="-12%" width="124%" height="124%" color-interpolation-filters="sRGB">
@@ -139,7 +143,11 @@ const sketch = (m, other) => {
               </defs>
               <image href="${m.sketch}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet" filter="url(#neon-${m.id})" />
             </svg>
-            </div>
+            </div>`;
+  return `        <div class="sketch sketch-${m.id}" data-sketch="${m.id}" style="--neon: ${m.colour}">
+          <button class="sketch-hit" type="button" aria-label="${esc(m.name)}: throw a meteor at ${esc(other.name)}"></button>
+          <div class="sketch-body">
+${art}
           </div>
           <span class="sketch-name">${esc(m.name)}</span>
         </div>`;

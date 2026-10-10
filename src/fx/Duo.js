@@ -56,9 +56,11 @@ const setHref = (node, url) => {
  *    rock and flings it at the other one; it drifts back in afterwards.
  *
  * A hit bursts the rock, knocks the sketch back and shorts its neon —
- * arcs crackle and spark, the tube stutters, and it sees stars. The face reacts in three beats: a flash of shock
- * (eyes wide), a wince of pain, then anger — or sadness, if they started
- * it and this is the payback — before it relaxes.
+ * arcs crackle and spark, the tube stutters, and it sees stars. A finished
+ * portrait switches to its angry picture for a few seconds; a line sketch's
+ * face reacts in three beats instead: a flash of shock (eyes wide), a wince
+ * of pain, then anger — or sadness, if they started it and this is the
+ * payback — before it relaxes.
  */
 export default class Duo {
   constructor(el, fx, stage) {
@@ -69,8 +71,10 @@ export default class Duo {
     this.members = team.map((m) => {
       const root = el.querySelector(`[data-sketch="${m.id}"]`);
       const h = VIEW_W / m.aspect;
-      const eyeUrl = eyeMap(VIEW_W, h, m.eyes, m.eyeR);
-      setHref(root.querySelector('.eye-map'), eyeUrl);
+      /* A finished portrait swaps to its angry picture when hit; only a
+         line sketch has eyes and a face for the expression warps. */
+      const eyeUrl = m.eyes ? eyeMap(VIEW_W, h, m.eyes, m.eyeR) : null;
+      if (eyeUrl) setHref(root.querySelector('.eye-map'), eyeUrl);
 
       const faces = {};
       if (m.face) {
@@ -111,6 +115,7 @@ export default class Duo {
         body: root.querySelector('.sketch-body'),
         svg: host,
         hitBtn: root.querySelector('.sketch-hit'),
+        angry: root.querySelector('.sketch-face-angry'),
         gasp,
         faces,
         mapB,
@@ -378,6 +383,10 @@ export default class Duo {
    * and slowly relaxes.
    */
   react(m, mood) {
+    if (m.angry) {
+      this.scowl(m);
+      return;
+    }
     const [eye, hurt, after] = m.warps;
     const faces = m.faces;
     gsap.killTweensOf([eye, hurt, after]);
@@ -401,6 +410,17 @@ export default class Duo {
       .to(after, { v: next.scale, duration: 0.6, ease: 'power2.inOut' }, 1.25)
       /* Hold, then let it go. */
       .to(after, { v: 0, duration: 1.1, ease: 'power2.inOut' }, 3.6);
+  }
+
+  /**
+   * A portrait's reaction: the angry picture the moment the rock lands,
+   * held as long as the drawn faces hold their mood, then back to calm.
+   */
+  scowl(m) {
+    gsap.killTweensOf(m.angry);
+    gsap.timeline()
+      .set(m.angry, { opacity: 1 })
+      .to(m.angry, { opacity: 0, duration: 0.45, ease: 'power2.inOut' }, 3.6);
   }
 
   /* -------------------------------------------------------------- loop */
