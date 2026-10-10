@@ -122,6 +122,12 @@ export default class App {
     this.page.enter();
   }
 
+  /** A link to the page already showing: back to its top, the page's own way. */
+  toTop() {
+    if (store.isTransitioning) return;
+    this.page?.toTop();
+  }
+
   /* ---------------------------------------------------------- extras */
 
   /**

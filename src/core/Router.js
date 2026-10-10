@@ -27,7 +27,11 @@ export default class Router {
       if (link.target === '_blank') return;
 
       e.preventDefault();
-      if (url.pathname === window.location.pathname) return;
+      /* A link to the page already showing (the logo, mostly): back to its top. */
+      if (url.pathname === window.location.pathname) {
+        if (!url.hash) this.app.toTop();
+        return;
+      }
       this.go(url.pathname);
     };
 
