@@ -18,17 +18,19 @@ import { clamp } from '../fx/particles.js';
  *   Home → About   the first scroll takes over: the heading and subtext
  *                  fade away on their own, the page glides down to About,
  *                  and the four rocks come along with you, still circling
- *                  (clockwise, unevenly), now round the screen.
+ *                  (clockwise, unevenly), now round the screen. Without
+ *                  handing the scroll back, it carries on: the rocks spiral
+ *                  in, collide in the centre and crumble, their pieces
+ *                  swirling out across the page.
  *   About          now your scroll drives everything, both ways: the
- *                  photos and text unfold, and over the very same scroll
- *                  the rocks spiral in, collide in the centre and crumble,
- *                  their pieces swirling out across the page.
- *   About → Home   scroll back above About and it glides you home again.
+ *                  photos and text unfold.
+ *   About → Home   scroll back into the collision and it plays in reverse
+ *                  on its own, then glides you home again.
  *
  * Below About, the work gets its own pinned reel: the scroll pulls the
  * projects sideways past you, then lets go to the footer.
  */
-const GLIDE = 1.6;
+const GLIDE = 1.3;
 const glideEase = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
 /* The scroll through About (0 → 1), in order: the waiting rocks are
@@ -37,6 +39,19 @@ const glideEase = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) 
    brief (photos, text, button) play out over the rest. */
 const COLLIDE = 0.2;
 const SCATTERED = 0.42;
+/* The first scroll doesn't stop at About: the page carries itself on.
+   The rocks start closing in LEAD s before the glide lands (no settling
+   in first), are drawn in (DRAW_IN s) and collide, the pieces burst out
+   (BURST s), a beat, then the two frames arrive and run through their
+   photos (PHOTOS s). The scroll is handed back just before the text — the
+   next scroll brings that in. Scrolling back into that stretch plays it
+   in reverse (UNSMASH s) and glides home. */
+const LEAD = 0.35;
+const DRAW_IN = 0.5;
+const BURST = 0.55;
+const BEAT = 0.25;
+const PHOTOS = 1.9;
+const UNSMASH = 1.1;
 /* How closely the scrubbed sequences follow the scroll (per 60fps frame).
    Lenis already smooths the scroll; this only takes the edge off. */
 const FOLLOW = 0.16;
@@ -226,35 +241,102 @@ export default class Main extends Page {
     /* The rocks let go of the sketches and come along with the viewer. */
     gsap.to(this.journey, { f: 1, duration: GLIDE * 0.95, delay: 0.08, ease: 'power2.inOut', overwrite: 'auto' });
 
-    this.lenis.scrollTo(this.aboutTop, {
-      duration: GLIDE,
-      easing: glideEase,
-      force: true,
+    this.lenis.scrollTo(this.aboutTop, { duration: GLIDE, easing: glideEase, force: true });
+    /* …and closing in on each other before it lands, so there's no pause
+       between arriving and the hit. */
+    this.smash(GLIDE - LEAD);
+  }
+
+  /** The scroll position at progress p (0 → 1) through About… */
+  aboutAt(p) {
+    return this.aboutTop + Math.max(0, this.aboutH - store.height) * p;
+  }
+
+  /** …and the progress at scroll position y. */
+  aboutProgress(y) {
+    return clamp((y - this.aboutTop) / Math.max(1, this.aboutH - store.height), 0, 1);
+  }
+
+  /** Where the photos are done and the text is next: the scroll is handed
+      back here. */
+  get handBack() {
+    return this.aboutAt(SCATTERED + (1 - SCATTERED) * this.briefAuto);
+  }
+
+  /**
+   * Keep the wheel and play About on without waiting for a scroll: the
+   * rocks are drawn together and collide, the pieces burst out, a beat,
+   * then the frames arrive and run through their photos. The scroll is
+   * handed back just before the text.
+   *
+   * It runs on its own clock rather than the scroll's, so it can begin
+   * (after `delay`) while the glide is still landing. Once landed, the
+   * scroll keeps pace — the stage is sticky, so that moves nothing.
+   */
+  smash(delay = 0) {
+    if (!this.lenis) return;
+    this.state = 'toAbout';
+    this.lenis.stop();
+    this.autoTl?.kill();
+
+    const auto = { p: Math.max(this.rockP, this.aboutProgress(store.scroll)) };
+    this.auto = auto;
+    const follow = () => {
+      this.rockP = auto.p;
+      if (store.scroll >= this.aboutTop - 1) this.lenis.scrollTo(this.aboutAt(auto.p), { immediate: true, force: true });
+    };
+    const tl = gsap.timeline({
+      delay,
+      onUpdate: follow,
       onComplete: () => {
+        this.auto = null;
+        this.lenis.scrollTo(this.handBack, { immediate: true, force: true });
         this.state = 'about';
         this.lenis.start();
       }
     });
+    /* Straight in (the rocks' own pull already gathers speed into the hit),
+       then flung apart. */
+    if (auto.p < COLLIDE) tl.to(auto, { p: COLLIDE, duration: DRAW_IN, ease: 'none' });
+    if (auto.p < SCATTERED) tl.to(auto, { p: SCATTERED, duration: BURST, ease: 'power2.out' });
+    tl.to(auto, { p: SCATTERED + (1 - SCATTERED) * this.briefAuto, duration: PHOTOS, ease: 'none' }, tl.duration() ? `+=${BEAT}` : 0);
+
+    this.glideEnd = performance.now() + (delay + tl.duration() + 0.6) * 1000;
+    this.autoTl = tl;
   }
 
-  /** Scrolled back above About: carry the viewer home. */
+  /** Stop playing About on its own (the scroll drives it again). */
+  stopAuto() {
+    this.autoTl?.kill();
+    this.auto = null;
+  }
+
+  /**
+   * Scrolled back above the text: carry the viewer home — back up through
+   * the photos and the collision first (the pieces gather, the rocks come
+   * apart), then the glide.
+   */
   goHome() {
     if (!this.lenis) return;
+    this.stopAuto();
     this.state = 'toHome';
-    this.glideEnd = performance.now() + (GLIDE + 0.6) * 1000;
+    const wait = store.scroll > this.aboutTop + 3 ? UNSMASH : 0;
+    this.glideEnd = performance.now() + (wait + GLIDE + 0.6) * 1000;
     this.lenis.stop();
 
-    /* The rocks return to orbit as the sketches come back into view. */
-    gsap.to(this.journey, { f: 0, duration: GLIDE * 0.95, ease: 'power2.inOut', overwrite: 'auto' });
+    /* The rocks return to orbit as the sketches come back into view.
+       (Timed, not chained to the scroll, so they still play if a glide is
+       cut short — see finishGlide.) */
+    gsap.to(this.journey, { f: 0, duration: GLIDE * 0.95, delay: wait, ease: 'power2.inOut', overwrite: 'auto' });
 
     /* The heading settles back in as the page arrives. */
     gsap.to(this.heroLines(), {
       y: 0, opacity: 1, filter: 'blur(0px)',
-      duration: 1, ease: 'power3.out', stagger: 0.07, delay: GLIDE * 0.55, overwrite: 'auto'
+      duration: 1, ease: 'power3.out', stagger: 0.07, delay: wait + GLIDE * 0.55, overwrite: 'auto'
     });
-    if (this.cue) gsap.to(this.cue, { opacity: 1, y: 0, duration: 0.9, ease: 'power2.out', delay: GLIDE * 0.8, overwrite: 'auto' });
+    if (this.cue) gsap.to(this.cue, { opacity: 1, y: 0, duration: 0.9, ease: 'power2.out', delay: wait + GLIDE * 0.8, overwrite: 'auto' });
 
-    this.lenis.scrollTo(0, {
+    const glide = () => this.lenis.scrollTo(0, {
       duration: GLIDE,
       easing: glideEase,
       force: true,
@@ -263,6 +345,8 @@ export default class Main extends Page {
         this.lenis.start();
       }
     });
+    if (!wait) glide();
+    else this.lenis.scrollTo(this.aboutTop, { duration: UNSMASH, easing: glideEase, force: true, onComplete: glide });
   }
 
   /**
@@ -270,6 +354,7 @@ export default class Main extends Page {
    * mid-scroll (the browser restores the position on reload), or the
    * scroll jumped (End key, scrollbar): settle straight into the About
    * state, the welcome copy away and the rocks travelling with the viewer.
+   * Short of the text, the rest plays out on its own from there.
    */
   atAbout() {
     gsap.killTweensOf([this.journey, ...this.heroLines()]);
@@ -277,6 +362,7 @@ export default class Main extends Page {
     this.journey.f = 1;
     gsap.set(this.heroLines(), { y: -70, opacity: 0, filter: 'blur(12px)' });
     if (this.cue) gsap.set(this.cue, { opacity: 0, y: 14 });
+    if (store.scroll < this.handBack - 3) this.smash();
   }
 
   /**
@@ -287,7 +373,8 @@ export default class Main extends Page {
    */
   finishGlide() {
     const toAbout = this.state === 'toAbout';
-    this.lenis?.scrollTo(toAbout ? this.aboutTop : 0, { immediate: true, force: true });
+    this.stopAuto();
+    this.lenis?.scrollTo(toAbout ? this.handBack : 0, { immediate: true, force: true });
     this.state = toAbout ? 'about' : 'home';
     this.lenis?.start();
   }
@@ -348,6 +435,9 @@ export default class Main extends Page {
 
     /* A short hold so the finished section sits still before the page moves on. */
     tl.to({}, { duration: 0.6 });
+
+    /* Up to the text, it plays on its own (see smash). */
+    this.briefAuto = textAt / tl.duration();
 
     tl.progress(this.aboutP);
     this.aboutTl = tl;
@@ -448,14 +538,15 @@ export default class Main extends Page {
       if (this.state === 'home' && scroll > 3) {
         if (scroll >= this.aboutTop - 3) this.atAbout();
         else this.goAbout();
-      } else if (this.state === 'about' && scroll < this.aboutTop - 3) this.goHome();
+      } else if (this.state === 'about' && scroll < this.handBack - 3) this.goHome();
       else if ((this.state === 'toAbout' || this.state === 'toHome') && performance.now() > this.glideEnd) this.finishGlide();
     }
 
     const end = this.aboutTop + this.aboutH - vh;
 
-    /* One progress for the whole scroll through About. */
-    this.rockP = ease(this.rockP, clamp((scroll - this.aboutTop) / Math.max(1, end - this.aboutTop), 0, 1));
+    /* One progress for the whole scroll through About — unless it's playing
+       out on its own (see smash). */
+    if (!this.auto) this.rockP = ease(this.rockP, clamp((scroll - this.aboutTop) / Math.max(1, end - this.aboutTop), 0, 1));
 
     /* About brief: only once the rocks have scattered. */
     const aboutNext = clamp((this.rockP - SCATTERED) / (1 - SCATTERED), 0, 1);
@@ -493,9 +584,9 @@ export default class Main extends Page {
       this.buildAbout();
     }
     this.measure();
-    /* Keep the viewer on About if a resize moved where it starts. */
-    if (this.state === 'about' && store.scroll < this.aboutTop) {
-      this.lenis?.scrollTo(this.aboutTop, { immediate: true, force: true });
+    /* Keep the viewer at the text if a resize moved where it starts. */
+    if (this.state === 'about' && store.scroll < this.handBack) {
+      this.lenis?.scrollTo(this.handBack, { immediate: true, force: true });
     }
     this.fx.resize();
     this.stage.resize();
@@ -546,6 +637,7 @@ export default class Main extends Page {
     if (this.onButtonMove) window.removeEventListener('pointermove', this.onButtonMove);
     if (this.buttonSpring) gsap.ticker.remove(this.buttonSpring);
     gsap.killTweensOf([this.cue, this.journey, ...this.heroLines()]);
+    this.stopAuto();
     this.aboutTl?.kill();
     this.showTl?.kill();
     this.water?.destroy();
