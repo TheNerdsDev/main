@@ -28,6 +28,15 @@ const shell = ({ title, description, pageId, body, bodyClass = '' }) => `<!docty
 <meta property="og:site_name" content="${esc(studio.name)}" />
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 <link rel="preload" as="image" href="/textures/noise.png" />
+<!-- The first paint, before the stylesheet arrives (in dev it's injected by
+     script): dark, with the loader covering the page. The loader's contents
+     stay hidden until base.css sets --styled, so nothing shows unstyled. -->
+<style>
+  html { background: #05060F; color-scheme: dark; scrollbar-width: none; }
+  html::-webkit-scrollbar { display: none; }
+  .loader { position: fixed; inset: 0; z-index: 100; background: #05060F; }
+  .loader > * { visibility: var(--styled, hidden); }
+</style>
 </head>
 <body class="${bodyClass}">
 <a class="skip-link" href="#page-content">Skip to content</a>
