@@ -140,17 +140,17 @@ export const info = {
 
 export const projects = [
   {
-    slug: 'nikunj-salon',
-    name: 'Nikunj Salon',
+    slug: 'css-arena',
+    name: 'CSS Arena',
     year: '2026',
     role: 'Design & Development',
-    accent: '#C8702F',
-    excerpt: 'Scroll-driven salon site',
+    accent: '#9259EE',
+    excerpt: 'Live CSS battle platform',
     description:
-      'A scroll-driven site for a neighbourhood salon, where every section reveals itself as you move down the page. Built around short intro films and a booking flow that takes three taps.',
-    deliverables: ['Art direction', 'Scroll animation', 'Booking integration', 'Hosting'],
+      'A CSS battle platform for the Vivacity 2K26 tech fest. Contestants recreate a target design in HTML and CSS against the clock, and every attempt is scored pixel by pixel — on 60 machines over an offline LAN.',
+    deliverables: ['Code editor', 'Pixel-accurate scoring', 'Live timer', 'Offline LAN setup'],
     link: 'https://example.com',
-    shots: 3,
+    shots: 1,
     /* Plays inside the ink when the card is hovered. Placeholder clip for now. */
     video: '/media/sample/preview.mp4'
   },
