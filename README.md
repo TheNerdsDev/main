@@ -113,8 +113,13 @@ the bottom of `src/styles/pages.css`.
 
 ### Swapping in your own sketches
 
-The sketches in `public/media/team/*-sketch.svg` are placeholders. To use real
-ones, drop the files in (PNG, JPG or SVG) and update each entry in `team`:
+The sketches (`public/media/team/meet-sketch.png`, `prem-sketch.png`) are
+line portraits drawn from photos of Meet and Prem: the photo aligned so the
+eyes sit at the same spot, pencil lines from a difference of Gaussians,
+background removed, and one shared shoulder outline so both busts match.
+They're white on transparent (`ink: 'light'`); the neon colour comes from
+each person's `colour`. To swap one, drop the file in (PNG, JPG or SVG) and
+update its entry in `team`:
 
 - `sketch` — the file path; `aspect` — width ÷ height of the drawing
 - `ink` — `'dark'` for pencil on white paper (the paper is keyed out),

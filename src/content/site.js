@@ -60,19 +60,20 @@ export const team = [
     id: 'prem',
     name: 'Prem',
     colour: '#39FF14',
-    sketch: '/media/team/prem-sketch.svg',
+    /* Drawn from a photo; the points below are measured on the drawing. */
+    sketch: '/media/team/prem-sketch.png',
     aspect: 0.8,
     ink: 'light',
-    eyes: [[0.4025, 0.43], [0.5975, 0.43]],
+    eyes: [[0.4, 0.428], [0.5975, 0.428]],
     eyeR: 0.11,
     face: {
-      brows: [[0.46, 0.374], [0.54, 0.374]],
-      browsOuter: [[0.34, 0.384], [0.66, 0.384]],
-      mouth: [0.5, 0.602],
-      corners: [[0.44, 0.594], [0.56, 0.594]]
+      brows: [[0.475, 0.39], [0.525, 0.39]],
+      browsOuter: [[0.33, 0.392], [0.6625, 0.392]],
+      mouth: [0.5, 0.588],
+      corners: [[0.425, 0.584], [0.5675, 0.58]]
     },
-    hit: [0.5, 0.355],
-    crown: [0.5, 0.13],
+    hit: [0.5, 0.34],
+    crown: [0.5, 0.135],
     hand: [0.86, 0.84],
     photos: ['/media/team/prem-1.svg', '/media/team/prem-2.svg', '/media/team/prem-3.svg']
   },
@@ -80,19 +81,20 @@ export const team = [
     id: 'meet',
     name: 'Meet',
     colour: '#2F8CFF',
-    sketch: '/media/team/meet-sketch.svg',
+    /* Drawn from a photo; the points below are measured on the drawing. */
+    sketch: '/media/team/meet-sketch.png',
     aspect: 0.8,
     ink: 'light',
-    eyes: [[0.4025, 0.43], [0.5975, 0.43]],
+    eyes: [[0.405, 0.428], [0.595, 0.428]],
     eyeR: 0.11,
     face: {
-      brows: [[0.465, 0.38], [0.535, 0.38]],
-      browsOuter: [[0.335, 0.388], [0.665, 0.388]],
-      mouth: [0.5, 0.612],
-      corners: [[0.445, 0.6], [0.555, 0.6]]
+      brows: [[0.455, 0.374], [0.545, 0.374]],
+      browsOuter: [[0.35, 0.38], [0.65, 0.38]],
+      mouth: [0.5, 0.57],
+      corners: [[0.3675, 0.554], [0.63, 0.552]]
     },
-    hit: [0.5, 0.355],
-    crown: [0.5, 0.13],
+    hit: [0.5, 0.34],
+    crown: [0.5, 0.2],
     hand: [0.14, 0.84],
     photos: ['/media/team/meet-1.svg', '/media/team/meet-2.svg', '/media/team/meet-3.svg']
   }
