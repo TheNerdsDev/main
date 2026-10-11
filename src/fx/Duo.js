@@ -516,6 +516,8 @@ export default class Duo {
    * showing underneath.
    */
   scowl(m) {
+    /* Not in yet (it loads once the page is up — loadLate): stay calm. */
+    if (!m.angry.complete || !m.angry.naturalWidth) return;
     m.scowlTl?.kill();
     const show = (angry) => {
       m.angry.style.opacity = angry ? '1' : '0';
@@ -523,6 +525,19 @@ export default class Duo {
     };
     show(true);
     m.scowlTl = gsap.delayedCall(3.6, () => show(false));
+  }
+
+  /**
+   * The angry portraits (~0.65 MB) are only seen when a rock lands, so they
+   * load after the page is up, in an idle moment — not alongside everything
+   * the loader is waiting for.
+   */
+  loadLate() {
+    const go = () => this.members.forEach((m) => {
+      if (m.angry && !m.angry.src && m.angry.dataset.src) m.angry.src = m.angry.dataset.src;
+    });
+    if ('requestIdleCallback' in window) requestIdleCallback(go, { timeout: 2000 });
+    else setTimeout(go, 600);
   }
 
   /* -------------------------------------------------------------- loop */

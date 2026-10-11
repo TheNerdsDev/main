@@ -47,6 +47,7 @@ export default class RockStage {
     this.chunkMat = rockMaterial(true, { bump: 1.1, seed: 9.1 });
 
     this.warm();
+    this.prime();
 
     this.chunks = [];
     this.flying = new Set();
@@ -74,6 +75,32 @@ export default class RockStage {
     } catch {
       done();
     }
+  }
+
+  /**
+   * …and put every rock's geometry on the GPU the same way, one per idle
+   * moment (a speck of each, drawn and cleared while nothing else is on
+   * this canvas). Otherwise the first real render did all of it at once —
+   * ≈40 ms, measured, in the very frame the rocks collide.
+   */
+  prime() {
+    const geos = [this.rockGeo, ...this.chunkGeos];
+    const later = (fn) => ('requestIdleCallback' in window ? requestIdleCallback(fn, { timeout: 500 }) : setTimeout(fn, 50));
+    const step = () => {
+      if (this.destroyed || !geos.length) return;
+      if (!this.running) {
+        const g = geos.shift();
+        const m = new Mesh(g, g === this.rockGeo ? this.rockMat : this.chunkMat);
+        m.scale.setScalar(0.0001);
+        m.frustumCulled = false;
+        this.scene.add(m);
+        this.renderer.render(this.scene, this.camera);
+        this.scene.remove(m);
+        this.renderer.clear();
+      }
+      later(step);
+    };
+    later(step);
   }
 
   resize() {
@@ -206,6 +233,7 @@ export default class RockStage {
   };
 
   destroy() {
+    this.destroyed = true;
     gsap.ticker.remove(this.tick);
     this.rockGeo.dispose();
     this.chunkGeos.forEach((g) => g.dispose());

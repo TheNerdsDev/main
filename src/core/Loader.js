@@ -43,8 +43,8 @@ export default class Loader {
     const jobs = urls.map((u) =>
       this.track(assets.load(u, { srgb: true }))
     );
-    jobs.push(this.track(assets.load('/textures/noise.png', { srgb: false, wrap: true })));
-    jobs.push(this.track(assets.load('/textures/surface.jpg', { srgb: true, wrap: true })));
+    /* (noise.png and surface.jpg used to be loaded here too — 0.3 MB that
+       nothing on the site reads; the grain is drawn in the shader.) */
 
     this.total = jobs.length;
     this.tick();

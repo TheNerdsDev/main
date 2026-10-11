@@ -1,7 +1,7 @@
 /* Syne Mono (SIL Open Font License — see /fonts/SyneMono-OFL.txt). */
 @font-face {
   font-family: 'Syne Mono';
-  src: url('/fonts/SyneMono-Regular.ttf') format('truetype');
+  src: url('/fonts/SyneMono-Regular.woff') format('woff');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -718,7 +718,7 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
   justify-content: center;
   pointer-events: none;
 }
-#main .about-button {
+:is(#main, #info) .about-button {
   position: relative;
   pointer-events: auto;
   display: flex;
@@ -734,15 +734,15 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
     inset 0 0 0.8rem rgba(var(--c-ink-rgb), 0.2);
   transition: box-shadow 0.6s var(--ease-out), border-color 0.6s var(--ease-out);
 }
-#main .about-button {
+:is(#main, #info) .about-button {
   /* Magnetic lean (set by Main.js) and the hover grow, kept apart from
      the transform GSAP animates. */
   translate: var(--nx, 0px) var(--ny, 0px);
   scale: 1;
   transition: box-shadow 0.5s var(--ease-out), border-color 0.5s var(--ease-out), scale 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-#main .about-button:hover,
-#main .about-button:focus-visible {
+:is(#main, #info) .about-button:hover,
+:is(#main, #info) .about-button:focus-visible {
   scale: 1.15;
   border-color: #0ACD88;
   box-shadow:
@@ -752,10 +752,10 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
   outline: none;
 }
 /* Hover: the outline glows green and the label turns green with it. */
-#main .about-button:hover .about-button-text,
-#main .about-button:focus-visible .about-button-text { color: #0ACD88; text-shadow: none; }
+:is(#main, #info) .about-button:hover .about-button-text,
+:is(#main, #info) .about-button:focus-visible .about-button-text { color: #0ACD88; text-shadow: none; }
 
-#main .about-button-text {
+:is(#main, #info) .about-button-text {
   display: flex;
   overflow: hidden;
   font-size: 1.4rem;
@@ -769,7 +769,7 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
   text-shadow: 0 0 0.8rem rgba(var(--c-ink-rgb), 0.55);
   transition: color 0.4s var(--ease-out), text-shadow 0.4s var(--ease-out);
 }
-#main .about-button-char {
+:is(#main, #info) .about-button-char {
   position: relative;
   display: inline-block;
   transition: transform 0.6s var(--ease-out);
@@ -777,14 +777,14 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
 }
 /* Letter-spacing also trails the last letter — cancel it so the label
    sits truly centred in the pill. */
-#main .about-button-char:last-child { margin-right: -0.22em; }
-#main .about-button-char::after {
+:is(#main, #info) .about-button-char:last-child { margin-right: -0.22em; }
+:is(#main, #info) .about-button-char::after {
   content: attr(data-c);
   position: absolute;
   left: 0; top: 100%;
 }
-#main .about-button:hover .about-button-char,
-#main .about-button:focus-visible .about-button-char { transform: translateY(-100%); }
+:is(#main, #info) .about-button:hover .about-button-char,
+:is(#main, #info) .about-button:focus-visible .about-button-char { transform: translateY(-100%); }
 
 /* ---------------------------------------------------------- showcase */
 
@@ -1003,7 +1003,7 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
 
 /* The last screen: planets pile up along its floor (fx/PlanetShower.js),
    the heading and button sit above the pile. */
-#main .finale {
+:is(#main, #info) .finale {
   position: relative;
   z-index: 4;
   /* Sideways swipes move the planets; up/down still scrolls the page. */
@@ -1013,13 +1013,13 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
   min-height: 56rem;
   overflow: hidden;
 }
-#main .planet-canvas {
+:is(#main, #info) .planet-canvas {
   position: absolute;
   inset: 0;
   width: 100%; height: 100%;
   pointer-events: none;
 }
-#main .finale-body {
+:is(#main, #info) .finale-body {
   position: relative;
   z-index: 1;
   height: 100%;
@@ -1033,7 +1033,7 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
   /* The pile underneath still feels the pointer; only the button takes clicks. */
   pointer-events: none;
 }
-#main .finale-title {
+:is(#main, #info) .finale-title {
   font-family: 'Anton', 'Arial Narrow', sans-serif;
   font-weight: 400;
   font-size: 10rem;
@@ -1041,21 +1041,21 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
   letter-spacing: 0.012em;
   text-transform: uppercase;
 }
-#main .finale-text { font-size: 1.8rem; line-height: 1.5; color: var(--c-dim); max-width: 48rem; text-wrap: balance; }
+:is(#main, #info) .finale-text { font-size: 1.8rem; line-height: 1.5; color: var(--c-dim); max-width: 48rem; text-wrap: balance; }
 /* Each line its own block, so one that wraps (on a phone) balances on its own. */
-#main .finale-line { display: block; }
-#main .finale-cta { margin-top: 2.6rem; pointer-events: auto; }
+:is(#main, #info) .finale-line { display: block; }
+:is(#main, #info) .finale-cta { margin-top: 2.6rem; pointer-events: auto; }
 /* About Us, scaled up: same outline, glow, letter roll and lean. */
-#main .finale-button { padding: 2.4rem 6.4rem; }
-#main .finale-button .about-button-text { font-size: 2rem; }
+:is(#main, #info) .finale-button { padding: 2.4rem 6.4rem; }
+:is(#main, #info) .finale-button .about-button-text { font-size: 2rem; }
 
 /* It arrives with each shower. */
-#main .finale-title .line-inner { transform: translateY(110%); transition: transform 1.1s var(--ease-out); }
-#main .finale-text,
-#main .finale-cta { opacity: 0; translate: 0 2rem; transition: opacity 0.9s var(--ease-out), translate 0.9s var(--ease-out); }
-#main .finale.is-in .finale-title .line-inner { transform: none; }
-#main .finale.is-in .finale-text { opacity: 1; translate: 0 0; transition-delay: 0.25s; }
-#main .finale.is-in .finale-cta { opacity: 1; translate: 0 0; transition-delay: 0.4s; }
+:is(#main, #info) .finale-title .line-inner { transform: translateY(110%); transition: transform 1.1s var(--ease-out); }
+:is(#main, #info) .finale-text,
+:is(#main, #info) .finale-cta { opacity: 0; translate: 0 2rem; transition: opacity 0.9s var(--ease-out), translate 0.9s var(--ease-out); }
+:is(#main, #info) .finale.is-in .finale-title .line-inner { transform: none; }
+:is(#main, #info) .finale.is-in .finale-text { opacity: 1; translate: 0 0; transition-delay: 0.25s; }
+:is(#main, #info) .finale.is-in .finale-cta { opacity: 1; translate: 0 0; transition-delay: 0.4s; }
 
 /* ---------------------------------------------------------- fallback */
 
@@ -1064,6 +1064,11 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
 html.no-webgl #main .sketch-gasp,
 html.no-webgl #main .duo-actions,
 html.no-webgl #main .porthole-shutter { display: none; }
+
+/* Out of sight (Main.js), the portholes' loops rest. */
+#main .about.is-away .porthole *,
+#main .about.is-away .porthole *::before,
+#main .about.is-away .porthole *::after { animation-play-state: paused; }
 
 /* Reduced motion: the portholes stand still — no breathing, drifting,
    blinking or pulsing, no wave; the layout stays. */
@@ -1117,7 +1122,7 @@ html.no-webgl #main .porthole-shutter { display: none; }
 
   #main .about-text { font-size: 2.1rem; }
   #main .about-cta { margin-top: 3.2rem; }
-  #main .about-button { padding: 1.4rem 3rem; }
+  :is(#main, #info) .about-button { padding: 1.4rem 3rem; }
   #main .about-body { align-items: center; }
 }
 
@@ -1209,26 +1214,26 @@ html.no-webgl #main .showcase-progress { display: none; }
 
 /* Finale on small screens. */
 @media screen and (max-width: 767px) {
-  #main .finale-title { font-size: 5.6rem; }
-  #main .finale-button { padding: 2rem 4.4rem; }
-  #main .finale-button .about-button-text { font-size: 1.6rem; }
+  :is(#main, #info) .finale-title { font-size: 5.6rem; }
+  :is(#main, #info) .finale-button { padding: 2rem 4.4rem; }
+  :is(#main, #info) .finale-button .about-button-text { font-size: 1.6rem; }
 }
 /* Tall (portrait) screens — phones, tablets: centred, the heading would
    float far above the pile, so it's set down to sit just over it instead.
    The pile fills about the bottom 30% on every screen (fx/PlanetShower.js). */
 @media screen and (orientation: portrait) {
-  #main .finale-body {
+  :is(#main, #info) .finale-body {
     justify-content: flex-end;
     padding-bottom: calc(34vh + 4rem);
     padding-bottom: calc(34svh + 4rem);
   }
   /* No planets (no WebGL, or reduced motion): keep it centred. */
-  #main .finale:not(:has(.planet-canvas)) .finale-body {
+  :is(#main, #info) .finale:not(:has(.planet-canvas)) .finale-body {
     justify-content: center;
     padding-bottom: 18vh;
   }
 }
-html.no-webgl #main .planet-canvas { display: none; }
-html.no-webgl #main .finale-title .line-inner { transform: none; }
-html.no-webgl #main .finale-text,
-html.no-webgl #main .finale-cta { opacity: 1; translate: 0 0; }
+html.no-webgl :is(#main, #info) .planet-canvas { display: none; }
+html.no-webgl :is(#main, #info) .finale-title .line-inner { transform: none; }
+html.no-webgl :is(#main, #info) .finale-text,
+html.no-webgl :is(#main, #info) .finale-cta { opacity: 1; translate: 0 0; }

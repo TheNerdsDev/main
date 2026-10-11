@@ -11,13 +11,12 @@ export const studio = {
     'A two-person studio building websites, software and automation for businesses that deserve better than a template.',
   email: 'hello@thenerds.studio',
   /* The header's way to the contact page. */
-  contactLabel: "Let's talk",
-  location: 'Ahmedabad, IN — working remotely',
+  contactLabel: 'Contact Us',
+  location: 'Surat, IN — working remotely',
   available: 'January 2027',
   year: '2026',
   social: [
     { label: 'Instagram', url: 'https://instagram.com/' },
-    { label: 'GitHub', url: 'https://github.com/' },
     { label: 'LinkedIn', url: 'https://linkedin.com/' }
   ]
 };
@@ -95,13 +94,26 @@ export const team = [
 /* Contact page at `/contact/`. */
 export const contact = {
   title: ['Got an idea?', "Let's talk."],
+  /* **word** renders bold. */
   lead:
-    "Tell us what you're building — a website, a tool, an automation, or just a hunch you can't shake. We read everything and reply within two working days.",
+    "Got something in mind? We build **websites**, **custom software** and **automation** that work as hard as you do. Tell us about it — you'll hear back within 24 hours.",
+  /* In the order they're laid out, two to a row (so Phone sits right
+     under Based in). A detail with `href` is a link; one with `lines` lists
+     a name and a link per line, and takes two rows' height, so the column
+     beside it keeps its even spacing. */
   details: [
-    { label: 'Response time', value: 'Within 48 hours' },
-    { label: 'Based in', value: 'Ahmedabad, IN — working remotely' },
-    { label: 'Available', value: 'January 2027' }
+    { label: 'Response time', value: 'Within 24 hours' },
+    { label: 'Based in', value: 'Surat, IN — working remotely' },
+    { label: 'Email', value: 'hello@thenerds.studio', href: 'mailto:hello@thenerds.studio' },
+    {
+      label: 'Phone',
+      lines: [
+        { name: 'Meet Raval', value: '+91 8153813924', href: 'tel:+918153813924' },
+        { name: 'Prem Kajiwala', value: '+91 6353820610', href: 'tel:+916353820610' }
+      ]
+    }
   ],
+  socials: 'Socials',
   /* The enquiry form. Each submission is saved to the database and emailed
      to us (supabase/functions/contact). `name` is the key it's sent and
      stored under — change a label freely, but a name only together with
@@ -116,7 +128,7 @@ export const contact = {
       { name: 'idea', label: 'What do you have in mind', type: 'textarea', rows: 5, max: 4000 }
     ],
     optional: 'Optional',
-    button: 'Give a Shout',
+    button: 'Send Your Idea',
     sending: 'Sending…',
     sent: {
       title: 'Got it — thank you!',
@@ -142,7 +154,7 @@ export const showcase = {
 
 /* The closing section of the landing page, under the planet shower. */
 export const finale = {
-  title: ['Connect to us'],
+  title: ['Ready for liftoff?'],
   /* One line each. */
   text: ['Dreaming something up?', 'Two nerds are ready to bring it down to earth.'],
   button: 'Contact us'
@@ -157,20 +169,9 @@ export const workIndex = {
 };
 
 export const info = {
-  title: ['Two nerds,', 'zero templates'],
+  title: ['Who we are'],
   lead:
-    'We are a small studio. That is the point — you talk to the people writing the code, every single time.',
-  body: [
-    'The Nerds is run by two developers who got tired of watching good local businesses settle for templates that look like everyone else. A cafe, a salon, a neighbourhood kitchen — each one has a character worth putting on screen, and almost none of them get it.',
-    'We handle the whole thing: design direction, front-end build, the backend and automations that keep it running, and the hosting it sits on. No handoffs between agencies, no account manager relaying messages. One conversation, start to finish.',
-    'Our work leans on motion and interaction, but never at the cost of speed. Every site we ship is measured on a mid-range phone before it goes live, because that is what your customers are actually holding.'
-  ],
-  services: [
-    { label: 'Design', items: ['Art direction', 'Interface design', 'Design systems', 'Prototyping'] },
-    { label: 'Build', items: ['Front-end development', 'WebGL & motion', 'CMS integration', 'Performance'] },
-    { label: 'Systems', items: ['Automation', 'Booking & ordering', 'Cloud infrastructure', 'Maintenance'] }
-  ],
-  capabilities: ['WebGL', 'Three.js', 'GSAP', 'React', 'Astro', 'Node', 'Python', 'AWS']
+    'We are Meet and Prem, two developers based in Surat. We design and build websites, custom software and automation for businesses of every size. Every project is handled by the two of us, from the first conversation through to launch and beyond.'
 };
 
 export const projects = [
@@ -191,6 +192,12 @@ export const projects = [
     /* Its GitHub repository: "Code — GitHub ↗" on the project's page
        (left out while empty). */
     github: 'https://github.com/meetRaval09/css-arena',
+    /* Our certificates of appreciation from the event, pinned either side
+       of the video (the first on the left); click one to see it whole. */
+    certificates: [
+      { name: 'Meet Raval', src: '/media/css-arena/certificate-meet.webp' },
+      { name: 'Prem Kajiwala', src: '/media/css-arena/certificate-prem.webp' }
+    ],
     /* Detail shots 01–03: the 100% match (wide), the round countdown and
        the admin console. Shown even while other projects' are empty. */
     shots: 3,
@@ -213,7 +220,7 @@ export const projects = [
     description:
       'A local-first task scheduler: plan the day, track what got done, stay focused. Your day at a glance on the dashboard, a month calendar and analytics on streaks and trends, desktop reminders, and themes from dark to sandstone.',
     deliverables: ['Dashboard', 'Calendar', 'Analytics', 'Desktop reminders'],
-    github: '',
+    github: 'https://github.com/premkajiwala-hub/Task-Pilot',
     /* Detail shots 01–03: the dashboard (wide), the calendar and analytics. */
     shots: 3,
     photos: true,

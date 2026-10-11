@@ -109,6 +109,12 @@ export default class InkTrail {
     const moving = Math.min(travelled * 90, 1);
     this.active += ((this.active > 0 ? moving : 0) - this.active) * 0.25;
 
+    /* Once the last stroke has faded to nothing (it loses 2.6% a frame, so
+       even the densest is gone within ~300 frames) the pass changes nothing
+       — skip it until the pointer moves again. */
+    this.still = this.active < 0.001 ? (this.still || 0) + 1 : 0;
+    if (this.still > 320) return;
+
     const u = this.material.uniforms;
     u.tPrev.value = this.read.texture;
     u.uMouse.value.copy(this.mouse);

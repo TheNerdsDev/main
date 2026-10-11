@@ -370,6 +370,41 @@ export default class PlanetScene {
     return b.tilt;
   }
 
+  /**
+   * Upload every map and compile every material ahead of time, a piece at
+   * a time in idle moments. Left to the first draw, all of it happened in
+   * one frame (≈0.9 s, measured) — freezing the page just as the shower
+   * began. Shaders compile in parallel where the GPU allows it.
+   */
+  async warm() {
+    if (!this.ready || this.warming) return this.warming;
+    const r = this.renderer;
+    const idle = () => new Promise((res) => {
+      if ('requestIdleCallback' in window) requestIdleCallback(() => res(), { timeout: 250 });
+      else setTimeout(res, 16);
+    });
+    this.warming = (async () => {
+      for (const t of Object.values(this.tex || {})) {
+        await idle();
+        if (this.disposed) return;
+        r.initTexture(t);
+      }
+      await idle();
+      if (this.disposed) return;
+      /* Instanced meshes with nothing in them are skipped by compile(); give
+         each one instance for the moment it takes. */
+      const counts = Object.values(this.meshes).map((m) => [m, m.count]);
+      counts.forEach(([m]) => { m.count = Math.min(Math.max(m.count, 1), m.instanceMatrix.count); });
+      try {
+        if (r.compileAsync) await r.compileAsync(this.scene, this.camera);
+        else r.compile(this.scene, this.camera);
+      } finally {
+        counts.forEach(([m, c]) => { m.count = c; });
+      }
+    })();
+    return this.warming;
+  }
+
   render(bodies, time) {
     if (!this.ready) {
       this.renderer.clear();
@@ -430,6 +465,7 @@ export default class PlanetScene {
   }
 
   dispose() {
+    this.disposed = true;
     this.geometries?.forEach((g) => g.dispose());
     Object.values(this.meshes).forEach((m) => {
       m.material.dispose();
