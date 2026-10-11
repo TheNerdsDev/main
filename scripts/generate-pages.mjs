@@ -171,7 +171,7 @@ const showcaseSection = () => {
     ? ` srcset="/media/${slug}/featured-960.webp 960w, /media/${slug}/featured.jpg 1600w" sizes="(max-width: 767px) 100vw, 36vw"`
     : '';
   const cards = projects
-    .map((p, i) => `          <a class="show-card" href="/work/${p.slug}/" data-link data-cursor="View"${p.video ? ` data-video="${esc(p.video)}"` : ''} style="--accent: ${p.accent}">
+    .map((p, i) => `          <a class="show-card${p.screenshot ? ' is-still' : ''}" href="/work/${p.slug}/" data-link data-cursor="View"${p.video ? ` data-video="${esc(p.video)}"` : ''} style="--accent: ${p.accent}">
             <span class="show-card-inner">
               <span class="show-card-media"><img class="show-card-img" src="/media/${p.slug}/featured.jpg"${srcset(p.slug)} alt="${esc(p.name)}" loading="lazy" decoding="async" /></span>
               <span class="show-card-meta">

@@ -83,7 +83,8 @@ export default class Main extends Page {
     this.show = q('.showcase');
     this.showTrack = q('.showcase-track');
     this.showCards = [...this.el.querySelectorAll('.show-card')];
-    this.showImgs = this.showCards.map((c) => c.querySelector('.show-card-img'));
+    /* (A screenshot card's image stays still — no drift.) */
+    this.showImgs = this.showCards.map((c) => (c.classList.contains('is-still') ? null : c.querySelector('.show-card-img')));
     this.showNow = q('.showcase-count-now');
     this.showBar = q('.showcase-progress-bar');
     this.showX = 0;

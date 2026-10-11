@@ -595,6 +595,10 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
 @media screen and (min-width: 768px) {
   #main .show-card-img { will-change: transform; }
 }
+/* A screenshot with its own frame (`screenshot` in site.js) is shown whole
+   and still — no zoom, no drift — so it sits centred, and lines up with
+   its hover video. */
+#main .show-card.is-still .show-card-img { transform: none; will-change: auto; }
 #main .show-card:hover .show-card-img { filter: saturate(1.05) brightness(1.04); }
 #main .show-card:focus-visible { outline: none; }
 
