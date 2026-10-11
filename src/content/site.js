@@ -164,19 +164,26 @@ export const projects = [
     video: '/media/css-arena/preview.mp4'
   },
   {
-    slug: 'harbour-coffee',
-    name: 'Harbour Coffee',
+    slug: 'taskpilot',
+    name: 'TaskPilot',
     year: '2026',
     role: 'Design & Development',
-    accent: '#2F6FC8',
-    excerpt: 'Cafe storefront & ordering',
+    accent: '#E63946',
+    /* The thumbnail is a framed logo poster: show it whole and still. */
+    screenshot: true,
+    /* The project page leads with the video below, playing on a loop. */
+    pageVideo: true,
+    excerpt: 'Local-first task scheduler',
     description:
-      'A storefront for a two-location roastery, with a menu that updates itself from the till system and a pickup-ordering flow that works on a phone in one hand.',
-    deliverables: ['Brand site', 'Menu sync', 'Online ordering', 'Analytics'],
+      'A local-first task scheduler: plan the day, track what got done, stay focused. Your day at a glance on the dashboard, a month calendar and analytics on streaks and trends, desktop reminders, and themes from dark to sandstone.',
+    deliverables: ['Dashboard', 'Calendar', 'Analytics', 'Desktop reminders'],
     link: 'https://example.com',
+    /* Detail shots 01–03: the dashboard (wide), the calendar and analytics. */
     shots: 3,
-    /* Plays inside the ink when the card is hovered. Placeholder clip for now. */
-    video: '/media/sample/preview.mp4'
+    photos: true,
+    /* Plays inside the ink when the card is hovered: a walkthrough, from
+       the logo through planning a task to analytics. */
+    video: '/media/taskpilot/preview.mp4'
   },
   {
     slug: 'mesa-kitchen',
