@@ -109,7 +109,8 @@ export const showcase = {
 /* The closing section of the landing page, under the planet shower. */
 export const finale = {
   title: ['Connect to us'],
-  text: 'placeholder',
+  /* One line each. */
+  text: ['Dreaming something up?', 'Two nerds are ready to bring it down to earth.'],
   button: 'Contact us'
 };
 

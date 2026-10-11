@@ -284,7 +284,7 @@ ${showcaseSection()}
       <canvas class="planet-canvas" aria-hidden="true"></canvas>
       <div class="finale-body">
         <h2 class="finale-title" id="finale-title">${finale.title.map((l) => `<span class="line"><span class="line-inner">${esc(l)}</span></span>`).join(' ')}</h2>
-        <p class="finale-text">${esc(finale.text)}</p>
+        <p class="finale-text">${[].concat(finale.text).map((l) => `<span class="finale-line">${esc(l)}</span>`).join(' ')}</p>
         <div class="finale-cta">
           <a class="about-button finale-button" href="/contact/" data-link aria-label="${esc(finale.button)}">
             <span class="about-button-text" aria-hidden="true">${rollChars(finale.button)}</span>
