@@ -38,8 +38,15 @@ export default class Scroll {
   stop()  { this.lenis.stop(); }
   start() { this.lenis.start(); }
 
-  toTop(immediate = true) {
-    this.lenis.scrollTo(0, { immediate });
+  /**
+   * To the top, for certain (a new page always starts there): the window
+   * itself first, then Lenis. Lenis alone skips a jump to where it believes
+   * it already is — and it can be wrong, as when the browser has moved the
+   * page without it — or a jump while it's stopped.
+   */
+  toTop() {
+    window.scrollTo(0, 0);
+    this.lenis.scrollTo(0, { immediate: true, force: true });
     store.scroll = 0;
     store.velocity = 0;
   }

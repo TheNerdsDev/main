@@ -46,10 +46,15 @@ export default class Page {
 
     this.world?.media.enter();
     this.onEnter?.(tl);
+    this.enterTl = tl;
     return tl;
   }
 
   leave() {
+    /* Stop the entrance if it's still playing (left straight away, or
+       passed through on the way somewhere else): it would keep pulling
+       everything back in while this takes it out. */
+    this.enterTl?.kill();
     const tl = gsap.timeline();
 
     tl.to(this.lines, {

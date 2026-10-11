@@ -13,10 +13,9 @@ const LOADERS = {
 
 export const loadPage = (id) => (LOADERS[id] ? LOADERS[id]() : Promise.resolve(null));
 
-export const createPage = async (opts) => {
-  const mod = await loadPage(opts.el.dataset.page);
-  const Ctor = mod?.default || Page;
-  return new Ctor(opts);
-};
+/** Build a page from its already-loaded code (loadPage), synchronously. */
+export const buildPage = (mod, opts) => new (mod?.default || Page)(opts);
+
+export const createPage = async (opts) => buildPage(await loadPage(opts.el.dataset.page), opts);
 
 export const warmPages = () => Object.values(LOADERS).forEach((load) => load().catch(() => {}));
