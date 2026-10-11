@@ -1,0 +1,131 @@
+{
+  "projects": [
+    {
+      "name": "CSS Arena",
+      "slug": "css-arena",
+      "year": "2026",
+      "role": "Design & Development",
+      "excerpt": "Live CSS battle platform",
+      "description": "A CSS battle platform for the Vivacity 2K26 tech fest. Contestants recreate a target design in HTML and CSS against the clock, and every attempt is scored pixel by pixel — on more than 60 machines over an offline LAN.",
+      "deliverables": [
+        "Code editor",
+        "Pixel-accurate scoring",
+        "Live timer",
+        "Offline LAN setup"
+      ],
+      "accent": "#9259EE",
+      "github": "https://github.com/meetRaval09/css-arena",
+      "thumbnail": "/media/css-arena/featured.jpg",
+      "stillThumbnail": true,
+      "video": "/media/css-arena/preview.mp4",
+      "pageVideo": true,
+      "shots": [
+        "/media/css-arena/01.jpg",
+        "/media/css-arena/02.jpg",
+        "/media/css-arena/03.jpg"
+      ],
+      "certificates": [
+        {
+          "name": "Meet Raval",
+          "image": "/media/css-arena/certificate-meet.webp"
+        },
+        {
+          "name": "Prem Kajiwala",
+          "image": "/media/css-arena/certificate-prem.webp"
+        }
+      ]
+    },
+    {
+      "name": "TaskPilot",
+      "slug": "taskpilot",
+      "year": "2026",
+      "role": "Design & Development",
+      "excerpt": "Local-first task scheduler",
+      "description": "A local-first task scheduler: plan the day, track what got done, stay focused. Your day at a glance on the dashboard, a month calendar and analytics on streaks and trends, desktop reminders, and themes from dark to sandstone.",
+      "deliverables": [
+        "Dashboard",
+        "Calendar",
+        "Analytics",
+        "Desktop reminders"
+      ],
+      "accent": "#E63946",
+      "github": "https://github.com/premkajiwala-hub/Task-Pilot",
+      "thumbnail": "/media/taskpilot/featured.jpg",
+      "stillThumbnail": true,
+      "video": "/media/taskpilot/preview.mp4",
+      "pageVideo": true,
+      "shots": [
+        "/media/taskpilot/01.jpg",
+        "/media/taskpilot/02.jpg",
+        "/media/taskpilot/03.jpg"
+      ],
+      "certificates": []
+    },
+    {
+      "name": "Mesa Kitchen",
+      "slug": "mesa-kitchen",
+      "year": "2025",
+      "role": "Front-end Development",
+      "excerpt": "Restaurant & reservations",
+      "description": "A restaurant site built to make people hungry. Full-bleed food photography treated with a custom WebGL grade, and a reservation system wired straight into the floor plan.",
+      "deliverables": [
+        "Front-end build",
+        "WebGL image grade",
+        "Reservations",
+        "CMS"
+      ],
+      "accent": "#B8343C",
+      "github": "",
+      "thumbnail": "/media/mesa-kitchen/featured.jpg",
+      "stillThumbnail": false,
+      "video": "/media/sample/preview.mp4",
+      "pageVideo": false,
+      "shots": [],
+      "certificates": []
+    },
+    {
+      "name": "Atlas Fitness",
+      "slug": "atlas-fitness",
+      "year": "2025",
+      "role": "Design & Development",
+      "excerpt": "Class booking platform",
+      "description": "A booking platform for a studio running forty classes a week. Members see a schedule that loads instantly; staff see a dashboard that replaced three spreadsheets.",
+      "deliverables": [
+        "Product design",
+        "Booking platform",
+        "Staff dashboard",
+        "Automation"
+      ],
+      "accent": "#1F8F6A",
+      "github": "",
+      "thumbnail": "/media/atlas-fitness/featured.jpg",
+      "stillThumbnail": false,
+      "video": "/media/sample/preview.mp4",
+      "pageVideo": false,
+      "shots": [],
+      "certificates": []
+    },
+    {
+      "name": "Verde Grocer",
+      "slug": "verde-grocer",
+      "year": "2025",
+      "role": "Development & Systems",
+      "excerpt": "Local grocery storefront",
+      "description": "A grocer with eight hundred products and no time to manage a website. We built the storefront and the automation that keeps stock, pricing and delivery slots in sync on their own.",
+      "deliverables": [
+        "Storefront",
+        "Inventory sync",
+        "Delivery slots",
+        "Infrastructure"
+      ],
+      "accent": "#6B8F1F",
+      "github": "",
+      "thumbnail": "/media/verde-grocer/featured.jpg",
+      "stillThumbnail": false,
+      "video": "/media/sample/preview.mp4",
+      "pageVideo": false,
+      "shots": [],
+      "certificates": []
+    }
+  ]
+}

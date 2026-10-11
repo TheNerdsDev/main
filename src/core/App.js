@@ -96,7 +96,7 @@ export default class App {
     /* Warm the work index's thumbnails in idle moments, one at a time, so
        the first trip there is still instant — without the loader waiting
        on them. */
-    const thumbs = projects.map((p) => `/media/${p.slug}/featured.jpg`);
+    const thumbs = projects.map((p) => p.thumbnail);
     const later = (fn) => ('requestIdleCallback' in window ? requestIdleCallback(fn, { timeout: 3000 }) : setTimeout(fn, 400));
     const next = () => {
       const url = thumbs.shift();

@@ -92,13 +92,20 @@ const header = (current) => `  <header class="site-header">
 const mediaBlock = (src, alt, extra = '') =>
   `<div class="media-wrapper" data-media ${extra}><img class="media" src="${src}" alt="${esc(alt)}" loading="lazy" decoding="async" /></div>`;
 
-/* Project pages show empty frames until the real photos are in — a project
-   with `photos: true` shows its own, and setting this to true shows them
-   everywhere. (An empty frame holds the layout; with no data-media, WebGL
-   leaves it alone.) */
+/* A project page shows its photos once it has screenshots (`shots` in
+   projects.json); until then, empty frames hold the layout (with no
+   data-media, WebGL leaves them alone). Setting this to true shows the
+   thumbnail in those frames everywhere. */
 const WORK_PHOTOS = false;
 const workMedia = (p, src, alt) =>
-  WORK_PHOTOS || p.photos ? mediaBlock(src, alt) : '<div class="media-wrapper is-empty" aria-hidden="true"></div>';
+  WORK_PHOTOS || p.shots.length ? mediaBlock(src, alt) : '<div class="media-wrapper is-empty" aria-hidden="true"></div>';
+
+/* The lighter copy of an image when one sits beside it (scripts/media-variants.py):
+   the .webp of a shot, the -960.webp of a thumbnail. */
+const beside = (src, suffix) => {
+  const alt = src.replace(/\.[^./]+$/, suffix);
+  return alt !== src && existsSync(join(root, 'public', alt)) ? alt : null;
+};
 
 const splitTitle = (lines) =>
   lines.map((l) => `<span class="line"><span class="line-inner">${esc(l)}</span></span>`).join('\n        ');
@@ -189,13 +196,14 @@ const showcaseSection = () => {
   /* A 960px WebP alongside the full photo when there is one
      (scripts/media-variants.py): the card shows at most ~36vw (photo
      overscan and hover zoom included), full width on phones. */
-  const srcset = (slug) => existsSync(join(root, 'public', 'media', slug, 'featured-960.webp'))
-    ? ` srcset="/media/${slug}/featured-960.webp 960w, /media/${slug}/featured.jpg 1600w" sizes="(max-width: 767px) 100vw, 36vw"`
-    : '';
+  const srcset = (thumb) => {
+    const small = beside(thumb, '-960.webp');
+    return small ? ` srcset="${small} 960w, ${thumb} 1600w" sizes="(max-width: 767px) 100vw, 36vw"` : '';
+  };
   const cards = projects
-    .map((p, i) => `          <a class="show-card${p.screenshot ? ' is-still' : ''}" href="/work/${p.slug}/" data-link data-cursor="View"${p.video ? ` data-video="${esc(p.video)}"` : ''} style="--accent: ${p.accent}">
+    .map((p, i) => `          <a class="show-card${p.stillThumbnail ? ' is-still' : ''}" href="/work/${p.slug}/" data-link data-cursor="View"${p.video ? ` data-video="${esc(p.video)}"` : ''} style="--accent: ${p.accent}">
             <span class="show-card-inner">
-              <span class="show-card-media"><img class="show-card-img" src="/media/${p.slug}/featured.jpg"${srcset(p.slug)} alt="${esc(p.name)}" loading="lazy" decoding="async" /></span>
+              <span class="show-card-media"><img class="show-card-img" src="${esc(p.thumbnail)}"${srcset(p.thumbnail)} alt="${esc(p.name)}" loading="lazy" decoding="async" /></span>
               <span class="show-card-meta">
                 <span class="show-card-no">${pad(i + 1)}</span>
                 <span class="show-card-name">${esc(p.name)}</span>
@@ -354,7 +362,7 @@ const projectsPage = () => {
     .map(
       (p, i) => `        <li class="project-item">
           <a class="project" href="/work/${p.slug}/" data-link data-project="${i}" aria-label="${esc(p.name)}">
-            ${mediaBlock(`/media/${p.slug}/featured.jpg`, p.name, `data-video="/media/${p.slug}/preview.jpg"`)}
+            ${mediaBlock(p.thumbnail, p.name, `data-video="/media/${p.slug}/preview.jpg"`)}
             <span class="project-meta"><span class="project-name">${esc(p.name)}</span><span class="project-year">${esc(p.year)}</span></span>
           </a>
         </li>`
@@ -372,7 +380,7 @@ const projectsPage = () => {
   const previews = projects
     .map(
       (p, i) =>
-        `          <div class="media-wrapper" data-media data-preview="${i}"><img class="media" src="/media/${p.slug}/featured.jpg" alt="" loading="lazy" decoding="async" /></div>`
+        `          <div class="media-wrapper" data-media data-preview="${i}"><img class="media" src="${esc(p.thumbnail)}" alt="" loading="lazy" decoding="async" /></div>`
     )
     .join('\n');
 
@@ -416,15 +424,11 @@ ${previews}
 
 const workPage = (p) => {
   const next = getNext(p.slug);
-  /* The WebP copy when there is one (scripts/media-variants.py) — the same
-     picture, lighter. */
-  const shot = (i) => {
-    const webp = `/media/${p.slug}/0${i + 1}.webp`;
-    return existsSync(join(root, 'public', webp)) ? webp : `/media/${p.slug}/0${i + 1}.jpg`;
-  };
-  const shots = Array.from({ length: p.shots }, (_, i) =>
-    `        ${workMedia(p, shot(i), `${p.name} — detail ${i + 1}`)}`
-  ).join('\n');
+  /* Its screenshots (the WebP copy of each when there is one), or three
+     empty frames while it has none. */
+  const shots = (p.shots.length ? p.shots : [null, null, null])
+    .map((src, i) => `        ${workMedia(p, src && (beside(src, '.webp') || src), `${p.name} — detail ${i + 1}`)}`)
+    .join('\n');
 
   const deliverables = p.deliverables
     .map((d) => `<li class="text">${esc(d)}</li>`)
@@ -434,9 +438,9 @@ const workPage = (p) => {
      opens one whole on a click; without script, the link opens the image). */
   const certs = p.certificates || [];
   const cert = (c, side) => `<figure class="cert cert-${side}">
-        <a class="cert-hang" href="${esc(c.src)}" target="_blank" rel="noopener" data-cursor="View" aria-label="View ${esc(c.name)}'s certificate of appreciation">
+        <a class="cert-hang" href="${esc(c.image)}" target="_blank" rel="noopener" data-cursor="View" aria-label="View ${esc(c.name)}'s certificate of appreciation">
           <span class="cert-paper">
-            <img class="cert-img" src="${esc(c.src)}" alt="Certificate of appreciation — ${esc(c.name)}" width="1055" height="1491" decoding="async" />
+            <img class="cert-img" src="${esc(c.image)}" alt="Certificate of appreciation — ${esc(c.name)}" width="1055" height="1491" decoding="async" />
             <span class="cert-curl" aria-hidden="true"></span>
           </span>
         </a>
@@ -461,7 +465,7 @@ ${header('projects')}
       ${certs[0] ? cert(certs[0], 'left') : ''}
       ${p.pageVideo && p.video
         ? `<div class="work-film"><video class="work-film-video" src="${esc(p.video)}" autoplay muted loop playsinline preload="auto" aria-label="${esc(p.name)}, a walkthrough"></video></div>`
-        : workMedia(p, `/media/${p.slug}/featured.jpg`, p.name)}
+        : workMedia(p, p.thumbnail, p.name)}
       ${certs[1] ? cert(certs[1], 'right') : ''}
     </div>
 

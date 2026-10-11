@@ -42,11 +42,28 @@ Nearly everything lives in **one file**: `src/content/site.js`.
 | Work index headline and intro | `workIndex` |
 | Contact page heading, lead and details | `contact` |
 | About page copy, services, stack | `info` |
-| Projects (name, year, role, description, accent colour, hover video) | `projects` |
+| Projects (name, year, role, description, accent colour, images, videos, GitHub link) | `src/content/projects.json`, edited through the CMS (below) |
 | Colours, spacing, type scale | `:root` in `src/styles/base.css` |
 
 After editing content, run `npm run pages` (or just `npm run dev` / `npm run
 build`, which do it for you) to regenerate the HTML routes.
+
+### Editing projects (the CMS)
+
+Projects are edited in **Pages CMS**, a hosted editor that commits to this repo:
+
+1. Open <https://app.pagescms.org> and sign in with GitHub.
+2. Open **TheNerdsDev/main** and switch to the **new_version** branch.
+3. **Projects** lists them in the order they appear. Drag to reorder, open one
+   to edit it, or add a new one. Images and videos upload into `public/media/`.
+4. **Save** commits the change. Pull it (`git pull`) and restart `npm run dev`
+   to see it locally; a host that builds from GitHub picks it up by itself.
+
+The editor's fields, their help text and the upload rules are in `.pages.yml`;
+the data is `src/content/projects.json`. An uploaded image is used as is.
+`python scripts/media-variants.py` makes the lighter copies (the `-960.webp`
+thumbnails and `.webp` shots) when you want them; the pages use them
+automatically once they exist.
 
 ### The headline
 
@@ -186,7 +203,8 @@ at most) and point `video` at it.
 
 ```
 src/
-  content/site.js      Single source of truth for all copy and projects
+  content/site.js      Single source of truth for all copy (projects: projects.json)
+  content/projects.json The projects, edited through Pages CMS (.pages.yml)
   core/
     App.js             Boots everything, owns the render loop and transitions
     Store.js           Viewport, device, scroll, pointer, flags
