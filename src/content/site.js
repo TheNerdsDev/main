@@ -3,8 +3,6 @@
  * Edit this file to rebrand — pages regenerate on `npm run pages`.
  */
 
-import projectsData from './projects.json' with { type: 'json' };
-
 export const studio = {
   name: 'The Nerds',
   wordmark: 'The Nerds',
@@ -176,35 +174,106 @@ export const info = {
     'We are Meet and Prem, two developers based in Surat. We design and build websites, custom software and automation for businesses of every size. Every project is handled by the two of us, from the first conversation through to launch and beyond.'
 };
 
-/* The projects, in the order they appear: kept in projects.json, which the
-   CMS edits (Pages CMS, configured in .pages.yml at the repo root). Each one:
-     name, slug        its title, and its page at /work/<slug>/
-     year, role, excerpt, description, deliverables (the Scope list)
-     accent            its colour (#RRGGBB): the hover glow, the page's tint
-     github            "Code — GitHub ↗" on its page (left out while empty)
-     thumbnail         the card image (a smaller -960.webp beside it is used
-                       on small screens when it's there)
-     stillThumbnail    a framed screenshot or poster: shown whole, no zoom/drift
-     video             the walkthrough: plays on the card when hovered…
-     pageVideo         …and leads its page, on a loop
-     shots             its page's screenshots: the first wide, then two to a
-                       row (a .webp beside one is used instead when it's
-                       there); none: three empty frames hold the layout
-     certificates      pinned beside the video, { name, image } each */
-export const projects = projectsData.projects.map((p) => ({
-  ...p,
-  /* The CMS may leave an empty field out, or save it as null. */
-  year: p.year || '',
-  role: p.role || '',
-  excerpt: p.excerpt || '',
-  description: p.description || '',
-  accent: p.accent || '#6E8FD6',   // the site's own blue
-  github: p.github || '',
-  video: p.video || '',
-  deliverables: p.deliverables || [],
-  shots: p.shots || [],
-  certificates: p.certificates || []
-}));
+export const projects = [
+  {
+    slug: 'css-arena',
+    name: 'CSS Arena',
+    year: '2026',
+    role: 'Design & Development',
+    accent: '#9259EE',
+    /* The thumbnail is a framed screenshot: show it whole and still. */
+    screenshot: true,
+    /* The project page leads with the video below, playing on a loop. */
+    pageVideo: true,
+    excerpt: 'Live CSS battle platform',
+    description:
+      'A CSS battle platform for the Vivacity 2K26 tech fest. Contestants recreate a target design in HTML and CSS against the clock, and every attempt is scored pixel by pixel — on more than 60 machines over an offline LAN.',
+    deliverables: ['Code editor', 'Pixel-accurate scoring', 'Live timer', 'Offline LAN setup'],
+    /* Its GitHub repository: "Code — GitHub ↗" on the project's page
+       (left out while empty). */
+    github: 'https://github.com/meetRaval09/css-arena',
+    /* Our certificates of appreciation from the event, pinned either side
+       of the video (the first on the left); click one to see it whole. */
+    certificates: [
+      { name: 'Meet Raval', src: '/media/css-arena/certificate-meet.webp' },
+      { name: 'Prem Kajiwala', src: '/media/css-arena/certificate-prem.webp' }
+    ],
+    /* Detail shots 01–03: the 100% match (wide), the round countdown and
+       the admin console. Shown even while other projects' are empty. */
+    shots: 3,
+    photos: true,
+    /* Plays inside the ink when the card is hovered: a walkthrough, from
+       login to the standings. */
+    video: '/media/css-arena/preview.mp4'
+  },
+  {
+    slug: 'taskpilot',
+    name: 'TaskPilot',
+    year: '2026',
+    role: 'Design & Development',
+    accent: '#E63946',
+    /* The thumbnail is a framed logo poster: show it whole and still. */
+    screenshot: true,
+    /* The project page leads with the video below, playing on a loop. */
+    pageVideo: true,
+    excerpt: 'Local-first task scheduler',
+    description:
+      'A local-first task scheduler: plan the day, track what got done, stay focused. Your day at a glance on the dashboard, a month calendar and analytics on streaks and trends, desktop reminders, and themes from dark to sandstone.',
+    deliverables: ['Dashboard', 'Calendar', 'Analytics', 'Desktop reminders'],
+    github: 'https://github.com/premkajiwala-hub/Task-Pilot',
+    /* Detail shots 01–03: the dashboard (wide), the calendar and analytics. */
+    shots: 3,
+    photos: true,
+    /* Plays inside the ink when the card is hovered: a walkthrough, from
+       the logo through planning a task to analytics. */
+    video: '/media/taskpilot/preview.mp4'
+  },
+  {
+    slug: 'mesa-kitchen',
+    name: 'Mesa Kitchen',
+    year: '2025',
+    role: 'Front-end Development',
+    accent: '#B8343C',
+    excerpt: 'Restaurant & reservations',
+    description:
+      'A restaurant site built to make people hungry. Full-bleed food photography treated with a custom WebGL grade, and a reservation system wired straight into the floor plan.',
+    deliverables: ['Front-end build', 'WebGL image grade', 'Reservations', 'CMS'],
+    github: '',
+    shots: 3,
+    /* Plays inside the ink when the card is hovered. Placeholder clip for now. */
+    video: '/media/sample/preview.mp4'
+  },
+  {
+    slug: 'atlas-fitness',
+    name: 'Atlas Fitness',
+    year: '2025',
+    role: 'Design & Development',
+    accent: '#1F8F6A',
+    excerpt: 'Class booking platform',
+    description:
+      'A booking platform for a studio running forty classes a week. Members see a schedule that loads instantly; staff see a dashboard that replaced three spreadsheets.',
+    deliverables: ['Product design', 'Booking platform', 'Staff dashboard', 'Automation'],
+    github: '',
+    shots: 3,
+    /* Plays inside the ink when the card is hovered. Placeholder clip for now. */
+    video: '/media/sample/preview.mp4'
+  },
+  {
+    slug: 'verde-grocer',
+    name: 'Verde Grocer',
+    year: '2025',
+    role: 'Development & Systems',
+    accent: '#6B8F1F',
+    excerpt: 'Local grocery storefront',
+    description:
+      'A grocer with eight hundred products and no time to manage a website. We built the storefront and the automation that keeps stock, pricing and delivery slots in sync on their own.',
+    deliverables: ['Storefront', 'Inventory sync', 'Delivery slots', 'Infrastructure'],
+    github: '',
+    shots: 3,
+    /* Plays inside the ink when the card is hovered. Placeholder clip for now. */
+    video: '/media/sample/preview.mp4'
+  }
+];
 
 export const getProject = (slug) => projects.find((p) => p.slug === slug);
 export const getNext = (slug) => {
