@@ -23,6 +23,9 @@ a { color: inherit; text-decoration: none; }
   --c-faint:     rgba(var(--c-ink-rgb), 0.28);
   --c-line:      rgba(var(--c-ink-rgb), 0.14);
   --c-accent:    #6E8FD6;
+  /* The contact page's headings and labels: the green the header links
+     turn on hover. */
+  --c-heading:   #0ACD88;
   color-scheme: dark;
 
   --unit:  2.4rem;
@@ -66,16 +69,26 @@ html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; }
 html.is-transitioning { pointer-events: none; }
 html.is-loading { overflow: hidden; }
 
+/* Everything that isn't a heading (Anton) or one of the mono accents (Syne
+   Mono): links, labels, field labels, the body copy. Subset to Latin,
+   punctuation and arrows; it has no ↗, so that one glyph comes from Inter,
+   which the browser then loads for it alone. */
+@font-face {
+  font-family: 'STIX Two Text';
+  src: url('/fonts/STIXTwoText-Variable.woff') format('woff');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 body {
   min-height: 100vh;
   background: var(--c-bg);
   color: var(--c-ink);
-  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family: 'STIX Two Text', 'Inter', Georgia, 'Times New Roman', serif;
   font-size: 1.7rem;
   font-weight: 450;
   line-height: 148%;
-  letter-spacing: -0.01em;
-  font-feature-settings: 'ss01', 'cv05';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

@@ -210,7 +210,10 @@ export default class PlanetShower {
       this.near = entries.some((e) => e.isIntersecting);
       if (this.near) {
         /* Fetch the maps as the section approaches, not with the page. */
-        this.scene.load(PlanetShower.capacity()).catch(() => { this.dead = true; });
+        this.scene.load(PlanetShower.capacity())
+          /* …and get them onto the GPU before they're needed (PlanetScene.warm). */
+          .then(() => this.scene.warm())
+          .catch(() => { this.dead = true; });
         this.start();
       } else this.stop();
     }, { rootMargin: '100% 0px 100% 0px' });

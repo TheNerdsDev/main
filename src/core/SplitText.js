@@ -11,18 +11,29 @@ export default class SplitText {
   }
 
   split() {
-    /* Words keep their inline markup (e.g. <strong>), so emphasis survives the split. */
+    /* Words keep their inline markup (e.g. <strong>), so emphasis survives the split.
+       Text with no space before it stays joined to the word it follows — the
+       comma after </strong> — so no space opens up there, and the two never
+       end up on different lines. */
     const words = [];
+    let glue = false;
     this.el.childNodes.forEach((n) => {
-      if (n.nodeType === 3) {
-        n.textContent.split(/\s+/).filter(Boolean).forEach((w) => words.push(w.replace(/&/g, '&amp;').replace(/</g, '&lt;')));
-      } else if (n.nodeType === 1) {
-        n.textContent.split(/\s+/).filter(Boolean).forEach((w) => {
+      if (n.nodeType !== 3 && n.nodeType !== 1) return;
+      n.textContent.split(/\s+/).forEach((w, i) => {
+        if (i > 0 || !w) glue = false;
+        if (!w) return;
+        let html;
+        if (n.nodeType === 3) {
+          html = w.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+        } else {
           const el = n.cloneNode(false);
           el.textContent = w;
-          words.push(el.outerHTML);
-        });
-      }
+          html = el.outerHTML;
+        }
+        if (glue && words.length) words[words.length - 1] += html;
+        else words.push(html);
+        glue = true;
+      });
     });
     if (!words.length) return;
 

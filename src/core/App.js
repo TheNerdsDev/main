@@ -8,7 +8,7 @@ import World from '../gl/World.js';
 import Cursor from './Cursor.js';
 import LogoRocket from '../fx/LogoRocket.js';
 import ContactForm from './ContactForm.js';
-import { createPage } from '../pages/index.js';
+import { createPage, loadPage, warmPages } from '../pages/index.js';
 import { projects } from '../content/site.js';
 
 /**
@@ -60,17 +60,21 @@ export default class App {
   /* ------------------------------------------------------------ boot */
 
   async start() {
+    /* Only what this page shows. (The work index's thumbnails used to be
+       loaded here too, on every page — ~0.9 MB the loader waited for; they
+       are now fetched once the page is up, see below.) */
     const urls = assets.collectFromDOM(document);
-    /* Warm the index thumbnails too, so the first navigation is instant. */
-    projects.forEach((p) => urls.push(`/media/${p.slug}/featured.jpg`));
+    /* This page's code, fetched while the loader loads its pictures. */
+    const pageCode = loadPage(this.pageEl.dataset.page);
 
     await this.loader.preload([...new Set(urls)]);
+    await pageCode;
 
     /* Build the page now, while the loader's rocket is still on its way:
        this is the heaviest stretch of work (a long block of the main
        thread), and the loader animates on the compositor, so it can't stall
        it. The landing then plays on a quiet main thread. */
-    this.page = createPage({ el: this.pageEl, world: this.world, app: this });
+    this.page = await createPage({ el: this.pageEl, world: this.world, app: this });
     this.world.media.create(this.pageEl, this.page.id);
 
     await this.loader.finish();
@@ -88,6 +92,19 @@ export default class App {
 
     this.router = new Router(this);
     this.router.prefetchAll(['/', '/work/', '/info/', ...projects.map((p) => `/work/${p.slug}/`)]);
+
+    /* Warm the work index's thumbnails in idle moments, one at a time, so
+       the first trip there is still instant — without the loader waiting
+       on them. */
+    const thumbs = projects.map((p) => `/media/${p.slug}/featured.jpg`);
+    const later = (fn) => ('requestIdleCallback' in window ? requestIdleCallback(fn, { timeout: 3000 }) : setTimeout(fn, 400));
+    const next = () => {
+      const url = thumbs.shift();
+      /* Then the other pages' code (pages/index.js). */
+      if (!url) return warmPages();
+      Promise.resolve(assets.load(url, { srgb: true })).catch(() => {}).finally(() => later(next));
+    };
+    later(next);
   }
 
   /* ------------------------------------------------------ navigation */
@@ -102,8 +119,10 @@ export default class App {
       this.world.fadeTo(0.25, 0.55).then(() => {})
     ]);
 
-    /* 2 — swap the DOM. */
+    /* 2 — swap the DOM. (No page until the next is built: its code may
+       still be on the way, and the loop mustn't run a destroyed one.) */
     outgoing.destroy();
+    this.page = null;
     this.hoistHeader(nextPageEl);
     this.pageEl.replaceWith(nextPageEl);
     this.pageEl = nextPageEl;
@@ -115,7 +134,7 @@ export default class App {
     this.bindForms(this.pageEl);
 
     /* 3 — build the incoming page. */
-    this.page = createPage({ el: this.pageEl, world: this.world, app: this });
+    this.page = await createPage({ el: this.pageEl, world: this.world, app: this });
     store.pageId = this.page.id;
     this.world.media.create(this.pageEl, this.page.id);
 

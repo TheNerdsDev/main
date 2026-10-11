@@ -158,6 +158,136 @@ html .media-wrapper.is-empty {
   object-fit: cover;
 }
 
+/* Certificates pinned either side of the video (CSS Arena): paper hanging
+   from a red board pin, one bottom corner rolled up off the board, a soft
+   shadow under it. Work.js swings each one after the cursor, about its
+   pin, and opens it whole on a click. */
+#work .hero-media.has-certs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) min(96rem, calc(78svh * 4 / 3), 58vw) minmax(0, 1fr);
+  grid-template-areas: "left film right";
+  align-items: center;
+  column-gap: 3rem;
+}
+#work .has-certs .work-film { grid-area: film; width: 100%; }
+#work .cert-left  { grid-area: left; }
+#work .cert-right { grid-area: right; }
+#work .cert {
+  position: relative;
+  justify-self: center;
+  width: clamp(14rem, 13vw, 24rem);
+  margin: 0;
+}
+/* The pin goes through the paper near its top edge; the paper turns
+   about it. */
+#work .cert-hang {
+  display: block;
+  transform-origin: 50% 1.6rem;
+  rotate: -2deg;
+  filter: drop-shadow(0 1.4rem 1.4rem rgba(0, 0, 0, 0.5)) drop-shadow(0 0.3rem 0.4rem rgba(0, 0, 0, 0.35));
+  will-change: transform;
+  cursor: zoom-in;
+  transition: scale 0.45s var(--ease-out);
+}
+#work .cert-right .cert-hang { rotate: 2deg; }
+#work .cert-hang:hover,
+#work .cert-hang:focus-visible { scale: 1.04; outline: none; }
+#work .cert-hang:focus-visible .cert-paper { outline: 1px solid var(--c-accent); outline-offset: 0.6rem; }
+#work .cert-hang.is-lifted { visibility: hidden; }
+/* The paper, its rolled corner cut away (the roll itself sits on top). */
+#work .cert-paper {
+  position: relative;
+  display: block;
+  aspect-ratio: 1055 / 1491;
+  background: #f7f4ec;
+  clip-path: polygon(0 0, 100% 0, 100% 78.8%, 70% 100%, 0 100%);
+}
+#work .cert-left .cert-paper { clip-path: polygon(0 0, 100% 0, 100% 100%, 30% 100%, 0 78.8%); }
+#work .cert-img {
+  display: block;
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
+/* The roll: the corner curled back over the front, its underside showing
+   — shaded like a cylinder, lit along its curve, with a soft shadow cast
+   onto the page beneath it. */
+#work .cert-curl {
+  position: absolute; right: 0; bottom: 0;
+  width: 30%; height: 21.2%;
+  background: linear-gradient(to top left, transparent 50%, #a9a08c 50%, #e9e4d8 53%, #fffdf8 60%, #ece6d8 72%, #d6cebb 86%, #c2b8a2 100%);
+  border-top-left-radius: 85% 85%;
+  filter: drop-shadow(-0.3rem -0.3rem 0.45rem rgba(0, 0, 0, 0.3));
+}
+#work .cert-left .cert-curl {
+  right: auto; left: 0;
+  background: linear-gradient(to top right, transparent 50%, #a9a08c 50%, #e9e4d8 53%, #fffdf8 60%, #ece6d8 72%, #d6cebb 86%, #c2b8a2 100%);
+  border-radius: 0 85% 0 0 / 0 85% 0 0;
+  filter: drop-shadow(0.3rem -0.3rem 0.45rem rgba(0, 0, 0, 0.3));
+}
+/* A red board pin, its head catching the light, its shadow on the paper. */
+#work .cert-pin {
+  position: absolute; left: 50%; top: 0.6rem;
+  z-index: 2;
+  width: 2rem; height: 2rem;
+  margin-left: -1rem;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, #ffc2c2 0 7%, #f2343e 26%, #b5121b 64%, #6e050b 100%);
+  box-shadow:
+    0.5rem 0.7rem 0.5rem -0.15rem rgba(0, 0, 0, 0.45),
+    inset 0 -0.2rem 0.3rem rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+@media screen and (max-width: 1099px) {
+  /* The video full width, the two certificates side by side under it. */
+  #work .hero-media.has-certs {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas: "film film" "left right";
+    row-gap: 6rem;
+  }
+  #work .cert { width: clamp(13rem, 30vw, 24rem); }
+}
+
+/* A certificate, opened: whole, in the middle of the screen, until it's
+   closed (the backdrop, the button or Escape). */
+.cert-viewer {
+  position: fixed; inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 4vh 4vw;
+  background: rgba(var(--c-bg-rgb), 0.8);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  cursor: zoom-out;
+}
+.cert-viewer[hidden] { display: none; }
+.cert-viewer-img {
+  display: block;
+  width: auto; height: auto;
+  max-width: min(92vw, 72rem);
+  max-height: 90vh;
+  border-radius: 0.3rem;
+  box-shadow: 0 3rem 8rem rgba(0, 0, 0, 0.6);
+  cursor: default;
+}
+.cert-viewer-close {
+  position: fixed; top: 2.4rem; right: 2.4rem;
+  display: grid;
+  place-items: center;
+  width: 4.6rem; height: 4.6rem;
+  border: 1px solid rgba(var(--c-ink-rgb), 0.5);
+  border-radius: 50%;
+  background: rgba(var(--c-bg-rgb), 0.5);
+  color: var(--c-ink);
+  font-size: 2.6rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.3s var(--ease-out), color 0.3s var(--ease-out);
+}
+.cert-viewer-close:hover,
+.cert-viewer-close:focus-visible { border-color: #0ACD88; color: #0ACD88; outline: none; }
+
 #work .description {
   max-width: 62rem;
   margin: 0 auto 6rem;
@@ -212,53 +342,25 @@ html .media-wrapper.is-empty {
 /* =================================================================
    INFO
    ================================================================= */
-#info .page-content { padding: 18rem 0 12rem; }
-#info .title { padding: 0 var(--unit); margin-bottom: 6rem; }
+#info .page-content { padding: 18rem 0 0; }
+#info .title { padding: 0 var(--unit); margin-bottom: 3.2rem; }
 #info .title .line + .line { margin-top: 0.6rem; }
 
+/* A few lines about us on the left, straight under the heading; a 16:9
+   picture on the right, level with them at the top. */
 #info .info-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
   gap: calc(var(--unit) * 2);
   padding: 0 var(--unit);
-  margin-bottom: 12rem;
+  margin-bottom: 14rem;
   align-items: start;
 }
-/* Copy sits on the left, away from the backdrop; the portrait covers it. */
-#info .info-body { order: 1; }
-#info .info-portrait { order: 2; }
-#info .info-portrait .media-wrapper { aspect-ratio: 1 / 1.2; }
-#info .lead { font-size: 2.4rem; line-height: 136%; margin-bottom: 3.2rem; }
-#info .info-body .text { color: var(--c-dim); max-width: 46rem; }
-#info .info-body .text + .text { margin-top: 2rem; }
-
-#info .services {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--unit);
-  padding: 0 var(--unit);
-  margin-bottom: 10rem;
-}
-#info .service .label { margin-bottom: 1.6rem; padding-bottom: 1.2rem; border-bottom: 1px solid var(--c-line); }
-#info .service li { color: var(--c-dim); }
-#info .service li + li { margin-top: 0.5rem; }
-
-#info .capabilities, #info .elsewhere { padding: 0 var(--unit); margin-bottom: 8rem; }
-#info .capabilities .label, #info .elsewhere .label { margin-bottom: 1.6rem; }
-#info .capability-list { display: flex; flex-wrap: wrap; gap: 0.8rem; }
-#info .capability-list li {
-  padding: 0.6rem 1.4rem;
-  border: 1px solid var(--c-line);
-  border-radius: 10rem;
-  color: var(--c-dim);
-  font-size: 1.4rem;
-}
-#info .social-list { display: flex; flex-wrap: wrap; gap: 2.4rem; }
+#info .info-portrait .media-wrapper { aspect-ratio: 16 / 9; }
+#info .lead { max-width: 52rem; font-size: 2.2rem; line-height: 145%; }
 
 @media screen and (max-width: 1099px) {
-  #info .info-grid { grid-template-columns: 1fr; gap: 4rem; }
-  #info .info-portrait .media-wrapper { aspect-ratio: var(--ar); }
-  #info .services { grid-template-columns: 1fr; gap: 3.2rem; }
+  #info .info-grid { grid-template-columns: 1fr; gap: 4rem; margin-bottom: 10rem; }
   #info .lead { font-size: 2rem; }
 }
 
@@ -282,40 +384,57 @@ html .media-wrapper.is-empty {
   margin-bottom: 10rem;
   align-items: start;
 }
-#contact .lead { grid-column: 1; max-width: 54rem; font-size: 2.4rem; line-height: 136%; }
+#contact .lead { grid-column: 1; max-width: 46rem; font-size: 1.7rem; line-height: 150%; color: rgba(var(--c-ink-rgb), 0.78); }
+/* What we build, picked out. */
+#contact .lead strong { font-weight: 600; color: var(--c-ink); }
 
-/* The enquiry form: a see-through panel on the starfield, held by a white
-   rounded border. Short fields two to a row, the long ones full width. */
+/* The heading, the thank-you and the details' labels in green: the colour
+   the header links turn on hover (--c-heading). */
+#contact .title,
+#contact .form-sent-title,
+#contact .label { color: var(--c-heading); }
+
+/* The enquiry form: a pane of frosted glass on the starfield — a faint
+   sheen across it, a bright edge along the top, the stars blurred behind.
+   Short fields two to a row, the long ones full width. */
 #contact .contact-form {
   grid-column: 2; grid-row: 1 / -1;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 2.4rem 2rem;
   padding: 4.4rem 4rem 4rem;
-  border: 1px solid rgba(var(--c-ink-rgb), 0.55);
+  border: 1px solid rgba(var(--c-ink-rgb), 0.2);
   border-radius: 2.4rem;
-  background: none;
+  background:
+    linear-gradient(135deg, rgba(var(--c-ink-rgb), 0.12) 0%, rgba(var(--c-ink-rgb), 0.04) 42%, rgba(var(--c-ink-rgb), 0.08) 100%),
+    rgba(var(--c-bg-rgb), 0.38);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(140%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 2.4rem 6rem rgba(0, 0, 0, 0.45);
 }
 #contact .field { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
 /* The site's label look (not .label itself: those fade in one by one as
-   the page enters, and the form arrives as a whole). */
+   the page enters, and the form arrives as a whole), brighter to read. */
 #contact .field-label {
   font-size: 1.4rem;
   line-height: 110%;
-  letter-spacing: 0.02em;
-  color: var(--c-faint);
+  letter-spacing: 0.04em;
+  color: rgba(var(--c-ink-rgb), 0.78);
   text-transform: uppercase;
 }
 #contact .field-wide,
 #contact .contact-form-foot,
 #contact .form-sent { grid-column: 1 / -1; }
-#contact .field-optional { text-transform: none; letter-spacing: 0; }
+#contact .field-optional { text-transform: none; letter-spacing: 0; color: rgba(var(--c-ink-rgb), 0.5); }
 #contact .field-input {
   width: 100%;
   padding: 1.4rem 1.6rem;
   border: 1px solid rgba(var(--c-ink-rgb), 0.22);
   border-radius: 1.2rem;
-  background: none;
+  background: rgba(var(--c-bg-rgb), 0.32);
   color: var(--c-ink);
   font: inherit;
   font-size: 1.7rem;
@@ -401,9 +520,17 @@ html .media-wrapper.is-empty {
 #contact .form-sent-title { font-family: 'Anton', 'Arial Narrow', sans-serif; font-size: 4.4rem; line-height: 1; text-transform: uppercase; }
 #contact .form-sent .text { color: var(--c-dim); }
 
-#contact .contact-details { grid-column: 1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3.6rem var(--unit); }
+/* Two columns, the same gap between every detail: the phone numbers (two
+   lines) span two rows, so the shorter details beside them don't get
+   pushed apart. */
+#contact .contact-details { grid-column: 1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3.6rem var(--unit); align-content: start; }
+#contact .contact-detail-tall { grid-row: span 2; }
 #contact .contact-detail .label { margin-bottom: 1rem; }
 #contact .social-list { display: flex; flex-wrap: wrap; gap: 0.6rem 2.4rem; }
+/* Phone: a name and a number per line. */
+#contact .contact-lines { display: flex; flex-direction: column; gap: 0.6rem; }
+#contact .contact-lines li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 1rem; }
+#contact .contact-who { color: rgba(var(--c-ink-rgb), 0.66); }
 
 @media screen and (max-width: 1099px) {
   #contact .contact-grid { grid-template-columns: 1fr; grid-template-rows: none; }
@@ -412,8 +539,9 @@ html .media-wrapper.is-empty {
 @media screen and (max-width: 767px) {
   #contact .page-content { padding-top: 14rem; }
   #contact .title { font-size: 4.9rem; }
-  #contact .lead { font-size: 2rem; }
+  #contact .lead { font-size: 1.55rem; }
   #contact .contact-details { grid-template-columns: 1fr; }
+  #contact .contact-detail-tall { grid-row: auto; }
   #contact .contact-form { grid-template-columns: 1fr; padding: 3.2rem 2.4rem; border-radius: 2rem; }
   #contact .field-input { font-size: max(16px, 1.6rem); }   /* 16px+, or phones zoom into the field */
   #contact .shout-button { width: 100%; }
@@ -459,7 +587,6 @@ html.no-webgl .back { position: static; display: inline-block; margin: 0 var(--u
 
 
 #work .page-content { padding-bottom: 6rem; }
-#info .page-content { padding-bottom: 6rem; }
 
 
 /* =================================================================
@@ -480,7 +607,7 @@ html.no-webgl .back { position: static; display: inline-block; margin: 0 var(--u
   #projects .title { font-size: 7.4rem; }
 }
 
-/* No footer: the scrolling pages just get some breathing room at the end. */
+/* No footer: the scrolling pages just get some breathing room at the end
+   (About ends on the closing screen instead). */
 #work .page-content,
-#info .page-content,
 #contact .page-content { padding-bottom: 10rem; }

@@ -28,7 +28,6 @@ const shell = ({ title, description, pageId, body, bodyClass = '' }) => `<!docty
 <meta property="og:description" content="${esc(description)}" />
 <meta property="og:site_name" content="${esc(studio.name)}" />
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-<link rel="preload" as="image" href="/textures/noise.png" />
 <!-- The first paint, before the stylesheet arrives (in dev it's injected by
      script): dark, with the loader covering the page. The loader's contents
      stay hidden until base.css sets --styled, so nothing shows unstyled. -->
@@ -85,7 +84,7 @@ const header = (current) => `  <header class="site-header">
     </button>
     <nav class="nav" id="site-nav" aria-label="Primary">
       ${navItem('/work/', 'Work', current === 'projects')}
-      ${navItem('/info/', 'Info', current === 'info')}
+      ${navItem('/info/', 'About', current === 'info')}
       ${navItem('/contact/', studio.contactLabel || 'Contact', current === 'contact')}
     </nav>
   </header>`;
@@ -104,6 +103,27 @@ const workMedia = (p, src, alt) =>
 const splitTitle = (lines) =>
   lines.map((l) => `<span class="line"><span class="line-inner">${esc(l)}</span></span>`).join('\n        ');
 
+/* The closing screen — "Ready for liftoff?" — on the welcome page and
+   About: planets shower down from the seam above and pile up along the
+   bottom (fx/Finale.js, fx/PlanetShower.js). */
+const finaleSection = () => {
+  const chars = [...finale.button]
+    .map((c, i) => `<span class="about-button-char" style="--i: ${i}" data-c="${c === ' ' ? ' ' : esc(c)}">${c === ' ' ? '&nbsp;' : esc(c)}</span>`)
+    .join('');
+  return `    <section class="finale" id="connect" aria-labelledby="finale-title">
+      <canvas class="planet-canvas" aria-hidden="true"></canvas>
+      <div class="finale-body">
+        <h2 class="finale-title" id="finale-title">${finale.title.map((l) => `<span class="line"><span class="line-inner">${esc(l)}</span></span>`).join(' ')}</h2>
+        <p class="finale-text">${[].concat(finale.text).map((l) => `<span class="finale-line">${esc(l)}</span>`).join(' ')}</p>
+        <div class="finale-cta">
+          <a class="about-button finale-button" href="/contact/" data-link aria-label="${esc(finale.button)}">
+            <span class="about-button-text" aria-hidden="true">${chars}</span>
+          </a>
+        </div>
+      </div>
+    </section>`;
+};
+
 /* ----------------------------------------------------------------- main */
 
 /* Light lines keep their brightness as alpha; pencil on paper is inverted
@@ -117,7 +137,7 @@ const INK = {
    hidden until a rock hits (fx/Duo.js). */
 const portrait = (m) => `            <div class="sketch-svg sketch-portrait">
               <img class="sketch-face" src="${m.portrait}" alt="" width="800" height="1000" decoding="async" />
-              <img class="sketch-face sketch-face-angry" src="${m.portraitAngry}" alt="" width="800" height="1000" decoding="async" fetchpriority="low" />
+              <img class="sketch-face sketch-face-angry" data-src="${m.portraitAngry}" alt="" width="800" height="1000" decoding="async" />
             </div>`;
 
 const sketch = (m, other) => {
@@ -320,20 +340,7 @@ ${porthole(prem, 'right')}
 
 ${showcaseSection()}
 
-    <!-- The finale: planets shower down from the seam above and pile up
-         along the bottom (fx/PlanetShower.js). -->
-    <section class="finale" id="connect" aria-labelledby="finale-title">
-      <canvas class="planet-canvas" aria-hidden="true"></canvas>
-      <div class="finale-body">
-        <h2 class="finale-title" id="finale-title">${finale.title.map((l) => `<span class="line"><span class="line-inner">${esc(l)}</span></span>`).join(' ')}</h2>
-        <p class="finale-text">${[].concat(finale.text).map((l) => `<span class="finale-line">${esc(l)}</span>`).join(' ')}</p>
-        <div class="finale-cta">
-          <a class="about-button finale-button" href="/contact/" data-link aria-label="${esc(finale.button)}">
-            <span class="about-button-text" aria-hidden="true">${rollChars(finale.button)}</span>
-          </a>
-        </div>
-      </div>
-    </section>
+${finaleSection()}
 
   </div>
 </div>`
@@ -409,13 +416,32 @@ ${previews}
 
 const workPage = (p) => {
   const next = getNext(p.slug);
+  /* The WebP copy when there is one (scripts/media-variants.py) — the same
+     picture, lighter. */
+  const shot = (i) => {
+    const webp = `/media/${p.slug}/0${i + 1}.webp`;
+    return existsSync(join(root, 'public', webp)) ? webp : `/media/${p.slug}/0${i + 1}.jpg`;
+  };
   const shots = Array.from({ length: p.shots }, (_, i) =>
-    `        ${workMedia(p, `/media/${p.slug}/0${i + 1}.jpg`, `${p.name} — detail ${i + 1}`)}`
+    `        ${workMedia(p, shot(i), `${p.name} — detail ${i + 1}`)}`
   ).join('\n');
 
   const deliverables = p.deliverables
     .map((d) => `<li class="text">${esc(d)}</li>`)
     .join('');
+
+  /* Certificates pinned either side of the video (Work.js swings them and
+     opens one whole on a click; without script, the link opens the image). */
+  const certs = p.certificates || [];
+  const cert = (c, side) => `<figure class="cert cert-${side}">
+        <a class="cert-hang" href="${esc(c.src)}" target="_blank" rel="noopener" data-cursor="View" aria-label="View ${esc(c.name)}'s certificate of appreciation">
+          <span class="cert-paper">
+            <img class="cert-img" src="${esc(c.src)}" alt="Certificate of appreciation — ${esc(c.name)}" width="1055" height="1491" decoding="async" />
+            <span class="cert-curl" aria-hidden="true"></span>
+          </span>
+        </a>
+        <span class="cert-pin" aria-hidden="true"></span>
+      </figure>`;
 
   return shell({
     title: `${studio.name} — ${p.name}`,
@@ -431,10 +457,12 @@ ${header('projects')}
         ${splitTitle([p.name])}
     </h1>
 
-    <div class="hero-media">
+    <div class="hero-media${certs.length ? ' has-certs' : ''}">
+      ${certs[0] ? cert(certs[0], 'left') : ''}
       ${p.pageVideo && p.video
         ? `<div class="work-film"><video class="work-film-video" src="${esc(p.video)}" autoplay muted loop playsinline preload="auto" aria-label="${esc(p.name)}, a walkthrough"></video></div>`
         : workMedia(p, `/media/${p.slug}/featured.jpg`, p.name)}
+      ${certs[1] ? cert(certs[1], 'right') : ''}
     </div>
 
     <p class="description" data-split-lines>${esc(p.description)}</p>
@@ -464,74 +492,49 @@ ${shots}
 
 /* ----------------------------------------------------------------- info */
 
-const infoPage = () => {
-  const services = info.services
-    .map(
-      (s) => `        <div class="service">
-          <h2 class="label">${esc(s.label)}</h2>
-          <ul>${s.items.map((i) => `<li class="text">${esc(i)}</li>`).join('')}</ul>
-        </div>`
-    )
-    .join('\n');
-
-  const body = info.body.map((t) => `      <p class="text" data-split-lines>${esc(t)}</p>`).join('\n');
-  const caps = info.capabilities.map((c) => `<li class="text">${esc(c)}</li>`).join('');
-  const social = studio.social
-    .map(
-      (s) =>
-        `<li><a class="text link" href="${esc(s.url)}" target="_blank" rel="noopener noreferrer"><span class="line-inner">${esc(s.label)} &nearr;</span></a></li>`
-    )
-    .join('');
-
-  return shell({
-    title: `${studio.name} — Info`,
-    description: info.lead,
-    pageId: 'info',
-    body: `<div class="page" id="info" data-page="info">
+const infoPage = () => shell({
+  title: `${studio.name} — About`,
+  description: info.lead,
+  pageId: 'info',
+  body: `<div class="page" id="info" data-page="info">
   <div class="page-content" id="page-content" tabindex="-1">
 ${header('info')}
-
 
     <h1 class="title" data-split>
         ${splitTitle(info.title)}
     </h1>
 
     <div class="info-grid">
+      <div class="info-body">
+        <p class="lead" data-split-lines>${esc(info.lead)}</p>
+      </div>
       <div class="info-portrait">
         ${mediaBlock('/media/studio/portrait.jpg', 'The studio')}
       </div>
-
-      <div class="info-body">
-        <p class="lead" data-split-lines>${esc(info.lead)}</p>
-${body}
-      </div>
     </div>
 
-    <section class="services" aria-label="Services">
-${services}
-    </section>
-
-    <section class="capabilities" aria-label="Capabilities">
-      <h2 class="label">Stack</h2>
-      <ul class="capability-list">${caps}</ul>
-    </section>
-
-    <section class="elsewhere" aria-label="Elsewhere">
-      <h2 class="label">Elsewhere</h2>
-      <ul class="social-list">${social}</ul>
-    </section>
+${finaleSection()}
 
   </div>
 </div>`
-  });
-};
+});
 
 /* -------------------------------------------------------------- contact */
 
 const contactPage = () => {
+  const link = (href, text) => `<a class="link" href="${esc(href)}"><span class="line-inner">${esc(text)}</span></a>`;
+  const value = (d) => {
+    if (d.lines) {
+      return `<ul class="contact-lines">${d.lines.map((l) => `<li><span class="contact-who">${esc(l.name)}</span>${link(l.href, l.value)}</li>`).join('')}</ul>`;
+    }
+    return d.href ? link(d.href, d.value) : esc(d.value);
+  };
   const details = contact.details
-    .map((d) => `        <div class="contact-detail"><dt class="label">${esc(d.label)}</dt><dd class="text">${esc(d.value)}</dd></div>`)
+    .map((d) => `        <div class="contact-detail${d.lines ? ' contact-detail-tall' : ''}"><dt class="label">${esc(d.label)}</dt><dd class="text">${value(d)}</dd></div>`)
     .join('\n');
+  /* **word** renders bold (the meta description gets it plain). */
+  const lead = esc(contact.lead).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  const leadPlain = contact.lead.replace(/\*\*/g, '');
   const social = studio.social
     .map((s) => `<li><a class="text link" href="${esc(s.url)}" target="_blank" rel="noopener noreferrer"><span class="line-inner">${esc(s.label)} &nearr;</span></a></li>`)
     .join('');
@@ -558,7 +561,7 @@ const contactPage = () => {
 
   return shell({
     title: `${studio.name} — Contact`,
-    description: contact.lead,
+    description: leadPlain,
     pageId: 'contact',
     body: `<div class="page" id="contact" data-page="contact">
   <div class="page-content" id="page-content" tabindex="-1">
@@ -569,7 +572,7 @@ ${header('contact')}
         ${splitTitle(contact.title)}
       </h1>
 
-      <p class="lead" data-split-lines>${esc(contact.lead)}</p>
+      <p class="lead" data-split-lines>${lead}</p>
 
       <form class="contact-form" data-contact-form data-mailto="${esc(studio.email)}" data-messages="${esc(JSON.stringify({ sending: form.sending, failed: form.failed, ...form.errors }))}" novalidate>
 ${form.fields.map(field).join('\n')}
@@ -591,7 +594,7 @@ ${form.fields.map(field).join('\n')}
 
       <dl class="contact-details">
 ${details}
-        <div class="contact-detail"><dt class="label">Elsewhere</dt><dd><ul class="social-list">${social}</ul></dd></div>
+        <div class="contact-detail"><dt class="label">${esc(contact.socials)}</dt><dd><ul class="social-list">${social}</ul></dd></div>
       </dl>
     </div>
 

@@ -8,7 +8,8 @@ import RockStage from '../fx/RockStage.js';
 import Scatter from '../fx/Scatter.js';
 import { Crumble } from '../fx/Zap.js';
 import WaterReveal from '../fx/WaterReveal.js';
-import PlanetShower from '../fx/PlanetShower.js';
+import Finale from '../fx/Finale.js';
+import magnetic from '../fx/magnetic.js';
 import { PALETTE } from '../gl/World.js';
 import { clamp } from '../fx/particles.js';
 import { REACH } from '../content/astronauts.js';
@@ -146,102 +147,12 @@ export default class Main extends Page {
       if (this.state === 'home') this.goAbout();
     };
     this.cue?.addEventListener('click', this.onCue);
-    this.bindButtonShake();
+    /* The About Us and Contact us buttons lean after the cursor. */
+    this.unmagnet = magnetic([this.button, this.finaleButton]);
     this.bindTilt();
-    this.buildFinale();
+    this.finaleFx = this.finale ? new Finale(this.finale) : null;
 
     this.measure();
-  }
-
-  /**
-   * The About Us and Contact us buttons are magnetic: once the cursor comes
-   * within reach, a button leans after it — following its movement, but
-   * never more than PULL px from home — and eases back when the cursor
-   * leaves. (Hover also grows it; see the CSS.)
-   */
-  bindButtonShake() {
-    if (!window.matchMedia('(hover: hover)').matches) return;
-    const PULL = 22;
-    const springs = [this.button, this.finaleButton].filter(Boolean).map((btn) => ({
-      btn, x: 0, y: 0, tx: 0, ty: 0
-    }));
-    if (!springs.length) return;
-    let on = false;
-    this.onButtonMove = (e) => {
-      for (const s of springs) {
-        const r = s.btn.getBoundingClientRect();
-        if (!r.width) continue;
-        /* Where it sits without the lean, so the pull doesn't feed on itself. */
-        const cx = r.left + r.width / 2 - s.x;
-        const cy = r.top + r.height / 2 - s.y;
-        const dx = e.clientX - cx;
-        const dy = e.clientY - cy;
-        const reach = r.width / 2 + 70;
-        const d = Math.hypot(dx, dy);
-        if (d < reach) {
-          /* Follows the cursor, softly capped at the edge of its radius. */
-          const k = (PULL * Math.tanh(d / (reach * 0.5))) / Math.max(d, 1);
-          s.tx = dx * k;
-          s.ty = dy * k;
-        } else {
-          s.tx = 0;
-          s.ty = 0;
-        }
-      }
-      if (!on && springs.some((s) => s.tx || s.ty)) {
-        on = true;
-        gsap.ticker.add(this.buttonSpring);
-      }
-    };
-    this.buttonSpring = () => {
-      const k = 1 - Math.pow(1 - 0.16, gsap.ticker.deltaRatio(60));
-      let busy = false;
-      for (const s of springs) {
-        s.x += (s.tx - s.x) * k;
-        s.y += (s.ty - s.y) * k;
-        if (!s.tx && !s.ty && Math.abs(s.x) + Math.abs(s.y) < 0.05) {
-          if (s.x || s.y) {
-            s.x = s.y = 0;
-            s.btn.style.removeProperty('--nx');
-            s.btn.style.removeProperty('--ny');
-          }
-          continue;
-        }
-        busy = true;
-        s.btn.style.setProperty('--nx', `${s.x.toFixed(2)}px`);
-        s.btn.style.setProperty('--ny', `${s.y.toFixed(2)}px`);
-      }
-      if (!busy) {
-        gsap.ticker.remove(this.buttonSpring);
-        on = false;
-      }
-    };
-    window.addEventListener('pointermove', this.onButtonMove, { passive: true });
-  }
-
-  /**
-   * The closing section: a planet shower each time it scrolls into view
-   * (from above), and the heading and button arriving with it. Without
-   * WebGL2 (or with reduced motion) the text simply shows.
-   */
-  buildFinale() {
-    if (!this.finale) return;
-    const reveal = () => {
-      this.finale.classList.remove('is-in');
-      void this.finale.offsetWidth;
-      this.finale.classList.add('is-in');
-    };
-    const canvas = this.finale.querySelector('.planet-canvas');
-    if (canvas && PlanetShower.supported()) {
-      this.planets = new PlanetShower(this.finale, canvas, { onShower: reveal });
-    }
-    if (!this.planets || this.planets.dead) {
-      canvas?.remove();
-      this.finaleIO = new IntersectionObserver((entries) => {
-        if (entries.some((e) => e.isIntersecting)) this.finale.classList.add('is-in');
-      }, { threshold: 0.3 });
-      this.finaleIO.observe(this.finale);
-    }
   }
 
   get lenis() { return this.app?.scroll?.lenis; }
@@ -810,6 +721,14 @@ export default class Main extends Page {
 
     this.updateShowcase(scroll, vh, ease);
     this.updateTilt(scroll, vh);
+
+    /* The portholes' endless little animations (drifting stars, blinking
+       lights…) rest while About is out of sight. */
+    const away = scroll < this.aboutTop - vh || scroll > this.aboutTop + this.aboutH;
+    if (away !== this.aboutAway) {
+      this.aboutAway = away;
+      this.about?.classList.toggle('is-away', away);
+    }
   }
 
   resize() {
@@ -826,13 +745,14 @@ export default class Main extends Page {
     this.fx.resize();
     this.stage.resize();
     this.duo?.resize();
-    this.planets?.resize();
+    this.finaleFx?.resize();
   }
 
   /* ------------------------------------------------------ enter/leave */
 
   onEnter(tl) {
     this.entered = true;
+    this.duo?.loadLate();
     /* The scroll cue draws itself downward. */
     tl.to(this.el.querySelectorAll('.scroll-cue-track'), { scaleY: 1, duration: 1.6, ease: 'expo.out' }, 0.7)
       .to(this.el.querySelectorAll('.scroll-cue-head, .scroll-cue-label'), { opacity: 1, duration: 0.8, ease: 'power2.out', stagger: 0.1 }, 1.2);
@@ -867,9 +787,8 @@ export default class Main extends Page {
     /* Never leave the scroll locked behind us. */
     if (this.state === 'toAbout' || this.state === 'toHome') this.lenis?.start();
     this.cue?.removeEventListener('click', this.onCue);
-    if (this.onButtonMove) window.removeEventListener('pointermove', this.onButtonMove);
+    this.unmagnet?.();
     if (this.onTilt) window.removeEventListener(this.tiltEvent, this.onTilt);
-    if (this.buttonSpring) gsap.ticker.remove(this.buttonSpring);
     gsap.killTweensOf([this.cue, this.journey, ...this.heroLines()]);
     this.pullTl?.kill();
     if (this.streakEl) {
@@ -880,8 +799,7 @@ export default class Main extends Page {
     this.aboutTl?.kill();
     this.showTl?.kill();
     this.water?.destroy();
-    this.planets?.destroy();
-    this.finaleIO?.disconnect();
+    this.finaleFx?.destroy();
     this.scatter.destroy();
     this.duo?.destroy();
     this.fx.destroy();
