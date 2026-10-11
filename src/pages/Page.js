@@ -15,7 +15,7 @@ export default class Page {
     this.lines = lines;
 
     this.fades = [
-      ...el.querySelectorAll('.label, .meta-list li, .capability-list li, .project-meta, .project-index, .copyright, .back, .nav, .logo, .social-list li, .service li')
+      ...el.querySelectorAll('.label, .meta-list li, .capability-list li, .project-meta, .project-index, .copyright, .back, .nav, .logo, .social-list li, .service li, .contact-form')
     ];
 
     this.prepare();

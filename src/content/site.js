@@ -101,7 +101,37 @@ export const contact = {
     { label: 'Response time', value: 'Within 48 hours' },
     { label: 'Based in', value: 'Ahmedabad, IN — working remotely' },
     { label: 'Available', value: 'January 2027' }
-  ]
+  ],
+  /* The enquiry form. Each submission is saved to the database and emailed
+     to us (supabase/functions/contact). `name` is the key it's sent and
+     stored under — change a label freely, but a name only together with
+     the function and the table. */
+  form: {
+    fields: [
+      { name: 'name', label: 'Full name', type: 'text', autocomplete: 'name', required: true, max: 120 },
+      { name: 'email', label: 'Email', type: 'email', autocomplete: 'email', required: true, max: 200 },
+      { name: 'phone', label: 'Phone number', type: 'tel', autocomplete: 'tel', required: true, max: 30 },
+      { name: 'company', label: 'Company name', type: 'text', autocomplete: 'organization', max: 120 },
+      { name: 'about', label: 'Brief about you', type: 'textarea', rows: 3, max: 2000 },
+      { name: 'idea', label: 'What do you have in mind', type: 'textarea', rows: 5, max: 4000 }
+    ],
+    optional: 'Optional',
+    button: 'Give a Shout',
+    sending: 'Sending…',
+    sent: {
+      title: 'Got it — thank you!',
+      text: "Your message is with us. We'll get back to you within two working days."
+    },
+    /* Shown if it can't be sent; the address follows it. */
+    failed: "That didn't go through. Please try again in a moment, or write to us at",
+    /* Under a field that isn't right (checked here and again by the function). */
+    errors: {
+      required: 'Please fill this in.',
+      email: "That doesn't look like an email address.",
+      phone: "That doesn't look like a phone number.",
+      long: "That's a little too long."
+    }
+  }
 };
 
 /* Home-page showcase: the projects, given a section of their own. */

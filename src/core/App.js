@@ -7,6 +7,7 @@ import Router from './Router.js';
 import World from '../gl/World.js';
 import Cursor from './Cursor.js';
 import LogoRocket from '../fx/LogoRocket.js';
+import ContactForm from './ContactForm.js';
 import { createPage } from '../pages/index.js';
 import { projects } from '../content/site.js';
 
@@ -50,6 +51,7 @@ export default class App {
 
     this.bindEvents();
     this.bindCopyButtons(document);
+    this.bindForms(document);
     if (Cursor.supported()) this.cursor = new Cursor();
 
     this.start();
@@ -110,6 +112,7 @@ export default class App {
     this.scroll.toTop(true);
     this.scroll.resize();
     this.bindCopyButtons(this.pageEl);
+    this.bindForms(this.pageEl);
 
     /* 3 — build the incoming page. */
     this.page = createPage({ el: this.pageEl, world: this.world, app: this });
@@ -214,6 +217,13 @@ export default class App {
     });
     window.matchMedia('(max-width: 767px)').addEventListener('change', (e) => {
       if (!e.matches) this.setMenu(false);
+    });
+  }
+
+  /** The contact page's enquiry form (core/ContactForm.js). */
+  bindForms(root) {
+    root.querySelectorAll('[data-contact-form]').forEach((form) => {
+      if (!form._contact) form._contact = new ContactForm(form);
     });
   }
 

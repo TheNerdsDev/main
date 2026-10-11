@@ -536,6 +536,26 @@ const contactPage = () => {
     .map((s) => `<li><a class="text link" href="${esc(s.url)}" target="_blank" rel="noopener noreferrer"><span class="line-inner">${esc(s.label)} &nearr;</span></a></li>`)
     .join('');
 
+  /* The enquiry form (core/ContactForm.js sends it). Its errors and the
+     sending/sent states are written by the script; the labels are here. */
+  const { form } = contact;
+  const field = (f) => {
+    const id = `cf-${f.name}`;
+    const attrs = `class="field-input" id="${id}" name="${f.name}" maxlength="${f.max}" aria-describedby="${id}-error"${f.required ? ' required' : ''}`;
+    const control = f.type === 'textarea'
+      ? `<textarea ${attrs} rows="${f.rows || 4}" data-lenis-prevent></textarea>`
+      : `<input ${attrs} type="${f.type}" autocomplete="${f.autocomplete || 'off'}"${f.type === 'tel' ? ' inputmode="tel"' : ''} />`;
+    const optional = f.required ? '' : ` <span class="field-optional">(${esc(form.optional)})</span>`;
+    return `          <div class="field${f.type === 'textarea' ? ' field-wide' : ''}" data-field="${f.name}">
+            <label class="field-label" for="${id}">${esc(f.label)}${optional}</label>
+            ${control}
+            <p class="field-error" id="${id}-error"></p>
+          </div>`;
+  };
+  const shoutChars = [...form.button]
+    .map((c, i) => `<span class="shout-char" style="--i: ${i}" data-c="${c === ' ' ? ' ' : esc(c)}">${c === ' ' ? '&nbsp;' : esc(c)}</span>`)
+    .join('');
+
   return shell({
     title: `${studio.name} — Contact`,
     description: contact.lead,
@@ -544,22 +564,30 @@ const contactPage = () => {
   <div class="page-content" id="page-content" tabindex="-1">
 ${header('contact')}
 
-    <h1 class="title" data-split>
-        ${splitTitle(contact.title)}
-    </h1>
-
     <div class="contact-grid">
+      <h1 class="title" data-split>
+        ${splitTitle(contact.title)}
+      </h1>
+
       <p class="lead" data-split-lines>${esc(contact.lead)}</p>
 
-      <div class="contact-email">
-        <span class="label">Write to us</span>
-        <button class="contact-address" type="button" data-email="${esc(studio.email)}">
-          <span class="contact-address-text">${esc(studio.email)}</span>
-          <span class="contact-address-hint">Click to copy</span>
-        </button>
-        <span class="copied" aria-live="polite">Copied to your clipboard</span>
-        <a class="contact-mail link" href="mailto:${esc(studio.email)}"><span class="line-inner">Or open it in your mail app &rarr;</span></a>
-      </div>
+      <form class="contact-form" data-contact-form data-mailto="${esc(studio.email)}" data-messages="${esc(JSON.stringify({ sending: form.sending, failed: form.failed, ...form.errors }))}" novalidate>
+${form.fields.map(field).join('\n')}
+          <!-- A trap for bots: hidden from people, filled in by scripts. -->
+          <div class="field-trap" aria-hidden="true">
+            <label>Website <input type="text" name="website" tabindex="-1" autocomplete="off" /></label>
+          </div>
+          <div class="contact-form-foot">
+            <button class="shout-button" type="submit" aria-label="${esc(form.button)}">
+              <span class="shout-text" aria-hidden="true">${shoutChars}</span>
+            </button>
+            <p class="form-status" role="status" aria-live="polite"></p>
+          </div>
+        <div class="form-sent" tabindex="-1" hidden>
+          <p class="form-sent-title">${esc(form.sent.title)}</p>
+          <p class="text">${esc(form.sent.text)}</p>
+        </div>
+      </form>
 
       <dl class="contact-details">
 ${details}
