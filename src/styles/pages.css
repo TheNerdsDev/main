@@ -14,6 +14,11 @@
 }
 html.webgl .media { visibility: hidden; }
 html.webgl .media-wrapper { background: none; }
+/* A frame still waiting for its photo (scripts/generate-pages.mjs). */
+html .media-wrapper.is-empty {
+  background: rgba(var(--c-ink-rgb), 0.04);
+  box-shadow: inset 0 0 0 1px rgba(var(--c-ink-rgb), 0.08);
+}
 
 /* =================================================================
    WORK INDEX (card stack)

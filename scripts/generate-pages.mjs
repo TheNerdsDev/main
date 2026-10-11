@@ -92,6 +92,13 @@ const header = (current) => `  <header class="site-header">
 const mediaBlock = (src, alt, extra = '') =>
   `<div class="media-wrapper" data-media ${extra}><img class="media" src="${src}" alt="${esc(alt)}" loading="lazy" decoding="async" /></div>`;
 
+/* Project pages show empty frames until the real photos are in — set this
+   to true to put them back. (An empty frame holds the layout; with no
+   data-media, WebGL leaves it alone.) */
+const WORK_PHOTOS = false;
+const workMedia = (src, alt) =>
+  WORK_PHOTOS ? mediaBlock(src, alt) : '<div class="media-wrapper is-empty" aria-hidden="true"></div>';
+
 const splitTitle = (lines) =>
   lines.map((l) => `<span class="line"><span class="line-inner">${esc(l)}</span></span>`).join('\n        ');
 
@@ -368,7 +375,7 @@ ${previews}
 const workPage = (p) => {
   const next = getNext(p.slug);
   const shots = Array.from({ length: p.shots }, (_, i) =>
-    `        ${mediaBlock(`/media/${p.slug}/0${i + 1}.jpg`, `${p.name} — detail ${i + 1}`)}`
+    `        ${workMedia(`/media/${p.slug}/0${i + 1}.jpg`, `${p.name} — detail ${i + 1}`)}`
   ).join('\n');
 
   const deliverables = p.deliverables
@@ -390,7 +397,7 @@ ${header('projects')}
     </h1>
 
     <div class="hero-media">
-      ${mediaBlock(`/media/${p.slug}/featured.jpg`, p.name)}
+      ${workMedia(`/media/${p.slug}/featured.jpg`, p.name)}
     </div>
 
     <p class="description" data-split-lines>${esc(p.description)}</p>
