@@ -736,6 +736,10 @@ export default class Duo {
           if (y < lo) y += (lo - y) * avoid;
           const hi = vh - rockR;
           if (y > hi) y += (hi - y) * avoid;
+          /* …and the welcome copy beside them a wall, so a figure can't
+             push a rock back across it. */
+          const wl = wall + 16 + rockR;
+          if (x < wl) x += (wl - x) * avoid;
           x = Math.min(Math.max(x, rockR), vw - rockR);
         }
       }

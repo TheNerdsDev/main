@@ -312,69 +312,387 @@ html.webgl #main .about { height: 460vh; }
   top: 0;
   display: grid;
   grid-template-columns: 1fr minmax(0, 60rem) 1fr;
+  grid-template-areas: "left body right";
   align-items: center;
   column-gap: 4rem;
   height: 100vh;
   height: 100svh;
   padding: 0 var(--unit);
+  /* One size for both windows, so they can never differ. */
+  --porthole-size: clamp(220px, 24vw, 360px);
 }
 html.no-webgl #main .about-stage { position: relative; height: auto; min-height: 100vh; padding: 10rem var(--unit); }
 
-/* Frames and text share one centre line: captions and the button hang
-   outside the boxes that get centred, so they don't push anything off it. */
-#main .about-frame {
+/* On wide screens the pair is just the grid cells either side of the text. */
+#main .about-pair { display: contents; }
+#main .porthole-left  { grid-area: left; }
+#main .porthole-right { grid-area: right; }
+
+/* ------------------------------------------------------------- portholes */
+
+/* A ship's window, built in CSS: a riveted, brushed-metal rim (--rim
+   thick) with a status light round the glass in each person's colour, and
+   through the glass their cabin. Inside, back to front: the shutter (shut
+   until the first scroll irises it open), the view (space drifting past,
+   the cabin, the crew member, the console in front of them), the glass.
+   --px / --py (-1..1, set by Main.js from the cursor or the phone's tilt)
+   lean the whole window, and shift each layer by its own depth. */
+#main .porthole {
+  --rim: calc(var(--porthole-size) * 0.1);
   position: relative;
+  z-index: 1;
   justify-self: center;
-  width: min(100%, 32rem);
+  width: var(--porthole-size);
   margin: 0;
-  padding: 1.1rem;
-  border: 1px solid rgba(var(--c-ink-rgb), 0.16);
-  background: rgba(var(--c-bg-rgb), 0.35);
 }
-/* Neon corner brackets in each person's colour. */
-#main .about-frame::before,
-#main .about-frame::after {
+#main .porthole-body {
+  position: relative;
+  aspect-ratio: 1;
+  transform: perspective(900px) rotateY(calc(var(--px, 0) * 7deg)) rotateX(calc(var(--py, 0) * -7deg));
+}
+
+/* The rim: a metal ring with a conic sheen, fine concentric brushing, a
+   bevel stepping down to the glass, and eight bolts. */
+#main .porthole-rim {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(from 18deg, #5b616b, #cfd4db 7%, #7c838e 16%, #eef1f4 25%, #6b727c 36%, #b9bfc8 49%, #565c66 60%, #dde1e6 72%, #737a85 84%, #5b616b);
+  box-shadow:
+    inset 0 2px 2px rgba(255, 255, 255, 0.55),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(0, 0, 0, 0.7),
+    0 18px 40px rgba(0, 0, 0, 0.6),
+    0 0 0 0 transparent;
+  transition: box-shadow 0.5s var(--ease-out);
+}
+#main .porthole-rim::before {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  background: repeating-radial-gradient(circle, rgba(255, 255, 255, 0.08) 0 1px, rgba(0, 0, 0, 0.05) 1px 2px, transparent 2px 3px);
+  mix-blend-mode: overlay;
+}
+#main .porthole-rim::after {
   content: '';
   position: absolute;
-  width: 2.4rem; height: 2.4rem;
+  inset: calc(var(--rim) * 0.62);
+  border-radius: 50%;
+  background: linear-gradient(155deg, #1c1f25, #8a919b 38%, #2b2f36 62%, #151820);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.7), 0 -1px 0 rgba(255, 255, 255, 0.35), 0 2px 3px rgba(0, 0, 0, 0.5);
+}
+#main .porthole-bolt {
+  position: absolute; left: 50%; top: 50%;
+  z-index: 1;
+  width: calc(var(--rim) * 0.34); height: calc(var(--rim) * 0.34);
+  margin: calc(var(--rim) * -0.17);
+  border-radius: 50%;
+  transform: rotate(calc(var(--i) * 45deg + 22.5deg)) translateY(calc(var(--porthole-size) * -0.469));
+  background: radial-gradient(circle at 35% 30%, #f5f7fa, #a7aeb8 30%, #575e68 68%, #2a2e35);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+#main .porthole-bolt::after {   /* a slotted head */
+  content: '';
+  position: absolute; left: 22%; right: 22%; top: calc(50% - 0.5px);
+  height: 1px;
+  background: rgba(20, 22, 28, 0.75);
+  transform: rotate(calc(var(--i) * 61deg));
+}
+
+/* The status light round the glass, breathing slowly. */
+#main .porthole-ring {
+  position: absolute;
+  inset: calc(var(--rim) - 2px);
+  border-radius: 50%;
   border: 2px solid var(--neon);
-  filter: drop-shadow(0 0 4px var(--neon));
+  box-shadow: 0 0 8px var(--neon), inset 0 0 8px var(--neon);
+  pointer-events: none;
+  animation: porthole-pulse 3.6s ease-in-out infinite;
+}
+#main .porthole-right .porthole-ring { animation-delay: -1.8s; }
+@keyframes porthole-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.85; }
+}
+
+#main .porthole-window {
+  position: absolute;
+  inset: var(--rim);
+  border-radius: 50%;
+  overflow: hidden;
+  isolation: isolate;
+  background: #05060d;
+}
+/* the edge of the glass darkens, over everything inside */
+#main .porthole-window::after {
+  content: '';
+  position: absolute; inset: 0;
+  z-index: 4;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.8), inset 0 0 calc(var(--porthole-size) * 0.08) rgba(0, 0, 0, 0.85);
   pointer-events: none;
 }
-#main .about-frame::before { top: -1px; left: -1px; border-right: 0; border-bottom: 0; }
-#main .about-frame::after  { right: -1px; bottom: -1px; border-left: 0; border-top: 0; }
 
-#main .about-photos {
-  position: relative;
-  aspect-ratio: 1 / 1;
-  overflow: hidden;
-  background: #0a0b14;
+/* The shutter: iris blades round a hub, "Scroll down" on it. Main.js turns
+   it as the view irises open over it. */
+#main .porthole-shutter {
+  position: absolute; inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--porthole-size) * 0.035);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, #41464f 0 6%, #1d2026 6.5% 8%, transparent 8.5%),
+    repeating-conic-gradient(from 10deg, #30353d 0 15deg, #262a31 15deg 30deg);
 }
-#main .about-photo {
+#main .porthole-shutter::before {   /* the seams between blades */
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  background: repeating-conic-gradient(from 10deg, rgba(0, 0, 0, 0.6) 0 0.7deg, transparent 0.7deg 30deg);
+}
+#main .porthole-hint {
+  position: relative;
+  padding: 0.55em 1em 0.55em 1.3em;
+  font-family: 'Syne Mono', ui-monospace, monospace;
+  font-size: calc(var(--porthole-size) * 0.038);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(var(--c-ink-rgb), 0.88);
+  background: rgba(8, 10, 16, 0.8);
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+#main .porthole-hint-arrow {
+  position: relative;
+  width: calc(var(--porthole-size) * 0.05);
+  fill: none;
+  stroke: var(--neon);
+  stroke-width: 1.6;
+  filter: drop-shadow(0 0 4px var(--neon));
+  animation: porthole-hint-bob 1.6s ease-in-out infinite;
+}
+@keyframes porthole-hint-bob {
+  0%, 100% { translate: 0 0; opacity: 0.45; }
+  50% { translate: 0 0.5rem; opacity: 1; }
+}
+
+/* The view, irised by --iris (Main.js opens it from 0%). */
+#main .porthole-view {
+  position: absolute; inset: 0;
+  z-index: 2;
+  clip-path: circle(var(--iris, 75%) at 50% 50%);
+}
+
+/* Space, outside the cabin's window: two star fields and a few rocks
+   drifting past at their own speeds (each field is twice as wide as the
+   window and slides by exactly one tile, so it loops without a seam). */
+#main .porthole-space {
+  position: absolute; inset: -6%;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 68% 30%, color-mix(in srgb, var(--neon) 14%, transparent), transparent 55%),
+    radial-gradient(circle at 22% 70%, rgba(120, 90, 200, 0.12), transparent 50%),
+    #03040a;
+  translate: calc(var(--px, 0) * -6px) calc(var(--py, 0) * -6px);
+}
+#main .porthole-stars {
+  position: absolute; top: 0; bottom: 0; left: 0;
+  width: 200%;
+  background-image:
+    radial-gradient(circle at 8% 16%, rgba(255, 255, 255, 0.85) 0 0.8px, transparent 1.4px),
+    radial-gradient(circle at 31% 62%, rgba(255, 255, 255, 0.55) 0 0.6px, transparent 1.2px),
+    radial-gradient(circle at 54% 28%, rgba(200, 220, 255, 0.75) 0 0.8px, transparent 1.4px),
+    radial-gradient(circle at 72% 80%, rgba(255, 255, 255, 0.5) 0 0.6px, transparent 1.2px),
+    radial-gradient(circle at 88% 44%, rgba(255, 255, 255, 0.7) 0 0.8px, transparent 1.4px),
+    radial-gradient(circle at 18% 88%, rgba(255, 240, 220, 0.6) 0 0.6px, transparent 1.2px),
+    radial-gradient(circle at 44% 6%, rgba(255, 255, 255, 0.5) 0 0.6px, transparent 1.2px);
+  background-size: 25% 50%;
+  animation: porthole-drift 70s linear infinite;
+}
+#main .porthole-stars-near {
+  background-image:
+    radial-gradient(circle at 14% 30%, rgba(255, 255, 255, 0.95) 0 1.2px, transparent 2px),
+    radial-gradient(circle at 63% 12%, rgba(210, 230, 255, 0.85) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 82% 70%, rgba(255, 255, 255, 0.9) 0 1.2px, transparent 2px),
+    radial-gradient(circle at 38% 84%, rgba(255, 245, 225, 0.8) 0 1px, transparent 1.8px);
+  background-size: 50% 100%;
+  animation-duration: 28s;
+}
+@keyframes porthole-drift {
+  to { transform: translate3d(-50%, 0, 0); }
+}
+#main .porthole-rock {
+  position: absolute; left: 100%; top: var(--y);
+  width: var(--s); aspect-ratio: 1.2;
+  border-radius: 46% 54% 42% 58% / 52% 44% 56% 48%;
+  background: radial-gradient(circle at 34% 30%, #8d857a, #4a443d 55%, #1f1c19);
+  box-shadow: inset -2px -3px 4px rgba(0, 0, 0, 0.6);
+  animation: porthole-rock var(--t) linear infinite;
+  animation-delay: var(--d);
+}
+#main .porthole-rock-1 { --y: 14%; --s: 7%;   --t: 24s; --d: -6s; }
+#main .porthole-rock-2 { --y: 44%; --s: 4.5%; --t: 33s; --d: -20s; }
+#main .porthole-rock-3 { --y: 27%; --s: 3%;   --t: 15s; --d: -9s; opacity: 0.7; }
+#main .porthole-right .porthole-rock-1 { --y: 22%; --d: -15s; }
+#main .porthole-right .porthole-rock-2 { --y: 9%; --d: -4s; }
+@keyframes porthole-rock {
+  to { transform: translate3d(calc(var(--porthole-size) * -1.15), calc(var(--porthole-size) * 0.1), 0) rotate(-320deg); }
+}
+
+/* The cabin: dark walls round a wide window onto space, panel seams. */
+#main .porthole-cabin {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 62% 50% at 50% 42%, transparent 66%, rgba(150, 170, 200, 0.2) 67.5%, rgba(7, 9, 16, 0.94) 69.5%),
+    repeating-linear-gradient(90deg, transparent 0 17.6%, rgba(255, 255, 255, 0.035) 17.6% 18%),
+    linear-gradient(180deg, transparent 60%, rgba(7, 9, 16, 0.6));
+}
+
+/* The crew member (content/astronauts.js): lit from the window,
+   breathing on their feet. */
+#main .porthole-crew {
+  position: absolute; inset: 0;
+  translate: calc(var(--px, 0) * 4px) calc(var(--py, 0) * 3px);
+}
+#main .porthole-crew-wave {
+  position: absolute; inset: 0;
+  transform-origin: 50% 86%;
+}
+#main .astro {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
-  object-fit: cover;
-  will-change: transform, clip-path;
+  overflow: visible;
+  /* a little closer to the glass, from the top of the console */
+  scale: 1.15;
+  transform-origin: 50% 76%;
+  filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.45)) drop-shadow(0 0 calc(var(--porthole-size) * 0.03) color-mix(in srgb, var(--neon) 45%, transparent));
+  animation: porthole-bob 4s ease-in-out infinite;
 }
-#main .about-flash {
+#main .porthole-right .astro { animation-delay: -2s; }
+@keyframes porthole-bob {
+  0%, 100% { translate: 0 0; rotate: -0.5deg; }
+  50% { translate: 0 -2.5px; rotate: 0.5deg; }
+}
+/* They blink, now and then, each on their own time. */
+#main .astro-lid {
+  transform-box: fill-box;
+  transform-origin: 50% 0;
+  transform: scaleY(0);
+  animation: astro-blink 5.2s infinite;
+}
+#main .porthole-right .astro-lid { animation-delay: -2.7s; }
+@keyframes astro-blink {
+  0%, 93%, 100% { transform: scaleY(0); }
+  95.5% { transform: scaleY(1); }
+}
+
+/* The console in front of them: a curved desk, a screen, blinking lights. */
+#main .porthole-console {
+  position: absolute; left: -3%; right: -3%; bottom: -1%;
+  height: 24%;
+  border-radius: 50% 50% 0 0 / 24% 24% 0 0;
+  background: linear-gradient(180deg, #2b313c 0%, #161a22 20%, #0a0c12 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 -6px 14px rgba(0, 0, 0, 0.55);
+}
+#main .porthole-screen {
+  position: absolute; left: 37%; right: 37%; top: 42%;
+  height: 24%;
+  border-radius: 3px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--neon) 42%, #000), color-mix(in srgb, var(--neon) 14%, #000));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--neon) 40%, transparent), inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+#main .porthole-screen::after {
+  content: '';
   position: absolute; inset: 0;
-  background: radial-gradient(circle at 50% 40%, #fff, rgba(255, 255, 255, 0.6) 60%, rgba(255, 255, 255, 0.3));
-  mix-blend-mode: screen;
-  opacity: 0;
-  pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.3) 0 1px, transparent 1px 3px);
 }
-#main .about-caption {
-  position: absolute;
-  top: calc(100% + 1.2rem); left: 0;
-  font-size: 1.3rem;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-  color: var(--neon);
-  text-shadow: 0 0 8px var(--neon);
+#main .porthole-led {
+  position: absolute; top: 20%;
+  left: calc(16% + var(--i) * 11%);
+  width: 2.4%; aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--led);
+  box-shadow: 0 0 4px var(--led);
+  animation: porthole-blink calc(1.3s + var(--i) * 0.37s) steps(1, end) infinite;
+  animation-delay: calc(var(--i) * -0.53s);
+}
+#main .porthole-led-neon  { --led: var(--neon); }
+#main .porthole-led-amber { --led: #ffb648; }
+#main .porthole-led-red   { --led: #ff4d5e; }
+#main .porthole-led-white { --led: #e8f0ff; }
+@keyframes porthole-blink {
+  0%, 100% { opacity: 1; }
+  40% { opacity: 0.2; }
+  70% { opacity: 0.9; }
+}
+
+/* The glass: a diagonal glare, a curved reflection, a breath of
+   condensation and scratches. Bigger than the window, so it can shift
+   with the parallax without showing an edge. */
+#main .porthole-glass {
+  position: absolute; inset: -8%;
+  z-index: 3;
+  pointer-events: none;
+  translate: calc(var(--px, 0) * 10px) calc(var(--py, 0) * 8px);
+  background:
+    linear-gradient(118deg, transparent 34%, rgba(255, 255, 255, 0.15) 40%, rgba(255, 255, 255, 0.04) 46%, transparent 47%, transparent 52%, rgba(255, 255, 255, 0.07) 54%, transparent 57%),
+    radial-gradient(120% 70% at 28% 6%, rgba(255, 255, 255, 0.11), transparent 42%);
+}
+#main .porthole-glass::before {
+  content: '';
+  position: absolute; inset: 15%;
+  border-radius: 50%;
+  border-top: 2px solid rgba(255, 255, 255, 0.24);
+  rotate: -32deg;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 30%, #000 62%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 30%, #000 62%, transparent);
+}
+#main .porthole-glass::after {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(64deg, transparent 49.8%, rgba(255, 255, 255, 0.35) 50%, transparent 50.2%),
+    linear-gradient(-22deg, transparent 49.85%, rgba(255, 255, 255, 0.25) 50%, transparent 50.15%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1.6 -0.75'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 60% 60%, 45% 45%, 160px 160px;
+  background-position: 70% 30%, 20% 75%, 0 0;
+  background-repeat: no-repeat, no-repeat, repeat;
+  opacity: 0.07;
+  mix-blend-mode: screen;
+}
+
+/* Hover: the status light and the rim glow brighter, and they give a
+   little wiggle. */
+#main .porthole:hover .porthole-ring {
+  animation: none;
+  opacity: 1;
+  box-shadow: 0 0 12px var(--neon), 0 0 28px var(--neon), inset 0 0 12px var(--neon);
+}
+#main .porthole:hover .porthole-rim {
+  box-shadow:
+    inset 0 2px 2px rgba(255, 255, 255, 0.55),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(0, 0, 0, 0.7),
+    0 18px 40px rgba(0, 0, 0, 0.6),
+    0 0 36px 4px color-mix(in srgb, var(--neon) 38%, transparent);
+}
+#main .porthole:hover .porthole-crew-wave { animation: porthole-wave 1.2s ease-in-out; }
+@keyframes porthole-wave {
+  0%   { rotate: 0deg; translate: 0 0; }
+  16%  { rotate: -4deg; translate: 0 -2%; }
+  34%  { rotate: 3deg; }
+  52%  { rotate: -2.5deg; translate: 0 -1%; }
+  70%  { rotate: 1.5deg; }
+  100% { rotate: 0deg; translate: 0 0; }
 }
 
 #main .about-body {
   position: relative;
+  z-index: 2;
+  grid-area: body;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -743,9 +1061,20 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
 
 /* ---------------------------------------------------------- fallback */
 
-/* No WebGL / no JS: everything is simply visible, last photo on top. */
+/* No WebGL / no JS (or reduced motion): everything is simply visible, the
+   portholes open, nothing to scroll for. */
 html.no-webgl #main .sketch-gasp,
-html.no-webgl #main .duo-actions { display: none; }
+html.no-webgl #main .duo-actions,
+html.no-webgl #main .porthole-shutter { display: none; }
+
+/* Reduced motion: the portholes stand still — no breathing, drifting,
+   blinking or pulsing, no wave; the layout stays. */
+@media (prefers-reduced-motion: reduce) {
+  #main .porthole *,
+  #main .porthole *::before,
+  #main .porthole *::after { animation: none !important; transition: none !important; }
+  #main .porthole-body { transform: none; }
+}
 
 /* ------------------------------------------------------------ tablets */
 
@@ -763,16 +1092,13 @@ html.no-webgl #main .duo-actions { display: none; }
   #main .sketch-meet { top: 4%; right: 9%; }
   #main .sketch-prem { top: 44%; left: 9%; }
 
-  /* Frames side by side on one line, the text centred beneath them. */
+  /* Windows side by side on one line, the text centred beneath them. */
   #main .about-stage {
     grid-template-columns: 1fr 1fr;
     grid-template-areas: "left right" "body body";
     align-content: center;
     row-gap: 7rem;
   }
-  #main .about-frame-left  { grid-area: left; }
-  #main .about-frame-right { grid-area: right; }
-  #main .about-body { grid-area: body; }
   #main .about-text { font-size: 2.8rem; }
   #main .about-cta { position: relative; top: auto; margin-top: 4rem; }
 }
@@ -791,12 +1117,45 @@ html.no-webgl #main .duo-actions { display: none; }
   #main .sketch-gasp { font-size: 4.4rem; }
   #main .duo-action { width: 5.8rem; height: 5.8rem; }
 
-  #main .about-stage { column-gap: 1.6rem; row-gap: 5.6rem; }
-  #main .about-frame { padding: 0.7rem; }
   #main .about-text { font-size: 2.1rem; }
   #main .about-cta { margin-top: 3.2rem; }
   #main .about-button { padding: 1.4rem 3rem; }
   #main .about-body { align-items: center; }
+}
+
+/* Phones, upright: the two windows one above the other, the same size,
+   centred; the text waits at the foot of the screen. As it comes in, the
+   pair draws back and up to make room (Main.js). */
+@media screen and (max-width: 767px) and (orientation: portrait) {
+  #main .about-stage {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 5.6rem var(--unit) 0;
+  }
+  #main .about-pair {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.2rem;
+    transform-origin: 50% 0;
+  }
+  #main .about-body { position: absolute; left: var(--unit); right: var(--unit); bottom: max(5vh, 2.4rem); }
+  html.no-webgl #main .about-body { position: relative; left: auto; right: auto; bottom: auto; margin-top: 5rem; }
+}
+
+/* Phones on their side: no room to stack, so the windows go either side
+   of the text again, sized by the height too. */
+@media screen and (max-width: 1099px) and (orientation: landscape) and (max-height: 540px) {
+  #main .about-stage {
+    grid-template-columns: 1fr minmax(0, 1.4fr) 1fr;
+    grid-template-areas: "left body right";
+    row-gap: 0;
+    --porthole-size: min(clamp(220px, 24vw, 360px), 58vh);
+  }
+  #main .about-text { font-size: min(2.1rem, 4.6vh); }
+  #main .about-cta { margin-top: 2rem; }
 }
 
 /* ------------------------------------------- wide and short screens */

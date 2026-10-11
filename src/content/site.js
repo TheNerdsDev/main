@@ -32,7 +32,9 @@ export const main = {
   about: {
     text:
       "We're Meet & Prem the Nerds, two curious minds who get way too excited about turning simple ideas into something creative. If you can dream it up, we'll probably nerd out building it.",
-    button: 'About Us'
+    button: 'About Us',
+    /* Shown in the empty frames until a scroll rolls the photos in. */
+    hint: 'Scroll Down'
   },
   /* Space rocks drifting around the sketches — click one and it gets thrown. */
   rocks: 4
@@ -60,6 +62,10 @@ export const main = {
  *   hit    where an incoming rock strikes (and the neon shorts out)
  *   crown  top of the head, where the dizzy stars circle
  *   hand   where a thrown rock leaves from
+ *
+ *
+ * (In About, in the spaceship portholes, we're cartoon astronauts — drawn
+ * in content/astronauts.js.)
  */
 export const team = [
   {
@@ -71,8 +77,7 @@ export const team = [
     aspect: 0.8,
     hit: [0.5, 0.46],
     crown: [0.5, 0.3],
-    hand: [0.86, 0.84],
-    photos: ['/media/team/prem-1.svg', '/media/team/prem-2.svg', '/media/team/prem-3.svg']
+    hand: [0.86, 0.84]
   },
   {
     id: 'meet',
@@ -83,8 +88,7 @@ export const team = [
     aspect: 0.8,
     hit: [0.495, 0.405],
     crown: [0.49, 0.235],
-    hand: [0.14, 0.84],
-    photos: ['/media/team/meet-1.svg', '/media/team/meet-2.svg', '/media/team/meet-3.svg']
+    hand: [0.14, 0.84]
   }
 ];
 
