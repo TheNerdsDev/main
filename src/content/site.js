@@ -148,6 +148,8 @@ export const projects = [
     accent: '#9259EE',
     /* The thumbnail is a framed screenshot: show it whole and still. */
     screenshot: true,
+    /* The project page leads with the video below, playing on a loop. */
+    pageVideo: true,
     excerpt: 'Live CSS battle platform',
     description:
       'A CSS battle platform for the Vivacity 2K26 tech fest. Contestants recreate a target design in HTML and CSS against the clock, and every attempt is scored pixel by pixel — on 60 machines over an offline LAN.',

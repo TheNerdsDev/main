@@ -140,6 +140,23 @@ html .media-wrapper.is-empty {
 #work .title { padding: 0 var(--unit); margin-bottom: 4rem; text-align: center; }
 #work .hero-media { padding: 0 var(--unit); margin-bottom: 8rem; }
 #work .hero-media .media-wrapper { aspect-ratio: 2.1 / 1; }
+/* A project that leads with its video (`pageVideo` in site.js): the same
+   framed 4:3 card as in the home reel, playing on a loop. */
+#work .work-film {
+  position: relative;
+  width: min(100%, 96rem, calc(78svh * 4 / 3));
+  aspect-ratio: 4 / 3;
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: 0.4rem;
+  background: rgba(var(--c-ink-rgb), 0.05);
+  box-shadow: 0 0 0 1px rgba(var(--c-ink-rgb), 0.08);
+}
+#work .work-film-video {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
 
 #work .description {
   max-width: 62rem;

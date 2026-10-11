@@ -397,7 +397,9 @@ ${header('projects')}
     </h1>
 
     <div class="hero-media">
-      ${workMedia(`/media/${p.slug}/featured.jpg`, p.name)}
+      ${p.pageVideo && p.video
+        ? `<div class="work-film"><video class="work-film-video" src="${esc(p.video)}" autoplay muted loop playsinline preload="auto" aria-label="${esc(p.name)}, a walkthrough"></video></div>`
+        : workMedia(`/media/${p.slug}/featured.jpg`, p.name)}
     </div>
 
     <p class="description" data-split-lines>${esc(p.description)}</p>
