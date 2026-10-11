@@ -155,7 +155,10 @@ export const projects = [
       'A CSS battle platform for the Vivacity 2K26 tech fest. Contestants recreate a target design in HTML and CSS against the clock, and every attempt is scored pixel by pixel — on 60 machines over an offline LAN.',
     deliverables: ['Code editor', 'Pixel-accurate scoring', 'Live timer', 'Offline LAN setup'],
     link: 'https://example.com',
-    shots: 1,
+    /* Detail shots 01–03: the 100% match (wide), the round countdown and
+       the admin console. Shown even while other projects' are empty. */
+    shots: 3,
+    photos: true,
     /* Plays inside the ink when the card is hovered: a walkthrough, from
        login to the standings. */
     video: '/media/css-arena/preview.mp4'
