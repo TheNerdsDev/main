@@ -15,8 +15,8 @@ void main() {
  * broken up by slowly drifting lobes (so it advances unevenly, the way water
  * runs over a flat surface), smoothly joined with a second tongue that
  * reaches for the pointer. Just behind the front the water piles up into a
- * rounded rim (a capillary ridge); further in it's a thin, level film with
- * ripples running out from the source and a faint living shimmer.
+ * rounded rim (a capillary ridge); further in it's a thin, level film that
+ * doesn't move, so the video shows through it clean.
  *
  * From that surface comes the light: the rim bends what's underneath like a
  * lens and catches a bright highlight, the contact line reads as a thin dark
@@ -92,18 +92,8 @@ void main() {
   float ridge = exp(-z * z) * smoothstep(-1.0, 2.0, s);
   vec2 G = -n * ridge * (-2.0 * z / 6.5) * 2.0;   // slope of the surface
 
-  /* Ripples running out from where the water started, settling once the
-     card is covered, and a fine shimmer on the film. */
-  vec2 q = p - uSrc;
-  float d = length(q) + 1e-3;
-  float amp = (1.0 - uCalm) * 0.9 + 0.06;
-  float env = smoothstep(0.0, 60.0, s) * amp * exp(-d / 520.0);
-  G += (q / d) * cos(d * 0.11 - uTime * 7.0) * 0.066 * env;
-  vec2 nq = p / 38.0 + vec2(uTime * 0.25, -uTime * 0.18);
-  float n0 = fbm(nq);
-  vec2 ng = vec2(fbm(nq + vec2(0.07, 0.0)) - n0, fbm(nq + vec2(0.0, 0.07)) - n0) / 0.07;
-  G += ng * 0.035 * (0.2 + 0.8 * (1.0 - uCalm)) * smoothstep(0.0, 30.0, s);
-
+  /* Behind the rim the film is level: no ripples, no shimmer, so the
+     video plays clean the moment the edge has passed. */
   vec3 N = normalize(vec3(-G * 2.2, 1.0));
   vec2 bend = G * 34.0;                          // refraction, px
 
@@ -129,6 +119,9 @@ void main() {
   col += lip * 0.35;
   /* The thin dark line where water meets the dry surface. */
   col *= 1.0 - 0.55 * exp(-pow(s / 2.2, 2.0));
+  /* Once the rim and its band of light are past, it's just the video —
+     not dimmed, not tinted. */
+  col = mix(col, under, smoothstep(34.0, 64.0, s));
 
   float inside = smoothstep(-0.8, 0.8, s);
   /* Just ahead of the front the surface looks damp. */
@@ -150,9 +143,10 @@ const DRAIN = 0.75;
  * thumbnail like a lens — and behind the front the thumbnail washes away
  * into the project's video, which starts playing as the water arrives.
  * Moving the pointer while it spreads draws a tongue of water after it.
- * It takes about two seconds to cross the card; once it's covered the
- * ripples settle to a clean, playing video.
- * Leave and the water drains back to where it started; the video pauses.
+ * It takes about two seconds to cross the card; behind the moving edge the
+ * video already plays clean, with no ripples.
+ * Leave and the water drains back to where it started; the video pauses,
+ * and once it's drained, rewinds — every hover plays it from the start.
  *
  * One WebGL canvas covers the reel's stage and draws every wet card, so
  * sweeping across the cards is seamless. Cards name their video in
@@ -388,7 +382,13 @@ export default class WaterReveal {
       const rate = c.target ? 1 / SPREAD : 1 / DRAIN;
       c.p += Math.sign(c.target - c.p) * Math.min(Math.abs(c.target - c.p), dt * rate);
       if (c.p <= 0 && c.target === 0) {
-        if (c.video && !c.video.paused) c.video.pause();
+        if (c.video && !c.video.paused) {
+          c.video.pause();
+          /* Drained off: the next hover plays it from the beginning (rewound
+             now, so that first frame is ready by then). */
+          c.video.currentTime = 0;
+          if (c.fresh === false) c.fresh = true;
+        }
         continue;
       }
       busy = true;
