@@ -188,7 +188,9 @@ export const projects = [
     description:
       'A CSS battle platform for the Vivacity 2K26 tech fest. Contestants recreate a target design in HTML and CSS against the clock, and every attempt is scored pixel by pixel — on 60 machines over an offline LAN.',
     deliverables: ['Code editor', 'Pixel-accurate scoring', 'Live timer', 'Offline LAN setup'],
-    link: 'https://example.com',
+    /* Its GitHub repository: "Code — GitHub ↗" on the project's page
+       (left out while empty). */
+    github: 'https://github.com/meetRaval09/css-arena',
     /* Detail shots 01–03: the 100% match (wide), the round countdown and
        the admin console. Shown even while other projects' are empty. */
     shots: 3,
@@ -211,7 +213,7 @@ export const projects = [
     description:
       'A local-first task scheduler: plan the day, track what got done, stay focused. Your day at a glance on the dashboard, a month calendar and analytics on streaks and trends, desktop reminders, and themes from dark to sandstone.',
     deliverables: ['Dashboard', 'Calendar', 'Analytics', 'Desktop reminders'],
-    link: 'https://example.com',
+    github: '',
     /* Detail shots 01–03: the dashboard (wide), the calendar and analytics. */
     shots: 3,
     photos: true,
@@ -229,7 +231,7 @@ export const projects = [
     description:
       'A restaurant site built to make people hungry. Full-bleed food photography treated with a custom WebGL grade, and a reservation system wired straight into the floor plan.',
     deliverables: ['Front-end build', 'WebGL image grade', 'Reservations', 'CMS'],
-    link: 'https://example.com',
+    github: '',
     shots: 3,
     /* Plays inside the ink when the card is hovered. Placeholder clip for now. */
     video: '/media/sample/preview.mp4'
@@ -244,7 +246,7 @@ export const projects = [
     description:
       'A booking platform for a studio running forty classes a week. Members see a schedule that loads instantly; staff see a dashboard that replaced three spreadsheets.',
     deliverables: ['Product design', 'Booking platform', 'Staff dashboard', 'Automation'],
-    link: 'https://example.com',
+    github: '',
     shots: 3,
     /* Plays inside the ink when the card is hovered. Placeholder clip for now. */
     video: '/media/sample/preview.mp4'
@@ -259,7 +261,7 @@ export const projects = [
     description:
       'A grocer with eight hundred products and no time to manage a website. We built the storefront and the automation that keeps stock, pricing and delivery slots in sync on their own.',
     deliverables: ['Storefront', 'Inventory sync', 'Delivery slots', 'Infrastructure'],
-    link: 'https://example.com',
+    github: '',
     shots: 3,
     /* Plays inside the ink when the card is hovered. Placeholder clip for now. */
     video: '/media/sample/preview.mp4'
