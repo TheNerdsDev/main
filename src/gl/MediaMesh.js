@@ -50,9 +50,6 @@ export default class MediaMesh extends Component {
       uDpr:        world.uniforms.uDpr,
       uTime:       world.uniforms.uTime,
       uInkAmount:  world.uniforms.uInkAmount,
-      uAccent:     world.uniforms.uAccent,
-      uDark:       world.uniforms.uDark,
-      uLight:      world.uniforms.uLight,
 
       uHover:      { value: 0 },
       uLoad:       { value: 0 },
