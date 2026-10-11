@@ -152,8 +152,9 @@ export const projects = [
     deliverables: ['Code editor', 'Pixel-accurate scoring', 'Live timer', 'Offline LAN setup'],
     link: 'https://example.com',
     shots: 1,
-    /* Plays inside the ink when the card is hovered. Placeholder clip for now. */
-    video: '/media/sample/preview.mp4'
+    /* Plays inside the ink when the card is hovered: a walkthrough, from
+       login to the standings. */
+    video: '/media/css-arena/preview.mp4'
   },
   {
     slug: 'harbour-coffee',
