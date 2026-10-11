@@ -27,7 +27,11 @@ export default class Router {
       if (link.target === '_blank') return;
 
       e.preventDefault();
-      if (url.pathname === window.location.pathname) return;
+      /* A link to the page already showing (the logo, mostly): back to its top. */
+      if (url.pathname === window.location.pathname) {
+        if (!url.hash) this.app.toTop();
+        return;
+      }
       this.go(url.pathname);
     };
 
@@ -77,10 +81,18 @@ export default class Router {
     if (push) history.pushState({ path }, '', path);
     this.current = path;
 
-    await this.app.transition(nextPage, doc.title);
-
-    store.isTransitioning = false;
-    store.html.classList.remove('is-transitioning');
+    try {
+      await this.app.transition(nextPage, doc.title);
+    } catch (err) {
+      /* A swap that fails halfway would otherwise leave the site frozen
+         (is-transitioning turns every click off). Load the page properly
+         instead. */
+      console.error('[Router] page change failed, loading it in full', err);
+      window.location.href = path;
+    } finally {
+      store.isTransitioning = false;
+      store.html.classList.remove('is-transitioning');
+    }
   }
 
   destroy() {

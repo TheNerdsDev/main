@@ -56,9 +56,11 @@ const setHref = (node, url) => {
  *    rock and flings it at the other one; it drifts back in afterwards.
  *
  * A hit bursts the rock, knocks the sketch back and shorts its neon —
- * arcs crackle and spark, the tube stutters, and it sees stars. The face reacts in three beats: a flash of shock
- * (eyes wide), a wince of pain, then anger — or sadness, if they started
- * it and this is the payback — before it relaxes.
+ * arcs crackle and spark, the tube stutters, and it sees stars. A finished
+ * portrait switches to its angry picture for a few seconds; a line sketch's
+ * face reacts in three beats instead: a flash of shock (eyes wide), a wince
+ * of pain, then anger — or sadness, if they started it and this is the
+ * payback — before it relaxes.
  */
 export default class Duo {
   constructor(el, fx, stage) {
@@ -69,8 +71,10 @@ export default class Duo {
     this.members = team.map((m) => {
       const root = el.querySelector(`[data-sketch="${m.id}"]`);
       const h = VIEW_W / m.aspect;
-      const eyeUrl = eyeMap(VIEW_W, h, m.eyes, m.eyeR);
-      setHref(root.querySelector('.eye-map'), eyeUrl);
+      /* A finished portrait swaps to its angry picture when hit; only a
+         line sketch has eyes and a face for the expression warps. */
+      const eyeUrl = m.eyes ? eyeMap(VIEW_W, h, m.eyes, m.eyeR) : null;
+      if (eyeUrl) setHref(root.querySelector('.eye-map'), eyeUrl);
 
       const faces = {};
       if (m.face) {
@@ -111,6 +115,8 @@ export default class Duo {
         body: root.querySelector('.sketch-body'),
         svg: host,
         hitBtn: root.querySelector('.sketch-hit'),
+        calm: root.querySelector('.sketch-face:not(.sketch-face-angry)'),
+        angry: root.querySelector('.sketch-face-angry'),
         gasp,
         faces,
         mapB,
@@ -161,6 +167,7 @@ export default class Duo {
     };
 
     this.members.forEach((m) => on(m.hitBtn, 'click', () => this.throw(m)));
+    this.members.forEach((m) => this.bindTap(m, on));
 
     this.actions.forEach((a) => {
       on(a.btn, 'pointerenter', () => { a.hovered = true; });
@@ -169,6 +176,100 @@ export default class Duo {
       on(a.btn, 'blur', () => { a.hovered = false; });
       on(a.btn, 'click', () => this.fling(a));
     });
+  }
+
+  /**
+   * Hovering a portrait: "Tap" rides along its outline, at the point of the
+   * edge nearest the pointer, just outside the glow — out on the dark,
+   * where it can be read (under the pointer it vanished into the picture).
+   * It glides round the edge as the pointer moves; the bottom edge is left
+   * to the name. Mouse and trackpad only, like the cursor's own labels.
+   */
+  bindTap(m, on) {
+    if (!m.calm || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    const tag = document.createElement('span');
+    tag.className = 'sketch-tap';
+    tag.setAttribute('aria-hidden', 'true');
+    tag.textContent = 'Tap';
+    m.root.appendChild(tag);
+    const toX = gsap.quickTo(tag, 'x', { duration: 0.35, ease: 'power3.out' });
+    const toY = gsap.quickTo(tag, 'y', { duration: 0.35, ease: 'power3.out' });
+
+    /* The outline, traced once from the picture itself: for each direction
+       out from the middle of the face, the outermost point that's part of
+       the portrait (fractions of the box). */
+    const N = 144;
+    const CX = 0.5;
+    const CY = 0.62;
+    let edge = null;
+    const trace = () => {
+      const w = 200;
+      const h = 250;
+      const c = document.createElement('canvas');
+      c.width = w;
+      c.height = h;
+      const g = c.getContext('2d', { willReadFrequently: true });
+      g.drawImage(m.calm, 0, 0, w, h);
+      const px = g.getImageData(0, 0, w, h).data;
+      const out = [];
+      for (let i = 0; i < N; i++) {
+        const t = (i / N) * Math.PI * 2;
+        const dx = Math.cos(t);
+        const dy = Math.sin(t);
+        let hit = null;
+        for (let r = Math.hypot(w, h); r > 0; r -= 0.5) {
+          const x = Math.round(CX * w + dx * r);
+          const y = Math.round(CY * h + dy * r);
+          if (x < 0 || y < 0 || x >= w || y >= h) continue;
+          if (px[(y * w + x) * 4 + 3] > 60) {
+            hit = [x / w, y / h];
+            break;
+          }
+        }
+        out.push(hit || [CX, CY]);
+      }
+      return out;
+    };
+
+    const place = (e, snap) => {
+      const box = m.root.getBoundingClientRect();
+      if (!box.width) return;
+      const cx = CX * box.width;
+      const cy = CY * box.height;
+      const t = Math.atan2(e.clientY - box.top - cy, e.clientX - box.left - cx);
+      let i = ((Math.round((t / (Math.PI * 2)) * N) % N) + N) % N;
+      /* The flat bottom edge belongs to the name: slide to the nearest
+         point that isn't on it (the corners of the shoulders). */
+      if (edge[i][1] > 0.97) {
+        for (let k = 1; k < N / 2; k++) {
+          const a = (i + k) % N;
+          const b = (i - k + N) % N;
+          if (edge[a][1] <= 0.97) { i = a; break; }
+          if (edge[b][1] <= 0.97) { i = b; break; }
+        }
+      }
+      const bx = edge[i][0] * box.width;
+      const by = edge[i][1] * box.height;
+      const len = Math.hypot(bx - cx, by - cy) || 1;
+      const gap = 18;   // px out from the edge, clear of the glow
+      const x = bx + ((bx - cx) / len) * gap;
+      const y = by + ((by - cy) / len) * gap;
+      /* Arriving: start right there; moving: glide after the pointer. */
+      if (snap) gsap.set(tag, { x, y });
+      toX(x);
+      toY(y);
+    };
+
+    on(m.hitBtn, 'pointerenter', (e) => {
+      if (!edge) {
+        if (!m.calm.complete || !m.calm.naturalWidth) return;
+        edge = trace();
+      }
+      place(e, true);
+      m.root.classList.add('is-tapping');
+    });
+    on(m.hitBtn, 'pointermove', (e) => { if (edge) place(e, false); });
+    on(m.hitBtn, 'pointerleave', () => m.root.classList.remove('is-tapping'));
   }
 
   /**
@@ -378,6 +479,10 @@ export default class Duo {
    * and slowly relaxes.
    */
   react(m, mood) {
+    if (m.angry) {
+      this.scowl(m);
+      return;
+    }
     const [eye, hurt, after] = m.warps;
     const faces = m.faces;
     gsap.killTweensOf([eye, hurt, after]);
@@ -403,11 +508,33 @@ export default class Duo {
       .to(after, { v: 0, duration: 1.1, ease: 'power2.inOut' }, 3.6);
   }
 
+  /**
+   * A portrait's reaction: the angry picture the moment the rock lands, held
+   * as long as the drawn faces hold their mood, then straight back to calm.
+   * Both are sudden cuts, one picture or the other — the portraits are
+   * partly see-through, so the hidden one is hidden outright, never left
+   * showing underneath.
+   */
+  scowl(m) {
+    m.scowlTl?.kill();
+    const show = (angry) => {
+      m.angry.style.opacity = angry ? '1' : '0';
+      m.calm.style.opacity = angry ? '0' : '1';
+    };
+    show(true);
+    m.scowlTl = gsap.delayedCall(3.6, () => show(false));
+  }
+
   /* -------------------------------------------------------------- loop */
 
   measure() {
     this.W = this.el.offsetWidth;
     this.H = this.el.offsetHeight;
+    /* The room the sketches have, for the stylesheet to size them by: on
+       tablets and phones the heading takes what it needs first, and the
+       sketches have to fit in what's left (main-page.css). */
+    this.el.style.setProperty('--duo-w', `${this.W}px`);
+    this.el.style.setProperty('--duo-h', `${this.H}px`);
     const page = this.el.closest('.page') || document;
     this.texts = [...page.querySelectorAll(TEXT)];
     const nav = document.querySelector('.site-header');
@@ -472,13 +599,19 @@ export default class Duo {
     const tRx = Math.min(vw * 0.3, 460);
     const tRy = Math.min(vh * 0.3, 250);
 
-    const cx = hx + (vw / 2 - hx) * fe;
-    const cy = hy + (vh / 2 - hy) * fe;
-    const tilt = hTilt + (-0.14 - hTilt) * fe;
-    const ct = Math.cos(tilt);
-    const st = Math.sin(tilt);
-    const rx = hRx + (tRx - hRx) * fe;
-    const ry = hRy + (tRy - hRy) * fe;
+    /* An orbit `fe` of the way from its home loop to the travelling one. */
+    const blend = (h) => {
+      const tilt = h.tilt + (-0.14 - h.tilt) * fe;
+      return {
+        cx: h.x + (vw / 2 - h.x) * fe,
+        cy: h.y + (vh / 2 - h.y) * fe,
+        ct: Math.cos(tilt),
+        st: Math.sin(tilt),
+        rx: h.rx + (tRx - h.rx) * fe,
+        ry: h.ry + (tRy - h.ry) * fe
+      };
+    };
+    const shared = { x: hx, y: hy, tilt: hTilt, rx: hRx, ry: hRy };
 
     /* Meeting: the orbits tighten slowly, then all at once. */
     const e = Math.pow(this.k, 2.2);
@@ -491,11 +624,54 @@ export default class Duo {
         return { x: r.left + r.width / 2, y: r.top + r.height * FIGURE.y, rx: r.width * FIGURE.rx, ry: r.height * FIGURE.ry };
       })
       : [];
-    /* The welcome copy's right edge — a wall the orbit keeps to the right of. */
-    const wall = avoid > 0 ? this.texts.reduce((m, el) => Math.max(m, el.getBoundingClientRect().right), -Infinity) : -Infinity;
+    /* The welcome copy. Beside the sketches (wide screens) it's a wall the
+       orbit keeps to the right of; above them (tablets and phones, where
+       the heading sits on top) it's a ceiling instead — as a wall it would
+       pin every rock to the right edge of the screen. */
+    let wall = -Infinity;
+    let roof = -Infinity;
+    if (avoid > 0) {
+      for (const el of this.texts) {
+        const r = el.getBoundingClientRect();
+        if (!r.width) continue;
+        if (r.bottom <= box.top + 4) roof = Math.max(roof, r.bottom);
+        else wall = Math.max(wall, r.right);
+      }
+    }
+
+    /* Tablets and phones (heading on top, sketches below): the two sketches
+       fill the width corner to corner, and one loop round both runs off the
+       sides of the screen — the rocks ended up pinned to its edges. There,
+       each sketch gets a loop of its own instead (two rocks each), sized to
+       it and kept on screen. */
+    const stacked = roof > -Infinity;
+    let homes = null;
+    if (stacked) {
+      const pad = o * 0.42 * 1.12 * 1.1 + 4;   // the biggest rock's radius, and a little air
+      const left = box.left + pad;
+      const right = box.right - pad;
+      const top = Math.max(box.top, this.ceiling, roof) + pad;
+      const bottom = box.bottom - pad;
+      homes = this.members.map((m) => {
+        const r = m.body.getBoundingClientRect();
+        const lrx = Math.min(r.width * 0.5 + pad * 0.5, (right - left) / 2);
+        const lry = Math.min(r.height * 0.5 + pad * 0.5, (bottom - top) / 2);
+        return {
+          x: clamp(r.left + r.width / 2, left + lrx, right - lrx),
+          y: clamp(r.top + r.height * 0.56, top + lry, bottom - lry),
+          tilt: 0,
+          rx: lrx,
+          ry: lry
+        };
+      });
+    }
+    /* How far out a figure pushes a passing rock (in its own radii): a
+       wide berth where there's room, a close shave on a phone. */
+    const berth = stacked ? 1.3 : 2;
 
     for (const act of this.actions) {
       const { r, size, phase } = act.orbit;
+      const { cx, cy, ct, st, rx, ry } = blend(homes ? homes[act.i % 2] : shared);
       act.pace += ((act.hovered ? 0 : 1) - act.pace) * Math.min(1, dt * 6);
 
       /* Distance from the centre, as a fraction of the orbit: shrinks to
@@ -525,7 +701,7 @@ export default class Duo {
         /* At home, stay inside the sketches' box and below the header —
            easing away from the edges rather than sliding along them. */
         const band = o * 0.9;
-        const top = Math.max(box.top + o * 0.6, this.ceiling + rockR * 1.15);
+        const top = Math.max(box.top + o * 0.6, this.ceiling + rockR * 1.15, roof + 8 + rockR);
         const left = Math.max(box.left + o * 0.6, wall + 16 + rockR);
         const bx = soften(x, left, box.right - o * 0.6, band);
         const by = soften(y, top, box.bottom - o * 0.6, band);
@@ -537,7 +713,9 @@ export default class Duo {
         /* Never across either figure or their names. Each pushes the path
            outwards inside a band around it, smoothly — so a rock arcs round
            a sketch the way something in orbit rounds a planet. The header
-           is a ceiling; where the two disagree a few passes settle it, so
+           (and the heading, where it sits on top) is a ceiling and the
+           bottom of the screen a floor; where they disagree a few passes
+           settle it, so
            a rock slides round instead of being shoved from one into the
            other. */
         for (let pass = 0; pass < 4; pass++) {
@@ -545,14 +723,23 @@ export default class Duo {
             const dx = x - fc.x;
             const dy = y - fc.y;
             const d = Math.hypot(dx / (fc.rx + rockR), dy / (fc.ry + rockR));
-            if (d < 2) {
-              const push = ((1 + (d * d) / 4) / Math.max(d, 0.05) - 1) * avoid;
+            if (d < berth) {
+              /* Eased out to the edge of the berth: d -> 1 + c d^2, which
+                 is 1 at the figure and meets the berth at its edge. */
+              const c = (berth - 1) / (berth * berth);
+              const push = ((1 + c * d * d) / Math.max(d, 0.05) - 1) * avoid;
               x += dx * push;
               y += dy * push;
             }
           }
-          const lo = this.ceiling + rockR;
+          const lo = Math.max(this.ceiling + rockR, roof + 8 + rockR);
           if (y < lo) y += (lo - y) * avoid;
+          const hi = vh - rockR;
+          if (y > hi) y += (hi - y) * avoid;
+          /* …and the welcome copy beside them a wall, so a figure can't
+             push a rock back across it. */
+          const wl = wall + 16 + rockR;
+          if (x < wl) x += (wl - x) * avoid;
           x = Math.min(Math.max(x, rockR), vw - rockR);
         }
       }
@@ -581,6 +768,7 @@ export default class Duo {
     this.rocks.destroy();
     this.members.forEach((m) => {
       m.humCall?.kill();
+      m.scowlTl?.kill();
       gsap.killTweensOf([m.root, m.body, m.svg, m.gasp, ...m.warps]);
       m.neon?.destroy();
     });

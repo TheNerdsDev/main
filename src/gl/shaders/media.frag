@@ -8,10 +8,7 @@ uniform vec2  uRes;         // viewport in px
 uniform float uHover;
 uniform float uLoad;        // texture reveal 0..1
 uniform float uEnter;       // page enter 0..1
-uniform float uColour;      // 0 = duotone, 1 = full colour
-uniform vec3  uDark;
-uniform vec3  uLight;
-uniform vec3  uAccent;
+uniform float uColour;      // 0 = black & white, 1 = full colour
 uniform float uGrain;
 uniform float uTime;
 uniform float uInkAmount;
@@ -66,21 +63,24 @@ void main() {
   vec2 texel = ratio * zoom / uPlaneSizes;
   vec3 col = uBlur > 0.25 ? sampleBlurred(uv, texel) : texture2D(tMap, uv).rgb;
 
-  // ---- duotone grade -------------------------------------------
+  // ---- black & white grade -------------------------------------
   // Samples arrive in LINEAR space (the texture is tagged sRGB and decoded
-  // on read), so lift to a perceptual curve before grading — otherwise a
-  // mid-tone reads as 0.09 and the whole image crushes to black.
+  // on read), and nothing after this converts back — what's written here
+  // is what the screen shows. So both looks are made in display space:
+  // the grade on a perceptual curve (or a mid-tone reads as 0.09 and the
+  // whole image crushes to black), the photo re-encoded to sRGB so it
+  // looks exactly like the file.
   float l = clamp(luma(col), 0.0, 1.0);
   l = pow(l, 1.0 / 2.2);                     // linear -> perceptual
   l = clamp((l - 0.06) / 0.78, 0.0, 1.0);    // levels
   l = pow(l, 0.90);                          // gamma
-  vec3 duo = mix(uDark, uLight, l);
-  duo = mix(duo, uAccent, smoothstep(0.50, 1.0, l) * 0.32);
+  vec3 mono = vec3(l);
+  vec3 photo = mix(12.92 * col, 1.055 * pow(col, vec3(1.0 / 2.4)) - 0.055, step(0.0031308, col));
 
-  // Only hover pushes the image back toward full colour — the ink
-  // deliberately leaves the grade alone.
-  float colourMix = clamp(uColour + uHover * 0.85, 0.0, 1.0);
-  vec3 finalCol = mix(duo, col, colourMix);
+  // Hover brings back the full original — the ink deliberately leaves the
+  // grade alone.
+  float colourMix = clamp(uColour + uHover, 0.0, 1.0);
+  vec3 finalCol = mix(mono, photo, colourMix);
 
   // ---- colourless ink highlight --------------------------------
   finalCol += vec3(inkDensity) * 0.07 * uInkAmount;

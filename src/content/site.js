@@ -32,17 +32,25 @@ export const main = {
   about: {
     text:
       "We're Meet & Prem the Nerds, two curious minds who get way too excited about turning simple ideas into something creative. If you can dream it up, we'll probably nerd out building it.",
-    button: 'About Us'
+    button: 'About Us',
+    /* Shown in the empty frames until a scroll rolls the photos in. */
+    hint: 'Scroll Down'
   },
   /* Space rocks drifting around the sketches — click one and it gets thrown. */
   rocks: 4
 };
 
 /**
- * The two of us. Every point is a fraction of the sketch image (0..1, from
- * the top-left), so swapping in a real sketch only means updating the file
- * path and re-measuring these points on the new drawing.
+ * The two of us. Every point is a fraction of the picture (0..1, from the
+ * top-left), so swapping in a new one only means updating the file path and
+ * re-measuring these points on it.
  *
+ *   portrait       the neon portrait, as it normally looks (4:5, transparent)
+ *   portraitAngry  the same, angry — shown when a rock hits, instead of the
+ *                  expression animation (same size and body position)
+ *
+ * Or, for a line sketch tinted and animated by the site (fx/NeonSketch.js):
+ *   sketch the drawing; `aspect` its width ÷ height
  *   ink    'light' = light lines on a transparent/dark background
  *          'dark'  = pencil on white paper (the paper is keyed out)
  *   eyes   centres of both eyes — they widen, then squint, when hit
@@ -54,47 +62,33 @@ export const main = {
  *   hit    where an incoming rock strikes (and the neon shorts out)
  *   crown  top of the head, where the dizzy stars circle
  *   hand   where a thrown rock leaves from
+ *
+ *
+ * (In About, in the spaceship portholes, we're cartoon astronauts — drawn
+ * in content/astronauts.js.)
  */
 export const team = [
   {
     id: 'prem',
     name: 'Prem',
     colour: '#39FF14',
-    sketch: '/media/team/prem-sketch.svg',
+    portrait: '/media/team/prem.webp',
+    portraitAngry: '/media/team/prem-angry.webp',
     aspect: 0.8,
-    ink: 'light',
-    eyes: [[0.4025, 0.43], [0.5975, 0.43]],
-    eyeR: 0.11,
-    face: {
-      brows: [[0.46, 0.374], [0.54, 0.374]],
-      browsOuter: [[0.34, 0.384], [0.66, 0.384]],
-      mouth: [0.5, 0.602],
-      corners: [[0.44, 0.594], [0.56, 0.594]]
-    },
-    hit: [0.5, 0.355],
-    crown: [0.5, 0.13],
-    hand: [0.86, 0.84],
-    photos: ['/media/team/prem-1.svg', '/media/team/prem-2.svg', '/media/team/prem-3.svg']
+    hit: [0.5, 0.46],
+    crown: [0.5, 0.3],
+    hand: [0.86, 0.84]
   },
   {
     id: 'meet',
     name: 'Meet',
     colour: '#2F8CFF',
-    sketch: '/media/team/meet-sketch.svg',
+    portrait: '/media/team/meet.webp',
+    portraitAngry: '/media/team/meet-angry.webp',
     aspect: 0.8,
-    ink: 'light',
-    eyes: [[0.4025, 0.43], [0.5975, 0.43]],
-    eyeR: 0.11,
-    face: {
-      brows: [[0.465, 0.38], [0.535, 0.38]],
-      browsOuter: [[0.335, 0.388], [0.665, 0.388]],
-      mouth: [0.5, 0.612],
-      corners: [[0.445, 0.6], [0.555, 0.6]]
-    },
-    hit: [0.5, 0.355],
-    crown: [0.5, 0.13],
-    hand: [0.14, 0.84],
-    photos: ['/media/team/meet-1.svg', '/media/team/meet-2.svg', '/media/team/meet-3.svg']
+    hit: [0.495, 0.405],
+    crown: [0.49, 0.235],
+    hand: [0.14, 0.84]
   }
 ];
 
@@ -107,7 +101,37 @@ export const contact = {
     { label: 'Response time', value: 'Within 48 hours' },
     { label: 'Based in', value: 'Ahmedabad, IN — working remotely' },
     { label: 'Available', value: 'January 2027' }
-  ]
+  ],
+  /* The enquiry form. Each submission is saved to the database and emailed
+     to us (supabase/functions/contact). `name` is the key it's sent and
+     stored under — change a label freely, but a name only together with
+     the function and the table. */
+  form: {
+    fields: [
+      { name: 'name', label: 'Full name', type: 'text', autocomplete: 'name', required: true, max: 120 },
+      { name: 'email', label: 'Email', type: 'email', autocomplete: 'email', required: true, max: 200 },
+      { name: 'phone', label: 'Phone number', type: 'tel', autocomplete: 'tel', required: true, max: 30 },
+      { name: 'company', label: 'Company name', type: 'text', autocomplete: 'organization', max: 120 },
+      { name: 'about', label: 'Brief about you', type: 'textarea', rows: 3, max: 2000 },
+      { name: 'idea', label: 'What do you have in mind', type: 'textarea', rows: 5, max: 4000 }
+    ],
+    optional: 'Optional',
+    button: 'Give a Shout',
+    sending: 'Sending…',
+    sent: {
+      title: 'Got it — thank you!',
+      text: "Your message is with us. We'll get back to you within two working days."
+    },
+    /* Shown if it can't be sent; the address follows it. */
+    failed: "That didn't go through. Please try again in a moment, or write to us at",
+    /* Under a field that isn't right (checked here and again by the function). */
+    errors: {
+      required: 'Please fill this in.',
+      email: "That doesn't look like an email address.",
+      phone: "That doesn't look like a phone number.",
+      long: "That's a little too long."
+    }
+  }
 };
 
 /* Home-page showcase: the projects, given a section of their own. */
@@ -119,7 +143,8 @@ export const showcase = {
 /* The closing section of the landing page, under the planet shower. */
 export const finale = {
   title: ['Connect to us'],
-  text: 'placeholder',
+  /* One line each. */
+  text: ['Dreaming something up?', 'Two nerds are ready to bring it down to earth.'],
   button: 'Contact us'
 };
 
@@ -150,34 +175,51 @@ export const info = {
 
 export const projects = [
   {
-    slug: 'nikunj-salon',
-    name: 'Nikunj Salon',
+    slug: 'css-arena',
+    name: 'CSS Arena',
     year: '2026',
     role: 'Design & Development',
-    accent: '#C8702F',
-    excerpt: 'Scroll-driven salon site',
+    accent: '#9259EE',
+    /* The thumbnail is a framed screenshot: show it whole and still. */
+    screenshot: true,
+    /* The project page leads with the video below, playing on a loop. */
+    pageVideo: true,
+    excerpt: 'Live CSS battle platform',
     description:
-      'A scroll-driven site for a neighbourhood salon, where every section reveals itself as you move down the page. Built around short intro films and a booking flow that takes three taps.',
-    deliverables: ['Art direction', 'Scroll animation', 'Booking integration', 'Hosting'],
-    link: 'https://example.com',
+      'A CSS battle platform for the Vivacity 2K26 tech fest. Contestants recreate a target design in HTML and CSS against the clock, and every attempt is scored pixel by pixel — on more than 60 machines over an offline LAN.',
+    deliverables: ['Code editor', 'Pixel-accurate scoring', 'Live timer', 'Offline LAN setup'],
+    /* Its GitHub repository: "Code — GitHub ↗" on the project's page
+       (left out while empty). */
+    github: 'https://github.com/meetRaval09/css-arena',
+    /* Detail shots 01–03: the 100% match (wide), the round countdown and
+       the admin console. Shown even while other projects' are empty. */
     shots: 3,
-    /* Plays inside the ink when the card is hovered. Placeholder clip for now. */
-    video: '/media/sample/preview.mp4'
+    photos: true,
+    /* Plays inside the ink when the card is hovered: a walkthrough, from
+       login to the standings. */
+    video: '/media/css-arena/preview.mp4'
   },
   {
-    slug: 'harbour-coffee',
-    name: 'Harbour Coffee',
+    slug: 'taskpilot',
+    name: 'TaskPilot',
     year: '2026',
     role: 'Design & Development',
-    accent: '#2F6FC8',
-    excerpt: 'Cafe storefront & ordering',
+    accent: '#E63946',
+    /* The thumbnail is a framed logo poster: show it whole and still. */
+    screenshot: true,
+    /* The project page leads with the video below, playing on a loop. */
+    pageVideo: true,
+    excerpt: 'Local-first task scheduler',
     description:
-      'A storefront for a two-location roastery, with a menu that updates itself from the till system and a pickup-ordering flow that works on a phone in one hand.',
-    deliverables: ['Brand site', 'Menu sync', 'Online ordering', 'Analytics'],
-    link: 'https://example.com',
+      'A local-first task scheduler: plan the day, track what got done, stay focused. Your day at a glance on the dashboard, a month calendar and analytics on streaks and trends, desktop reminders, and themes from dark to sandstone.',
+    deliverables: ['Dashboard', 'Calendar', 'Analytics', 'Desktop reminders'],
+    github: '',
+    /* Detail shots 01–03: the dashboard (wide), the calendar and analytics. */
     shots: 3,
-    /* Plays inside the ink when the card is hovered. Placeholder clip for now. */
-    video: '/media/sample/preview.mp4'
+    photos: true,
+    /* Plays inside the ink when the card is hovered: a walkthrough, from
+       the logo through planning a task to analytics. */
+    video: '/media/taskpilot/preview.mp4'
   },
   {
     slug: 'mesa-kitchen',
@@ -189,7 +231,7 @@ export const projects = [
     description:
       'A restaurant site built to make people hungry. Full-bleed food photography treated with a custom WebGL grade, and a reservation system wired straight into the floor plan.',
     deliverables: ['Front-end build', 'WebGL image grade', 'Reservations', 'CMS'],
-    link: 'https://example.com',
+    github: '',
     shots: 3,
     /* Plays inside the ink when the card is hovered. Placeholder clip for now. */
     video: '/media/sample/preview.mp4'
@@ -204,7 +246,7 @@ export const projects = [
     description:
       'A booking platform for a studio running forty classes a week. Members see a schedule that loads instantly; staff see a dashboard that replaced three spreadsheets.',
     deliverables: ['Product design', 'Booking platform', 'Staff dashboard', 'Automation'],
-    link: 'https://example.com',
+    github: '',
     shots: 3,
     /* Plays inside the ink when the card is hovered. Placeholder clip for now. */
     video: '/media/sample/preview.mp4'
@@ -219,7 +261,7 @@ export const projects = [
     description:
       'A grocer with eight hundred products and no time to manage a website. We built the storefront and the automation that keeps stock, pricing and delivery slots in sync on their own.',
     deliverables: ['Storefront', 'Inventory sync', 'Delivery slots', 'Infrastructure'],
-    link: 'https://example.com',
+    github: '',
     shots: 3,
     /* Plays inside the ink when the card is hovered. Placeholder clip for now. */
     video: '/media/sample/preview.mp4'

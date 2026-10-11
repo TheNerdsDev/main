@@ -32,6 +32,10 @@ a { color: inherit; text-decoration: none; }
   --ease-out:  cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out: cubic-bezier(0.76, 0, 0.24, 1);
   --dur: 0.8s;
+
+  /* Tells the inline first-paint styles (scripts/generate-pages.mjs) that
+     the real stylesheet is in, so the loader can show its contents. */
+  --styled: visible;
 }
 
 @media screen and (max-width: 1099px) {
@@ -179,11 +183,25 @@ h1 {
   gap: 2.4rem;
   background: var(--c-bg);
 }
-.loader-icon { width: 7.2rem; height: 7.2rem; }
-.loader-icon-inner { width: 100%; height: 100%; overflow: visible; }
-.loader-dot { fill: var(--c-ink); }
-.loader-dot-a { transform-origin: 24px 24px; }
-.loader-dot-b { fill-opacity: 0.5; transform-origin: 24px 24px; }
+/* The loader's logo: a stack of same-size layers (fx/LoaderLogo.js), each
+   moved only by transform/opacity so the compositor animates it. */
+.loader-logo { position: relative; width: min(52rem, 78vw); color: var(--c-ink); }
+.ll-layer,
+.ll-wipe,
+.ll-wipe-inner,
+.ll-smoke { position: absolute; inset: 0; width: 100%; height: 100%; }
+.ll-layer { overflow: visible; fill: currentColor; }
+.ll-wipe { overflow: hidden; }
+.ll-letter { opacity: 0; }
+.ll-rocket { fill: #fff; mix-blend-mode: difference; }
+.ll-puff {
+  position: absolute;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) { .ll-letter { opacity: 1; } }
 .loader-progress-wrapper { overflow: hidden; }
 .loader-progress-inner {
   display: block;
@@ -208,7 +226,7 @@ h1 {
   top: 0; left: 0; right: 0;
   z-index: 12;
   display: flex; align-items: center; justify-content: space-between;
-  padding: 1.4rem var(--unit);
+  padding: 1.1rem var(--unit);
   /* Frosted glass in the site's own background colour, untinted: the sky
      glows through it, anything passing beneath is blurred past reading. */
   background: rgba(var(--c-bg-rgb), 0.42);
@@ -216,7 +234,16 @@ h1 {
   backdrop-filter: blur(24px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
-.logo { font-weight: 600; letter-spacing: -0.01em; }
+/* The logo (traced from the brand artwork, content/logo.js). The rocket
+   that leaves the R is white with a difference blend: white against the
+   sky, dark over the letters — like the cut-out it flies out of. */
+.logo { display: inline-flex; align-items: center; color: var(--c-ink); }
+.logo-mark { display: block; height: 4rem; width: auto; overflow: visible; }
+@media screen and (max-width: 767px) { .logo-mark { height: 3.6rem; } }
+.logo-plug,
+.logo-rocket { visibility: hidden; }
+.logo-rocket { fill: #fff; mix-blend-mode: difference; }
+.logo:focus-visible { outline: 1px solid #0ACD88; outline-offset: 0.6rem; }
 .nav { position: relative; display: flex; align-items: center; gap: 2.8rem; }
 
 /* Header links: the letters roll on hover and turn green. */

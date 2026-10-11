@@ -6,6 +6,8 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { studio, main, team, workIndex, info, contact, showcase, finale, projects, getNext } from '../src/content/site.js';
+import { logoSvg } from '../src/content/logo.js';
+import { astronaut } from '../src/content/astronauts.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -27,17 +29,23 @@ const shell = ({ title, description, pageId, body, bodyClass = '' }) => `<!docty
 <meta property="og:site_name" content="${esc(studio.name)}" />
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 <link rel="preload" as="image" href="/textures/noise.png" />
+<!-- The first paint, before the stylesheet arrives (in dev it's injected by
+     script): dark, with the loader covering the page. The loader's contents
+     stay hidden until base.css sets --styled, so nothing shows unstyled. -->
+<style>
+  html { background: #05060F; color-scheme: dark; scrollbar-width: none; }
+  html::-webkit-scrollbar { display: none; }
+  .loader { position: fixed; inset: 0; z-index: 100; background: #05060F; }
+  .loader > * { visibility: var(--styled, hidden); }
+</style>
 </head>
 <body class="${bodyClass}">
 <a class="skip-link" href="#page-content">Skip to content</a>
 
 <div class="loader" role="status" aria-live="polite" aria-label="Loading">
-  <div class="loader-icon">
-    <svg class="loader-icon-inner" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-      <circle class="loader-dot loader-dot-a" cx="18" cy="24" r="11" />
-      <circle class="loader-dot loader-dot-b" cx="30" cy="24" r="11" />
-    </svg>
-  </div>
+  <!-- The logo, built in layers by fx/LoaderLogo.js: the letters rise in and the
+       rocket flies its trail while loading runs. -->
+  <div class="loader-logo" aria-hidden="true"></div>
   <div class="loader-progress-wrapper">
     <span class="loader-progress-inner"><span class="loader-progress">0</span>%</span>
   </div>
@@ -69,7 +77,8 @@ const navItem = (href, label, on) =>
   `<a class="nav-link roll-link${on ? ' is-current' : ''}" href="${href}" data-link aria-label="${esc(label)}"${on ? ' aria-current="page"' : ''}>${roll(label)}</a>`;
 
 const header = (current) => `  <header class="site-header">
-    <a class="logo roll-link" href="/" data-link aria-label="${esc(studio.wordmark)} — home">${roll(studio.wordmark)}</a>
+    <!-- Hover: the letters jump one by one and the rocket flies a lap (fx/LogoRocket.js). -->
+    <a class="logo" href="/" data-link aria-label="${esc(studio.wordmark)} — home">${logoSvg({ id: 'site-logo' })}</a>
     <!-- Phones: the links fold into a panel behind this (core/App.js bindMenu). -->
     <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Open menu">
       <span class="menu-toggle-line"></span><span class="menu-toggle-line"></span><span class="menu-toggle-line"></span>
@@ -84,6 +93,14 @@ const header = (current) => `  <header class="site-header">
 const mediaBlock = (src, alt, extra = '') =>
   `<div class="media-wrapper" data-media ${extra}><img class="media" src="${src}" alt="${esc(alt)}" loading="lazy" decoding="async" /></div>`;
 
+/* Project pages show empty frames until the real photos are in — a project
+   with `photos: true` shows its own, and setting this to true shows them
+   everywhere. (An empty frame holds the layout; with no data-media, WebGL
+   leaves it alone.) */
+const WORK_PHOTOS = false;
+const workMedia = (p, src, alt) =>
+  WORK_PHOTOS || p.photos ? mediaBlock(src, alt) : '<div class="media-wrapper is-empty" aria-hidden="true"></div>';
+
 const splitTitle = (lines) =>
   lines.map((l) => `<span class="line"><span class="line-inner">${esc(l)}</span></span>`).join('\n        ');
 
@@ -96,13 +113,17 @@ const INK = {
   dark:  '0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -0.6 -0.6 -0.6 0 1.6'
 };
 
+/* A finished neon portrait: the calm one, and the angry one stacked on top,
+   hidden until a rock hits (fx/Duo.js). */
+const portrait = (m) => `            <div class="sketch-svg sketch-portrait">
+              <img class="sketch-face" src="${m.portrait}" alt="" width="800" height="1000" decoding="async" />
+              <img class="sketch-face sketch-face-angry" src="${m.portraitAngry}" alt="" width="800" height="1000" decoding="async" fetchpriority="low" />
+            </div>`;
+
 const sketch = (m, other) => {
   const w = 400;
   const h = Math.round(w / m.aspect);
-  return `        <div class="sketch sketch-${m.id}" data-sketch="${m.id}" style="--neon: ${m.colour}">
-          <button class="sketch-hit" type="button" aria-label="${esc(m.name)}: throw a meteor at ${esc(other.name)}"></button>
-          <div class="sketch-body">
-            <div class="sketch-svg">
+  const art = m.portrait ? portrait(m) : `            <div class="sketch-svg">
             <svg class="sketch-vector" viewBox="0 0 ${w} ${h}" aria-hidden="true">
               <defs>
                 <filter id="neon-${m.id}" x="-12%" y="-12%" width="124%" height="124%" color-interpolation-filters="sRGB">
@@ -131,7 +152,11 @@ const sketch = (m, other) => {
               </defs>
               <image href="${m.sketch}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet" filter="url(#neon-${m.id})" />
             </svg>
-            </div>
+            </div>`;
+  return `        <div class="sketch sketch-${m.id}" data-sketch="${m.id}" style="--neon: ${m.colour}">
+          <button class="sketch-hit" type="button" aria-label="${esc(m.name)}: throw a meteor at ${esc(other.name)}"></button>
+          <div class="sketch-body">
+${art}
           </div>
           <span class="sketch-name">${esc(m.name)}</span>
         </div>`;
@@ -148,7 +173,7 @@ const showcaseSection = () => {
     ? ` srcset="/media/${slug}/featured-960.webp 960w, /media/${slug}/featured.jpg 1600w" sizes="(max-width: 767px) 100vw, 36vw"`
     : '';
   const cards = projects
-    .map((p, i) => `          <a class="show-card" href="/work/${p.slug}/" data-link data-cursor="View"${p.video ? ` data-video="${esc(p.video)}"` : ''} style="--accent: ${p.accent}">
+    .map((p, i) => `          <a class="show-card${p.screenshot ? ' is-still' : ''}" href="/work/${p.slug}/" data-link data-cursor="View"${p.video ? ` data-video="${esc(p.video)}"` : ''} style="--accent: ${p.accent}">
             <span class="show-card-inner">
               <span class="show-card-media"><img class="show-card-img" src="/media/${p.slug}/featured.jpg"${srcset(p.slug)} alt="${esc(p.name)}" loading="lazy" decoding="async" /></span>
               <span class="show-card-meta">
@@ -201,12 +226,43 @@ const mainPage = () => {
     .join('');
   const buttonChars = rollChars(main.about.button);
 
-  const frame = (m, side) => `      <figure class="about-frame about-frame-${side}" data-frame="${m.id}" style="--neon: ${m.colour}">
-        <div class="about-photos">
-${m.photos.map((src, i) => `          <img class="about-photo" src="${src}" alt="${i === m.photos.length - 1 ? esc(m.name) : ''}" decoding="async" />`).join('\n')}
-          <span class="about-flash" aria-hidden="true"></span>
+  /* A spaceship porthole (main-page.css): a riveted metal rim with a status
+     light, and through the glass each of us in our own cabin, as a cartoon
+     astronaut (content/astronauts.js) — a console of blinking lights in
+     front, space drifting past the window behind. A shutter covers it
+     until the first scroll irises it open. */
+  const LEDS = ['neon', 'amber', 'neon', 'white', 'red', 'neon', 'amber'];
+  const porthole = (m, side) => `      <figure class="porthole porthole-${side}" data-porthole="${m.id}" style="--neon: ${m.colour}">
+        <div class="porthole-body">
+          <div class="porthole-rim" aria-hidden="true">${Array.from({ length: 8 }, (_, i) => `<span class="porthole-bolt" style="--i: ${i}"></span>`).join('')}</div>
+          <div class="porthole-window">
+            <div class="porthole-shutter" aria-hidden="true">
+              <span class="porthole-hint">${esc(main.about.hint)}</span>
+              <svg class="porthole-hint-arrow" viewBox="0 0 16 10"><path d="M1 1.5 8 8.5l7-7" /></svg>
+            </div>
+            <div class="porthole-view">
+              <div class="porthole-space" aria-hidden="true">
+                <span class="porthole-stars"></span>
+                <span class="porthole-stars porthole-stars-near"></span>
+                <span class="porthole-rock porthole-rock-1"></span>
+                <span class="porthole-rock porthole-rock-2"></span>
+                <span class="porthole-rock porthole-rock-3"></span>
+              </div>
+              <div class="porthole-cabin" aria-hidden="true"></div>
+              <div class="porthole-crew">
+                <div class="porthole-crew-wave">
+${astronaut(m.id, { mirror: side === 'right', label: `${esc(m.name)}, as a cartoon astronaut` })}
+                </div>
+              </div>
+              <div class="porthole-console" aria-hidden="true">
+                <span class="porthole-screen"></span>
+                ${LEDS.map((c, i) => `<span class="porthole-led porthole-led-${c}" style="--i: ${i}"></span>`).join('')}
+              </div>
+            </div>
+            <div class="porthole-glass" aria-hidden="true"></div>
+          </div>
+          <span class="porthole-ring" aria-hidden="true"></span>
         </div>
-        <figcaption class="about-caption">${esc(m.name)}</figcaption>
       </figure>`;
 
   return shell({
@@ -247,7 +303,10 @@ ${actions}
          About sequence forwards, scrolling back plays it in reverse. -->
     <section class="about" id="about" aria-label="About us">
       <div class="about-stage">
-${frame(meet, 'left')}
+        <div class="about-pair">
+${porthole(meet, 'left')}
+${porthole(prem, 'right')}
+        </div>
         <div class="about-body">
           <p class="about-text">${team.reduce((t, m) => t.replace(m.name,`<span class="about-name" style="color: ${m.colour}">${m.name}</span>`), esc(main.about.text))}</p>
           <div class="about-cta">
@@ -256,7 +315,6 @@ ${frame(meet, 'left')}
             </a>
           </div>
         </div>
-${frame(prem, 'right')}
       </div>
     </section>
 
@@ -268,7 +326,7 @@ ${showcaseSection()}
       <canvas class="planet-canvas" aria-hidden="true"></canvas>
       <div class="finale-body">
         <h2 class="finale-title" id="finale-title">${finale.title.map((l) => `<span class="line"><span class="line-inner">${esc(l)}</span></span>`).join(' ')}</h2>
-        <p class="finale-text">${esc(finale.text)}</p>
+        <p class="finale-text">${[].concat(finale.text).map((l) => `<span class="finale-line">${esc(l)}</span>`).join(' ')}</p>
         <div class="finale-cta">
           <a class="about-button finale-button" href="/contact/" data-link aria-label="${esc(finale.button)}">
             <span class="about-button-text" aria-hidden="true">${rollChars(finale.button)}</span>
@@ -352,7 +410,7 @@ ${previews}
 const workPage = (p) => {
   const next = getNext(p.slug);
   const shots = Array.from({ length: p.shots }, (_, i) =>
-    `        ${mediaBlock(`/media/${p.slug}/0${i + 1}.jpg`, `${p.name} — detail ${i + 1}`)}`
+    `        ${workMedia(p, `/media/${p.slug}/0${i + 1}.jpg`, `${p.name} — detail ${i + 1}`)}`
   ).join('\n');
 
   const deliverables = p.deliverables
@@ -374,7 +432,9 @@ ${header('projects')}
     </h1>
 
     <div class="hero-media">
-      ${mediaBlock(`/media/${p.slug}/featured.jpg`, p.name)}
+      ${p.pageVideo && p.video
+        ? `<div class="work-film"><video class="work-film-video" src="${esc(p.video)}" autoplay muted loop playsinline preload="auto" aria-label="${esc(p.name)}, a walkthrough"></video></div>`
+        : workMedia(p, `/media/${p.slug}/featured.jpg`, p.name)}
     </div>
 
     <p class="description" data-split-lines>${esc(p.description)}</p>
@@ -383,7 +443,7 @@ ${header('projects')}
       <div class="meta"><dt class="label">Year</dt><dd class="text">${esc(p.year)}</dd></div>
       <div class="meta"><dt class="label">Role</dt><dd class="text">${esc(p.role)}</dd></div>
       <div class="meta"><dt class="label">Scope</dt><dd><ul class="meta-list">${deliverables}</ul></dd></div>
-      <div class="meta"><dt class="label">Visit</dt><dd><a class="text link" href="${esc(p.link)}" target="_blank" rel="noopener noreferrer"><span class="line-inner">Live site &nearr;</span></a></dd></div>
+      ${p.github ? `<div class="meta"><dt class="label">Code</dt><dd><a class="text link" href="${esc(p.github)}" target="_blank" rel="noopener noreferrer"><span class="line-inner">GitHub &nearr;</span></a></dd></div>` : ''}
     </dl>
 
     <div class="content">
@@ -476,6 +536,26 @@ const contactPage = () => {
     .map((s) => `<li><a class="text link" href="${esc(s.url)}" target="_blank" rel="noopener noreferrer"><span class="line-inner">${esc(s.label)} &nearr;</span></a></li>`)
     .join('');
 
+  /* The enquiry form (core/ContactForm.js sends it). Its errors and the
+     sending/sent states are written by the script; the labels are here. */
+  const { form } = contact;
+  const field = (f) => {
+    const id = `cf-${f.name}`;
+    const attrs = `class="field-input" id="${id}" name="${f.name}" maxlength="${f.max}" aria-describedby="${id}-error"${f.required ? ' required' : ''}`;
+    const control = f.type === 'textarea'
+      ? `<textarea ${attrs} rows="${f.rows || 4}" data-lenis-prevent></textarea>`
+      : `<input ${attrs} type="${f.type}" autocomplete="${f.autocomplete || 'off'}"${f.type === 'tel' ? ' inputmode="tel"' : ''} />`;
+    const optional = f.required ? '' : ` <span class="field-optional">(${esc(form.optional)})</span>`;
+    return `          <div class="field${f.type === 'textarea' ? ' field-wide' : ''}" data-field="${f.name}">
+            <label class="field-label" for="${id}">${esc(f.label)}${optional}</label>
+            ${control}
+            <p class="field-error" id="${id}-error"></p>
+          </div>`;
+  };
+  const shoutChars = [...form.button]
+    .map((c, i) => `<span class="shout-char" style="--i: ${i}" data-c="${c === ' ' ? ' ' : esc(c)}">${c === ' ' ? '&nbsp;' : esc(c)}</span>`)
+    .join('');
+
   return shell({
     title: `${studio.name} — Contact`,
     description: contact.lead,
@@ -484,22 +564,30 @@ const contactPage = () => {
   <div class="page-content" id="page-content" tabindex="-1">
 ${header('contact')}
 
-    <h1 class="title" data-split>
-        ${splitTitle(contact.title)}
-    </h1>
-
     <div class="contact-grid">
+      <h1 class="title" data-split>
+        ${splitTitle(contact.title)}
+      </h1>
+
       <p class="lead" data-split-lines>${esc(contact.lead)}</p>
 
-      <div class="contact-email">
-        <span class="label">Write to us</span>
-        <button class="contact-address" type="button" data-email="${esc(studio.email)}">
-          <span class="contact-address-text">${esc(studio.email)}</span>
-          <span class="contact-address-hint">Click to copy</span>
-        </button>
-        <span class="copied" aria-live="polite">Copied to your clipboard</span>
-        <a class="contact-mail link" href="mailto:${esc(studio.email)}"><span class="line-inner">Or open it in your mail app &rarr;</span></a>
-      </div>
+      <form class="contact-form" data-contact-form data-mailto="${esc(studio.email)}" data-messages="${esc(JSON.stringify({ sending: form.sending, failed: form.failed, ...form.errors }))}" novalidate>
+${form.fields.map(field).join('\n')}
+          <!-- A trap for bots: hidden from people, filled in by scripts. -->
+          <div class="field-trap" aria-hidden="true">
+            <label>Website <input type="text" name="website" tabindex="-1" autocomplete="off" /></label>
+          </div>
+          <div class="contact-form-foot">
+            <button class="shout-button" type="submit" aria-label="${esc(form.button)}">
+              <span class="shout-text" aria-hidden="true">${shoutChars}</span>
+            </button>
+            <p class="form-status" role="status" aria-live="polite"></p>
+          </div>
+        <div class="form-sent" tabindex="-1" hidden>
+          <p class="form-sent-title">${esc(form.sent.title)}</p>
+          <p class="text">${esc(form.sent.text)}</p>
+        </div>
+      </form>
 
       <dl class="contact-details">
 ${details}

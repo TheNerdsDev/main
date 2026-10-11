@@ -6,6 +6,8 @@ import Loader from './Loader.js';
 import Router from './Router.js';
 import World from '../gl/World.js';
 import Cursor from './Cursor.js';
+import LogoRocket from '../fx/LogoRocket.js';
+import ContactForm from './ContactForm.js';
 import { createPage } from '../pages/index.js';
 import { projects } from '../content/site.js';
 
@@ -42,12 +44,14 @@ export default class App {
     this.scroll = new Scroll();
     this.scroll.stop();
     this.bindMenu();
+    this.bindLogo();
 
     this.world = new World(this.canvas);
     this.loader = new Loader();
 
     this.bindEvents();
     this.bindCopyButtons(document);
+    this.bindForms(document);
     if (Cursor.supported()) this.cursor = new Cursor();
 
     this.start();
@@ -61,10 +65,15 @@ export default class App {
     projects.forEach((p) => urls.push(`/media/${p.slug}/featured.jpg`));
 
     await this.loader.preload([...new Set(urls)]);
-    await this.loader.finish();
 
+    /* Build the page now, while the loader's rocket is still on its way:
+       this is the heaviest stretch of work (a long block of the main
+       thread), and the loader animates on the compositor, so it can't stall
+       it. The landing then plays on a quiet main thread. */
     this.page = createPage({ el: this.pageEl, world: this.world, app: this });
     this.world.media.create(this.pageEl, this.page.id);
+
+    await this.loader.finish();
 
     gsap.ticker.add(this.loop);
 
@@ -103,6 +112,7 @@ export default class App {
     this.scroll.toTop(true);
     this.scroll.resize();
     this.bindCopyButtons(this.pageEl);
+    this.bindForms(this.pageEl);
 
     /* 3 — build the incoming page. */
     this.page = createPage({ el: this.pageEl, world: this.world, app: this });
@@ -113,6 +123,12 @@ export default class App {
 
     this.world.fadeTo(1, 0.7);
     this.page.enter();
+  }
+
+  /** A link to the page already showing: back to its top, the page's own way. */
+  toTop() {
+    if (store.isTransitioning) return;
+    this.page?.toTop();
   }
 
   /* ---------------------------------------------------------- extras */
@@ -139,6 +155,32 @@ export default class App {
       else a.removeAttribute('aria-current');
     });
     incoming.remove();
+  }
+
+  /**
+   * The header logo: hover (or tap, or keyboard focus) and its letters jump
+   * one by one while the rocket flies a lap and settles back in the R.
+   * Clicked on the page it links to (the router ignores a link to where you
+   * already are), it glides you back up to the top.
+   */
+  bindLogo() {
+    const mark = this.header?.querySelector('.logo-mark');
+    if (!mark) return;
+    this.logoRocket = new LogoRocket(mark);
+    const link = mark.closest('a');
+    link.addEventListener('pointerenter', () => this.logoRocket.play());
+    link.addEventListener('focus', () => {
+      if (link.matches(':focus-visible')) this.logoRocket.play();
+    });
+    link.addEventListener('click', (e) => {
+      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      if (new URL(link.href).pathname !== window.location.pathname || !this.page?.goTop) return;
+      e.preventDefault();
+      /* Close the phone menu first: closing it hands the scroll back, which
+         would cut the glide short. */
+      this.setMenu?.(false);
+      this.page.goTop();
+    });
   }
 
   /**
@@ -175,6 +217,13 @@ export default class App {
     });
     window.matchMedia('(max-width: 767px)').addEventListener('change', (e) => {
       if (!e.matches) this.setMenu(false);
+    });
+  }
+
+  /** The contact page's enquiry form (core/ContactForm.js). */
+  bindForms(root) {
+    root.querySelectorAll('[data-contact-form]').forEach((form) => {
+      if (!form._contact) form._contact = new ContactForm(form);
     });
   }
 

@@ -111,22 +111,27 @@ the bottom of `src/styles/pages.css`.
    of text and a big Contact us button (the About Us button, scaled up). An "All work" box beside the
    heading opens the full card stack at `/work/`. On phones it becomes a plain vertical list.
 
-### Swapping in your own sketches
+### The two of us in the hero
 
-The sketches in `public/media/team/*-sketch.svg` are placeholders. To use real
-ones, drop the files in (PNG, JPG or SVG) and update each entry in `team`:
+Meet and Prem are finished neon portraits (`public/media/team/meet.webp`,
+`prem.webp`), each with an angry twin (`meet-angry.webp`, `prem-angry.webp`).
+When a rock hits someone, their picture cuts to the angry one on impact,
+holds for a few seconds, then cuts straight back — one picture or the other,
+never both (the portraits are partly see-through, so the hidden one is
+hidden outright). The knock-back, the neon stutter, the lightning and the dizzy stars play as
+before. Both pictures are 4:5 and transparent (brightness is alpha: neon on
+black, minus the black).
 
-- `sketch` — the file path; `aspect` — width ÷ height of the drawing
-- `ink` — `'dark'` for pencil on white paper (the paper is keyed out),
-  `'light'` for light lines on a transparent or dark background
-- `eyes` — the centre of each eye, as fractions of the drawing (0..1 from the
-  top-left); `eyeR` is the eye radius as a fraction of the width
-- `face` — where the expressions pull: `brows` (inner brow ends),
-  `browsOuter` (outer ends), `mouth` (its centre) and `corners`. Measure
-  these on the new drawing — hurt, angry and sad are built from them
+To swap a portrait, drop the files in and update the entry in `team`:
+
+- `portrait`, `portraitAngry` — the two pictures (4:5, same body position)
 - `hit` (where a rock strikes and the neon shorts out), `crown` (top of the
   head, where the dizzy stars circle) and `hand` (where a thrown rock leaves
-  from)
+  from), as fractions of the picture (0..1 from the top-left)
+
+A line sketch tinted and animated by the site still works instead: give
+`sketch`, `aspect`, `ink` (`'light'` or `'dark'`), `eyes`/`eyeR` and `face`
+(the points the hurt / angry / sad expression warps pull on).
 
 Then run `npm run pages`. The neon colour comes from `colour`.
 
@@ -249,6 +254,17 @@ Each frame:
   turn green (the same effect as the About Us button). On phones the links
   fold behind a three-line menu button and open as a full-screen panel. No
   footer.
+- **Logo.** The brand artwork traced into SVG (`scripts/trace-logo.py` →
+  `src/content/logo.js`; re-run it if `scripts/brand/the-nerds.webp`
+  changes), one path per letter. Hover it and the letters jump one after
+  another like dominoes while the rocket blasts out of the R, comes back
+  round along its trail and settles in again, leaving tricolour clouds —
+  saffron, white, green — behind it (`fx/LogoRocket.js`). The loading
+  screen shows it large (`fx/LoaderLogo.js`): the letters rise in and the
+  rocket flies its trail, docking in the R once loading is done. Everything
+  there runs on the compositor (Web Animations, transform/opacity only), and
+  the page is built during the flight, so the heavy start-up work can't
+  make it stutter.
 - **Cursor.** On mouse / trackpad devices the pointer is a small star with an
   orbit that trails it; it opens up over links, turns into a dashed target over
   a rock, and steps aside for the text caret in form fields.
