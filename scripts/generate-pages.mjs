@@ -546,7 +546,7 @@ const contactPage = () => {
     const id = `cf-${f.name}`;
     const attrs = `class="field-input" id="${id}" name="${f.name}" maxlength="${f.max}" aria-describedby="${id}-error"${f.required ? ' required' : ''}`;
     const control = f.type === 'textarea'
-      ? `<textarea ${attrs} rows="${f.rows || 4}" data-lenis-prevent></textarea>`
+      ? `<textarea ${attrs} rows="${f.rows || 4}"></textarea>`
       : `<input ${attrs} type="${f.type}" autocomplete="${f.autocomplete || 'off'}"${f.type === 'tel' ? ' inputmode="tel"' : ''} />`;
     const optional = f.required ? '' : ` <span class="field-optional">(${esc(form.optional)})</span>`;
     return `          <div class="field${f.type === 'textarea' ? ' field-wide' : ''}" data-field="${f.name}">
