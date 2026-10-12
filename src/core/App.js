@@ -169,7 +169,8 @@ export default class App {
    * doesn't flicker between pages — and so its frosted glass can see (and
    * blur) the page beneath it. Inside a page's own stacking layer, the
    * backdrop blur has nothing to work with and text shows through.
-   * Each incoming page's header only tells us which link is current.
+   * Each incoming page's header only tells us which link is current (and
+   * whether we're inside its section — a project, under Work).
    */
   hoistHeader(pageEl) {
     const incoming = pageEl.querySelector('.site-header');
@@ -179,9 +180,12 @@ export default class App {
       document.body.insertBefore(incoming, document.body.firstChild);
       return;
     }
-    const current = [...incoming.querySelectorAll('a')].map((a) => a.classList.contains('is-current'));
+    const links = [...incoming.querySelectorAll('a')];
+    const current = links.map((a) => a.classList.contains('is-current'));
+    const inside = links.map((a) => a.classList.contains('is-inside'));
     [...this.header.querySelectorAll('a')].forEach((a, i) => {
       a.classList.toggle('is-current', !!current[i]);
+      a.classList.toggle('is-inside', !!inside[i]);
       if (current[i]) a.setAttribute('aria-current', 'page');
       else a.removeAttribute('aria-current');
     });

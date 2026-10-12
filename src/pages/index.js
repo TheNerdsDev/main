@@ -1,7 +1,7 @@
 import Page from './Page.js';
 
 /* Each page's own code loads only where it's needed — the welcome page's
-   rocks, reel and portholes stay out of every other page's download. App
+   rocks, reel and About frames stay out of every other page's download. App
    starts the current page's load at boot, alongside the loader, and warms
    the rest once the page is up, so a navigation never waits on one. */
 const LOADERS = {

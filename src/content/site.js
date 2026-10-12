@@ -30,7 +30,7 @@ export const main = {
   scrollLabel: 'Scroll Down',
   about: {
     text:
-      "We're Meet & Prem the Nerds, two curious minds who get way too excited about turning simple ideas into something creative. If you can dream it up, we'll probably nerd out building it.",
+      "We're Meet & Prem; the Nerds, two curious minds who get way too excited about turning simple ideas into something creative. If you can dream it up, we'll probably nerd out building it.",
     button: 'About Us',
     /* Shown in the empty frames until a scroll rolls the photos in. */
     hint: 'Scroll Down'
@@ -62,9 +62,8 @@ export const main = {
  *   crown  top of the head, where the dizzy stars circle
  *   hand   where a thrown rock leaves from
  *
- *
- * (In About, in the spaceship portholes, we're cartoon astronauts — drawn
- * in content/astronauts.js.)
+ *   photo     the square photo in About's frame (Meet's on the left, Prem's
+ *             on the right); photoAlt describes it
  */
 export const team = [
   {
@@ -76,7 +75,9 @@ export const team = [
     aspect: 0.8,
     hit: [0.5, 0.46],
     crown: [0.5, 0.3],
-    hand: [0.86, 0.84]
+    hand: [0.86, 0.84],
+    photo: '/media/team/about-prem.webp',
+    photoAlt: 'Prem, working at a laptop by a sunny window'
   },
   {
     id: 'meet',
@@ -87,7 +88,9 @@ export const team = [
     aspect: 0.8,
     hit: [0.495, 0.405],
     crown: [0.49, 0.235],
-    hand: [0.14, 0.84]
+    hand: [0.14, 0.84],
+    photo: '/media/team/about-meet.webp',
+    photoAlt: 'Meet, working at a sticker-covered laptop'
   }
 ];
 
@@ -162,10 +165,9 @@ export const finale = {
 
 /* Work index at `/work/` — the card stack. */
 export const workIndex = {
-  title: ['Built to be', 'Remembered'],
+  title: ["Work we're", 'proud of'],
   intro:
-    'We design and build high-performance websites for local businesses — with more going on beneath the surface.',
-  indexLabel: 'Index'
+    "A selection of the websites, software and tools we've designed and built from scratch. Pick one to see how it came together."
 };
 
 export const info = {
