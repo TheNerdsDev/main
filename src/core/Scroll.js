@@ -12,7 +12,15 @@ export default class Scroll {
       syncTouch: false,
       touchMultiplier: 1.6,
       wheelMultiplier: 1,
-      autoResize: true
+      autoResize: true,
+      /* A wheel over something that can scroll itself (a contact form
+         textarea with more text than fits) scrolls that, natively, until it
+         reaches its end; otherwise — and from then on — the page scrolls,
+         smoothly, as everywhere else. (It used to be blanket
+         data-lenis-prevent: an empty textarea then handed the wheel to the
+         browser, which passed it on to the page natively while Lenis was
+         still easing it, and the two tugged the page back and forth.) */
+      allowNestedScroll: true
     });
 
     this.prev = 0;
@@ -38,8 +46,15 @@ export default class Scroll {
   stop()  { this.lenis.stop(); }
   start() { this.lenis.start(); }
 
-  toTop(immediate = true) {
-    this.lenis.scrollTo(0, { immediate });
+  /**
+   * To the top, for certain (a new page always starts there): the window
+   * itself first, then Lenis. Lenis alone skips a jump to where it believes
+   * it already is — and it can be wrong, as when the browser has moved the
+   * page without it — or a jump while it's stopped.
+   */
+  toTop() {
+    window.scrollTo(0, 0);
+    this.lenis.scrollTo(0, { immediate: true, force: true });
     store.scroll = 0;
     store.velocity = 0;
   }

@@ -32,14 +32,16 @@ read or write it. Only the function can.
 
 ### 3. Resend (the email)
 
-1. Sign up at <https://resend.com> and create an **API key** (Sending access).
+1. Sign up at <https://resend.com> **with thenerds2k25@gmail.com** (enquiries
+   go to the address the account is under), then create an **API key**
+   (Sending access).
 2. Until you verify a domain, Resend sends **only to the address you signed up
-   with**, from `onboarding@resend.dev`. That's enough to start, so set
-   `CONTACT_TO` to that address.
-3. To send to both of you, or from your own address (e.g.
-   `hello@thenerds.studio`): Resend → Domains → add your domain → add the DNS
-   records it shows → then set `CONTACT_FROM` (e.g. `The Nerds <hello@thenerds.studio>`)
-   and list both inboxes in `CONTACT_TO`.
+   with**, from `onboarding@resend.dev`. That's all the enquiry emails need,
+   so `CONTACT_TO` is thenerds2k25@gmail.com.
+3. Once you have a domain (later): Resend → Domains → add it → add the DNS
+   records it shows → set `CONTACT_FROM` (e.g. `The Nerds <hello@yourdomain>`).
+   Then it can send to anyone, which is what a thank-you email to the client
+   will need.
 
 ### 4. Deploy the function
 
@@ -58,7 +60,7 @@ Set its settings. Use your own key and address, and the sites allowed to post
 to it: your local dev servers now, your real domain once it's live:
 
 ```bash
-npx supabase secrets set RESEND_API_KEY=re_xxxxxxxx CONTACT_TO=you@example.com ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5180 RATE_SALT=any-long-random-text
+npx supabase secrets set RESEND_API_KEY=re_xxxxxxxx CONTACT_TO=thenerds2k25@gmail.com ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5180,http://192.168.29.9:5173 RATE_SALT=any-long-random-text
 ```
 
 Then deploy it. `--no-verify-jwt` lets the site call it without a key, and

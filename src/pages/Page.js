@@ -14,8 +14,13 @@ export default class Page {
     this.splits = instances;
     this.lines = lines;
 
+    /* Everything that fades in and out with the page, besides the split
+       lines. Whatever's missing here (or in a page's own enter/leave) pops
+       in when the page arrives and cuts out when it goes: the details'
+       values (a project's year, role and GitHub link; the contact page's
+       hours, place, email and phones) and empty photo frames too. */
     this.fades = [
-      ...el.querySelectorAll('.label, .meta-list li, .capability-list li, .project-meta, .project-index, .copyright, .back, .nav, .logo, .social-list li, .service li, .contact-form')
+      ...el.querySelectorAll('.label, .meta-list li, .metas dd, .contact-detail dd, .capability-list li, .project-meta, .project-index, .copyright, .back, .nav, .logo, .social-list li, .service li, .contact-form, .media-wrapper.is-empty')
     ];
 
     this.prepare();
@@ -46,10 +51,15 @@ export default class Page {
 
     this.world?.media.enter();
     this.onEnter?.(tl);
+    this.enterTl = tl;
     return tl;
   }
 
   leave() {
+    /* Stop the entrance if it's still playing (left straight away, or
+       passed through on the way somewhere else): it would keep pulling
+       everything back in while this takes it out. */
+    this.enterTl?.kill();
     const tl = gsap.timeline();
 
     tl.to(this.lines, {

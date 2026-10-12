@@ -11,6 +11,10 @@ export default class Router {
     this.app = app;
     this.cache = new Map();
     this.current = window.location.pathname;
+    /* Every page starts at its top (App.transition). Left to the browser,
+       Back would put the old scroll position back as well — the next page
+       then arrives scrolled deep into nothing. */
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
 
     this.bind();
   }
@@ -42,6 +46,8 @@ export default class Router {
       if (url.origin === window.location.origin) this.prefetch(url.pathname);
     };
 
+    /* Back or forward while a page is still changing: go there as soon as
+       it's done (ignored, the address and the page would disagree). */
     this.onPop = () => this.go(window.location.pathname, false);
 
     document.addEventListener('click', this.onClick);
@@ -65,23 +71,33 @@ export default class Router {
     else setTimeout(run, 1200);
   }
 
+  /**
+   * Change to the page at `path`, one change at a time. Asked for another
+   * while one is under way (a second click, Back), it goes there as soon as
+   * this one's done: the last one asked for wins, none is dropped.
+   */
   async go(path, push = true) {
-    if (store.isTransitioning || path === this.current) return;
+    if (store.isTransitioning) {
+      this.pending = { path, push };
+      return;
+    }
+    if (path === this.current) return;
 
-    const html = await this.prefetch(path);
-    if (!html) { window.location.href = path; return; }
-
+    /* Claimed before the fetch: a click while the next page's HTML is on its
+       way would otherwise start a second change alongside this one, the two
+       fighting over the page. */
     store.isTransitioning = true;
     store.html.classList.add('is-transitioning');
 
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-    const nextPage = doc.querySelector('.page');
-    if (!nextPage) { window.location.href = path; return; }
-
-    if (push) history.pushState({ path }, '', path);
-    this.current = path;
-
     try {
+      const html = await this.prefetch(path);
+      const doc = html && new DOMParser().parseFromString(html, 'text/html');
+      const nextPage = doc && doc.querySelector('.page');
+      if (!nextPage) { window.location.href = path; return; }
+
+      if (push) history.pushState({ path }, '', path);
+      this.current = path;
+
       await this.app.transition(nextPage, doc.title);
     } catch (err) {
       /* A swap that fails halfway would otherwise leave the site frozen
@@ -93,6 +109,10 @@ export default class Router {
       store.isTransitioning = false;
       store.html.classList.remove('is-transitioning');
     }
+
+    const next = this.pending;
+    this.pending = null;
+    if (next && next.path !== this.current) this.go(next.path, next.push);
   }
 
   destroy() {

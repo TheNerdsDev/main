@@ -36,6 +36,10 @@ const shell = ({ title, description, pageId, body, bodyClass = '' }) => `<!docty
   html::-webkit-scrollbar { display: none; }
   .loader { position: fixed; inset: 0; z-index: 100; background: #05060F; }
   .loader > * { visibility: var(--styled, hidden); }
+  /* Already tucked away above the top, where base.css keeps it: otherwise
+     it starts in view, and base.css slides it up over the loader (it sits
+     above it, for keyboard users) as a white box for a moment. */
+  .skip-link { position: absolute; top: 0; left: 0; transform: translateY(-120%); }
 </style>
 </head>
 <body class="${bodyClass}">
@@ -546,7 +550,7 @@ const contactPage = () => {
     const id = `cf-${f.name}`;
     const attrs = `class="field-input" id="${id}" name="${f.name}" maxlength="${f.max}" aria-describedby="${id}-error"${f.required ? ' required' : ''}`;
     const control = f.type === 'textarea'
-      ? `<textarea ${attrs} rows="${f.rows || 4}" data-lenis-prevent></textarea>`
+      ? `<textarea ${attrs} rows="${f.rows || 4}"></textarea>`
       : `<input ${attrs} type="${f.type}" autocomplete="${f.autocomplete || 'off'}"${f.type === 'tel' ? ' inputmode="tel"' : ''} />`;
     const optional = f.required ? '' : ` <span class="field-optional">(${esc(form.optional)})</span>`;
     return `          <div class="field${f.type === 'textarea' ? ' field-wide' : ''}" data-field="${f.name}">

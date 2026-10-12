@@ -39,6 +39,18 @@ export default class Work extends Page {
     super(opts);
     this.accent = this.el.dataset.accent;
     if (this.accent) this.world?.setAccent(this.accent);
+
+    /* Hidden from the moment it's built, like the rest of the page: the
+       video and the next-project link rise in, the certificates drop onto
+       their pins (onEnter). Hidden only by the entrance, they'd show for a
+       frame first. */
+    const q = (s) => [...this.el.querySelectorAll(s)];
+    this.film = this.el.querySelector('.work-film');
+    this.certEls = q('.cert');
+    this.next = this.el.querySelector('.next-project');
+    gsap.set([this.film, this.next].filter(Boolean), { opacity: 0, y: 32 });
+    if (this.certEls.length) gsap.set(this.certEls, { opacity: 0, y: -24 });
+
     this.bindCerts();
   }
 
@@ -234,15 +246,24 @@ export default class Work extends Page {
   }
 
   onEnter(tl) {
-    const next = this.el.querySelector('.next-project');
-    if (next) tl.from(next, { opacity: 0, y: 24, duration: 0.9, ease: 'power3.out' }, 0.5);
+    if (this.next) tl.to(this.next, { opacity: 1, y: 0, duration: 0.9, ease: 'power3.out' }, 0.5);
 
     /* The project's video, if it leads with one: rises in and plays. */
-    const film = this.el.querySelector('.work-film');
-    if (film) {
-      tl.from(film, { opacity: 0, y: 40, duration: 1.1, ease: 'power3.out' }, 0.3);
-      this.playFilm(film);
+    if (this.film) {
+      tl.to(this.film, { opacity: 1, y: 0, duration: 1.1, ease: 'power3.out' }, 0.3);
+      this.playFilm(this.film);
     }
+    /* …and the certificates either side drop onto their pins. */
+    if (this.certEls.length) {
+      tl.to(this.certEls, { opacity: 1, y: 0, duration: 1, ease: 'back.out(1.6)', stagger: 0.12 }, 0.55);
+    }
+  }
+
+  /* The video, the certificates and the next-project link go with the rest
+     of the page, rather than staying on until it's swapped out. */
+  onLeave(tl) {
+    const parts = [this.film, ...this.certEls, this.next].filter(Boolean);
+    if (parts.length) tl.to(parts, { opacity: 0, y: -10, duration: 0.4, ease: 'power2.in' }, 0);
   }
 
   /**
