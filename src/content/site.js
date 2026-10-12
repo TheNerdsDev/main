@@ -30,7 +30,7 @@ export const main = {
   scrollLabel: 'Scroll Down',
   about: {
     text:
-      "We're Meet & Prem the Nerds, two curious minds who get way too excited about turning simple ideas into something creative. If you can dream it up, we'll probably nerd out building it.",
+      "We're Meet & Prem; the Nerds, two curious minds who get way too excited about turning simple ideas into something creative. If you can dream it up, we'll probably nerd out building it.",
     button: 'About Us',
     /* Shown in the empty frames until a scroll rolls the photos in. */
     hint: 'Scroll Down'
@@ -165,10 +165,9 @@ export const finale = {
 
 /* Work index at `/work/` — the card stack. */
 export const workIndex = {
-  title: ['Built to be', 'Remembered'],
+  title: ["Work we're", 'proud of'],
   intro:
-    'We design and build high-performance websites for local businesses — with more going on beneath the surface.',
-  indexLabel: 'Index'
+    "A selection of the websites, software and tools we've designed and built from scratch. Pick one to see how it came together."
 };
 
 export const info = {

@@ -75,10 +75,12 @@ const roll = (text) =>
     })
     .join('')}</span>`;
 
-const navItem = (href, label, on) =>
-  `<a class="nav-link roll-link${on ? ' is-current' : ''}" href="${href}" data-link aria-label="${esc(label)}"${on ? ' aria-current="page"' : ''}>${roll(label)}</a>`;
+/* `inside`: on a page within the current section (a project, under Work),
+   whose rule under the link is drawn shorter. */
+const navItem = (href, label, on, inside) =>
+  `<a class="nav-link roll-link${on ? ' is-current' : ''}${on && inside ? ' is-inside' : ''}" href="${href}" data-link aria-label="${esc(label)}"${on ? ' aria-current="page"' : ''}>${roll(label)}</a>`;
 
-const header = (current) => `  <header class="site-header">
+const header = (current, inside = false) => `  <header class="site-header">
     <!-- Hover: the letters jump one by one and the rocket flies a lap (fx/LogoRocket.js). -->
     <a class="logo" href="/" data-link aria-label="${esc(studio.wordmark)} — home">${logoSvg({ id: 'site-logo' })}</a>
     <!-- Phones: the links fold into a panel behind this (core/App.js bindMenu). -->
@@ -86,7 +88,7 @@ const header = (current) => `  <header class="site-header">
       <span class="menu-toggle-line"></span><span class="menu-toggle-line"></span><span class="menu-toggle-line"></span>
     </button>
     <nav class="nav" id="site-nav" aria-label="Primary">
-      ${navItem('/work/', 'Work', current === 'projects')}
+      ${navItem('/work/', 'Work', current === 'projects', inside)}
       ${navItem('/info/', 'About', current === 'info')}
       ${navItem('/contact/', studio.contactLabel || 'Contact', current === 'contact')}
     </nav>
@@ -200,11 +202,8 @@ const showcaseSection = () => {
             <span class="show-card-inner">
               <span class="show-card-media"><img class="show-card-img" src="/media/${p.slug}/featured.jpg"${srcset(p.slug)} alt="${esc(p.name)}" loading="lazy" decoding="async" /></span>
               <span class="show-card-meta">
-                <span class="show-card-no">${pad(i + 1)}</span>
                 <span class="show-card-name">${esc(p.name)}</span>
-                <span class="show-card-year">${esc(p.year)}</span>
               </span>
-              <span class="show-card-excerpt">${esc(p.excerpt)} &middot; ${esc(p.role)}</span>
             </span>
           </a>`)
     .join('\n');
@@ -216,7 +215,6 @@ const showcaseSection = () => {
             <h2 class="showcase-title" id="showcase-title">${showcase.title.map((l) => `<span class="line"><span class="line-inner">${esc(l)}</span></span>`).join(' ')}</h2>
             <a class="showcase-all" href="/work/" data-link data-cursor="Open">
               <span class="showcase-all-text">${esc(showcase.more)}</span>
-              <span class="showcase-all-sub">${projects.length} projects</span>
               <svg class="showcase-all-arrow" viewBox="0 0 48 48" aria-hidden="true"><path d="M10 38 38 10M16 10h22v22" /></svg>
             </a>
           </div>
@@ -371,8 +369,7 @@ ${header('projects')}
 ${cards}
       </ul>
 
-      <aside class="project-index">
-        <span class="project-index-title">${esc(workIndex.indexLabel)}</span>
+      <aside class="project-index" aria-label="Projects">
         <ul class="project-titles">
 ${titles}
         </ul>
@@ -424,7 +421,7 @@ const workPage = (p) => {
     pageId: 'work',
     body: `<div class="page" id="work" data-page="work" data-slug="${p.slug}" data-accent="${p.accent}">
   <div class="page-content" id="page-content" tabindex="-1">
-${header('projects')}
+${header('projects', true)}
 
     <a class="back link" href="/work/" data-link><span class="line-inner"><span class="back-arrow" aria-hidden="true">&larr;</span>Work</span></a>
 

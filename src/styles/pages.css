@@ -76,7 +76,6 @@ html .media-wrapper.is-empty {
   display: flex; flex-direction: column; align-items: flex-end;
   min-width: var(--col);
 }
-#projects .project-index-title { margin-bottom: 1.6rem; color: var(--c-accent); }
 #projects .project-titles {
   display: flex; flex-direction: column; align-items: flex-end;
   margin-bottom: 2.4rem;
@@ -105,6 +104,9 @@ html .media-wrapper.is-empty {
   transition: color 0.4s var(--ease-out);
 }
 #projects .project-title.is-active { color: var(--c-ink); font-weight: 600; }
+/* Pointed at: green, like the header links. */
+#projects .project-title:hover,
+#projects .project-title:focus-visible { color: #0ACD88; }
 
 @media screen and (max-width: 1365px) and (pointer: coarse) {
   #projects .text-wrapper, #projects .project-index { position: static; width: auto; pointer-events: auto; }

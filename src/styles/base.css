@@ -124,7 +124,7 @@ h1 {
   text-transform: uppercase;
 }
 .text { font-size: 1.7rem; line-height: 140%; }
-.overline, .project-meta, .nav, .logo, .back, .copied, .project-index-title, .project-title {
+.overline, .project-meta, .nav, .logo, .back, .copied, .project-title {
   font-size: 1.5rem;
   line-height: 120%;
 }
@@ -132,7 +132,7 @@ h1 {
   .label { font-size: 1.3rem; }
   .text  { font-size: 1.5rem; }
   .overline, .project-meta, .nav, .logo, .back, .copied,
-  .project-index-title, .project-title { font-size: 1.4rem; }
+  .project-title { font-size: 1.4rem; }
 }
 
 .line { display: block; position: relative; overflow: hidden; }
@@ -291,7 +291,11 @@ h1 {
   left: 0; right: 0; bottom: -0.5rem;
   height: 1px;
   background: #0ACD88;
+  transition: transform 0.6s var(--ease-out);
 }
+/* Inside its section (a project, under Work), the rule draws in shorter —
+   and back out to full on the way back to the index. */
+.roll-link.is-inside::after { transform: scaleX(0.4); }
 .copied {
   position: absolute; right: 0; top: 2.4rem;
   color: var(--c-dim);
