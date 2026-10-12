@@ -122,10 +122,18 @@ const plan = (w, h) => {
   return { unit, howMany: clamp((FILL * area) / (unit * unit), 0.6, 1.8) };
 };
 
+/* The scene — its WebGL context, its maps and its compiled shaders — lasts
+   the whole visit: a page that ends with the shower takes over the last
+   one's (canvas and all, see the constructor) rather than building it all
+   again, which on each visit to a page held up its entrance. */
+let kept = null;
+/* Whether WebGL2 works here — asked once (asking makes a context). */
+let webgl2 = null;
+
 export default class PlanetShower {
   static supported() {
-    const c = document.createElement('canvas');
-    return !!c.getContext('webgl2') && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (webgl2 === null) webgl2 = !!document.createElement('canvas').getContext('webgl2');
+    return webgl2 && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
 
   /** How many of each kind can ever fall at once (the widest screens). */
@@ -142,7 +150,6 @@ export default class PlanetShower {
    */
   constructor(section, canvas, { onShower } = {}) {
     this.section = section;
-    this.canvas = canvas;
     this.onShower = onShower;
     this.bodies = [];
     this.order = [];
@@ -153,13 +160,33 @@ export default class PlanetShower {
 
     /* Phones and small screens get 1K maps and lighter geometry. */
     const small = Math.min(window.screen?.width || 9999, window.screen?.height || 9999) < 820;
-    try {
-      this.scene = new PlanetScene(canvas, { small });
-    } catch {
-      this.dead = true;
-      return;
+    this.small = small;
+    const reuse = kept && kept.small === small && !kept.scene.renderer.getContext().isContextLost();
+    if (reuse) {
+      /* The last page's scene, ready to go: its canvas takes this one's place. */
+      canvas.replaceWith(kept.canvas);
+      canvas = kept.canvas;
+      this.scene = kept.scene;
+      this.scene.blank = false;
+    } else {
+      kept?.scene.dispose();
     }
-    canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); this.dead = true; this.stop(); });
+    kept = null;
+    this.canvas = canvas;
+    if (!reuse) {
+      try {
+        this.scene = new PlanetScene(canvas, { small });
+      } catch {
+        this.dead = true;
+        return;
+      }
+    }
+    this.onLost = (e) => {
+      e.preventDefault();
+      this.dead = true;
+      this.stop();
+    };
+    canvas.addEventListener('webglcontextlost', this.onLost);
 
     const local = (e) => {
       const r = this.section.getBoundingClientRect();
@@ -247,7 +274,7 @@ export default class PlanetShower {
       this.refit = setTimeout(() => {
         if (this.dead) return;
         const r = this.section.getBoundingClientRect();
-        if (r.top < window.innerHeight && r.bottom > 0 && this.scene.ready) this.shower({ reveal: false });
+        if (r.top < window.innerHeight && r.bottom > 0 && this.scene.warmed) this.shower({ reveal: false });
         else {
           this.bodies = [];
           this.order = [];
@@ -556,8 +583,9 @@ export default class PlanetShower {
       this.armed = false;
       this.pending = true;
     }
-    /* Let it fall once the maps are in (they start loading well before). */
-    if (this.pending && this.scene.ready) {
+    /* Let it fall once the maps are in and on the GPU (they start loading
+       well before). */
+    if (this.pending && this.scene.warmed) {
       this.pending = false;
       if (this.section.clientWidth !== this.W || this.section.clientHeight !== this.H) this.resize();
       this.shower();
@@ -593,6 +621,16 @@ export default class PlanetShower {
     this.section.removeEventListener('pointerup', this.onUp);
     this.section.removeEventListener('pointercancel', this.onUp);
     this.section.removeEventListener('pointerleave', this.onLeave);
-    this.scene?.dispose();
+    this.canvas?.removeEventListener('webglcontextlost', this.onLost);
+    if (!this.scene) return;
+    if (this.dead) {
+      this.scene.dispose();
+      return;
+    }
+    /* Kept, emptied, for the next page that has the shower — out of this
+       page, so it doesn't hold the rest of the old page in memory. */
+    this.scene.render([], 0);
+    this.canvas.remove();
+    kept = { scene: this.scene, canvas: this.canvas, small: this.small };
   }
 }
