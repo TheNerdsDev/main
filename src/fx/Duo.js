@@ -133,7 +133,7 @@ export default class Duo {
 
     this.actions = [...el.querySelectorAll('.duo-action')].map((btn, i) => {
       const orbit = ORBITS[i % ORBITS.length];
-      return { btn, i, orbit, hovered: false, pace: 1, angle: orbit.start, x: 0, y: 0 };
+      return { btn, i, orbit, hovered: false, pace: 1, angle: orbit.start, x: 0, y: 0, at: -Infinity };
     });
     this.rocks = new SpaceRocks(this.actions.map((a) => a.btn));
     this.actionsEl = el.querySelector('.duo-actions');
@@ -696,68 +696,110 @@ export default class Duo {
       const breathe = 1 + 0.07 * Math.sin(t * 0.9 + phase) * (1 - e);
       const rr = r * shrink * breathe;
 
-      /* Clockwise, always (the angle rises on a y-down screen). Each one
-         surges and lags on its own rhythm, and a tighter orbit runs faster —
-         like anything caught spiralling in. */
-      if (!this.gone) {
-        const surge = 1 + 0.3 * Math.sin(t * 0.37 + phase);
-        const pull = Math.min(Math.pow(shrink, -1.5), 9);
-        act.angle += dt * SPEED * act.pace * surge * pull;
-      }
-
-      const ex = Math.cos(act.angle) * rx * rr;
-      const ey = Math.sin(act.angle) * ry * rr;
-      let x = cx + ex * ct - ey * st + Math.sin(t * 2.3 + phase * 1.7) * 6 * (1 - e);
-      let y = cy + ex * st + ey * ct + Math.cos(t * 1.9 + phase * 1.1) * 6 * (1 - e);
       /* The rock's drawn radius at its largest on this orbit (the near side
          of the ring is drawn 10% bigger). */
       const rockR = o * 0.42 * size * 1.1;
-      if (fe < 1) {
-        /* At home, stay inside the sketches' box and below the header —
-           easing away from the edges rather than sliding along them. */
-        const band = o * 0.9;
-        const top = Math.max(box.top + o * 0.6, this.ceiling + rockR * 1.15, roof + 8 + rockR);
-        const left = Math.max(box.left + o * 0.6, wall + 16 + rockR);
-        const bx = soften(x, left, box.right - o * 0.6, band);
-        const by = soften(y, top, box.bottom - o * 0.6, band);
-        x = bx + (x - bx) * fe;
-        y = by + (y - by) * fe;
-      }
+      /* Its little drift, off the line. */
+      const wx = Math.sin(t * 2.3 + phase * 1.7) * 6 * (1 - e);
+      const wy = Math.cos(t * 1.9 + phase * 1.1) * 6 * (1 - e);
 
-      if (avoid > 0) {
+      /* Where the orbit is at `angle`, on the screen. */
+      const place = (angle) => {
+        const ex = Math.cos(angle) * rx * rr;
+        const ey = Math.sin(angle) * ry * rr;
+        let x = cx + ex * ct - ey * st + wx;
+        let y = cy + ex * st + ey * ct + wy;
+        if (fe < 1) {
+          /* At home, stay inside the sketches' box and below the header —
+             easing away from the edges rather than sliding along them. */
+          const band = o * 0.9;
+          const top = Math.max(box.top + o * 0.6, this.ceiling + rockR * 1.15, roof + 8 + rockR);
+          const left = Math.max(box.left + o * 0.6, wall + 16 + rockR);
+          const bx = soften(x, left, box.right - o * 0.6, band);
+          const by = soften(y, top, box.bottom - o * 0.6, band);
+          x = bx + (x - bx) * fe;
+          y = by + (y - by) * fe;
+        }
+        if (!(avoid > 0)) return { x, y };
+
         /* Never across either figure or their names. Each pushes the path
            outwards inside a band around it, smoothly — so a rock arcs round
            a sketch the way something in orbit rounds a planet. The header
-           (and the heading, where it sits on top) is a ceiling and the
-           bottom of the screen a floor; where they disagree a few passes
-           settle it, so
-           a rock slides round instead of being shoved from one into the
-           other. */
+           (and the heading, where it sits on top) is a ceiling, the bottom
+           of the screen a floor and the welcome copy beside them a wall.
+           Where a figure is nearer one of those than its berth, the berth
+           narrows towards it — most straight at it, less and less to the
+           sides — so the rock arcs over the head (or under the feet), a
+           closer shave, rather than being flattened against the edge and
+           sliding along it. */
+        const lo = Math.max(this.ceiling + rockR, roof + 8 + rockR);
+        const hi = vh - rockR;
+        const wl = Math.max(wall + 16 + rockR, rockR);
+        const wr = vw - rockR;
         for (let pass = 0; pass < 4; pass++) {
           for (const fc of faces) {
+            const sx = fc.rx + rockR;
+            const sy = fc.ry + rockR;
             const dx = x - fc.x;
             const dy = y - fc.y;
-            const d = Math.hypot(dx / (fc.rx + rockR), dy / (fc.ry + rockR));
-            if (d < berth) {
-              /* Eased out to the edge of the berth: d -> 1 + c d^2, which
-                 is 1 at the figure and meets the berth at its edge. */
-              const c = (berth - 1) / (berth * berth);
-              const push = ((1 + c * d * d) / Math.max(d, 0.05) - 1) * avoid;
-              x += dx * push;
-              y += dy * push;
-            }
+            const d = Math.hypot(dx / sx, dy / sy);
+            if (d >= berth) continue;
+            /* The room straight out from the figure to each edge, in its
+               radii, and the berth this way round. */
+            const ux = dx / sx / Math.max(d, 1e-4);
+            const uy = dy / sy / Math.max(d, 1e-4);
+            const narrow = (room, u) => berth - Math.max(0, berth - room) * u;
+            let b = berth;
+            if (uy < 0) b = Math.min(b, narrow((fc.y - lo) / sy, -uy));
+            if (uy > 0) b = Math.min(b, narrow((hi - fc.y) / sy, uy));
+            if (ux < 0) b = Math.min(b, narrow((fc.x - wl) / sx, -ux));
+            if (ux > 0) b = Math.min(b, narrow((wr - fc.x) / sx, ux));
+            b = Math.max(b, 1.02);
+            if (d >= b) continue;
+            /* Eased out to the edge of the berth: d -> 1 + c d^2, which
+               is 1 at the figure and meets the berth at its edge. */
+            const c = (b - 1) / (b * b);
+            const push = ((1 + c * d * d) / Math.max(d, 0.05) - 1) * avoid;
+            x += dx * push;
+            y += dy * push;
           }
-          const lo = Math.max(this.ceiling + rockR, roof + 8 + rockR);
           if (y < lo) y += (lo - y) * avoid;
-          const hi = vh - rockR;
           if (y > hi) y += (hi - y) * avoid;
-          /* …and the welcome copy beside them a wall, so a figure can't
-             push a rock back across it. */
-          const wl = wall + 16 + rockR;
           if (x < wl) x += (wl - x) * avoid;
           x = Math.min(Math.max(x, rockR), vw - rockR);
         }
+        return { x, y };
+      };
+
+      /* Clockwise, always (the angle rises on a y-down screen). Each one
+         surges and lags on its own rhythm, and a tighter orbit runs faster —
+         like anything caught spiralling in.
+         It's paced on screen, not by the angle: rounding a figure stretches
+         the path, and there the path also sways under the rock (the loop
+         breathes, the figures bob) — so the rock raced past one side of a
+         figure and all but stopped on another. Instead it floats on at its
+         own speed all the way round, the sway made up for at home. */
+      if (!this.gone) {
+        const surge = 1 + 0.3 * Math.sin(t * 0.37 + phase);
+        const pull = Math.min(Math.pow(shrink, -1.5), 9);
+        const speed = SPEED * act.pace * surge * pull * ((rx + ry) / 2) * rr;
+        const h = 0.02;
+        const p0 = place(act.angle - h);
+        const p1 = place(act.angle + h);
+        const tx = p1.x - p0.x;
+        const ty = p1.y - p0.y;
+        const len = Math.max(Math.hypot(tx, ty), 1e-6);
+        const along = Math.max(len / (2 * h), 1);
+        let sway = 0;
+        if (t - act.at < 0.1 && dt > 0) {
+          const here = place(act.angle);
+          sway = (((here.x - act.x) * tx + (here.y - act.y) * ty) / len / dt) * avoid * (1 - e);
+        }
+        act.angle += (clamp(speed - sway, speed * 0.25, speed * 3) / along) * dt;
       }
+
+      const { x, y } = place(act.angle);
+      act.at = t;
 
       /* Tilted ring: the near side (lower) a touch larger than the far side;
          closing in, they also come up towards the viewer. */

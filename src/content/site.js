@@ -30,7 +30,7 @@ export const main = {
   scrollLabel: 'Scroll Down',
   about: {
     text:
-      "We're Meet & Prem the Nerds, two curious minds who get way too excited about turning simple ideas into something creative. If you can dream it up, we'll probably nerd out building it.",
+      "We're Meet & Prem; the Nerds, two curious minds who get way too excited about turning simple ideas into something creative. If you can dream it up, we'll probably nerd out building it.",
     button: 'About Us',
     /* Shown in the empty frames until a scroll rolls the photos in. */
     hint: 'Scroll Down'
