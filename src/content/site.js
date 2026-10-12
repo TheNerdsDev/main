@@ -185,7 +185,6 @@ export const info = {
       'Consultation',
       'UI/UX Design',
       'Full Stack Development',
-      'Digital Strategy',
       'AI Solutions',
       'Social Media Management',
       'Search Engine Optimization (SEO)',
@@ -333,4 +332,8 @@ export const getProject = (slug) => projects.find((p) => p.slug === slug);
 export const getNext = (slug) => {
   const i = projects.findIndex((p) => p.slug === slug);
   return projects[(i + 1) % projects.length];
+};
+export const getPrev = (slug) => {
+  const i = projects.findIndex((p) => p.slug === slug);
+  return projects[(i - 1 + projects.length) % projects.length];
 };

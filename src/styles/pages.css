@@ -299,14 +299,18 @@ html .media-wrapper.is-empty {
   font-size: 2.4rem;
   line-height: 136%;
 }
+/* The year and the code link, side by side, centred under the
+   description. */
 #work .metas {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--unit);
-  max-width: 96rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 3.2rem 8rem;
+  max-width: 62rem;
   margin: 0 auto 12rem;
   padding: 0 var(--unit);
   align-items: start;
+  text-align: center;
 }
 #work .metas .meta { width: auto; margin: 0; }
 #work .meta-list li { color: var(--c-dim); }
@@ -321,9 +325,21 @@ html .media-wrapper.is-empty {
 }
 #work .content .media-wrapper:first-child { grid-column: 1 / -1; aspect-ratio: 2.1 / 1; }
 
-#work .work-bottom { padding: 0 var(--unit); text-align: center; }
-#work .next-project { display: inline-flex; flex-direction: column; align-items: center; gap: 1rem; }
-#work .next-project .text {
+/* The previous project on the left, the next on the right — closer in
+   than the page's edges, around the middle. */
+#work .work-bottom {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 4rem;
+  max-width: 96rem;
+  margin: 0 auto;
+  padding: 0 var(--unit);
+}
+#work .project-step { display: inline-flex; flex-direction: column; gap: 1rem; }
+#work .project-step--prev { align-items: flex-start; text-align: left; }
+#work .project-step--next { align-items: flex-end; text-align: right; }
+#work .project-step .text {
   font-family: 'Anton', sans-serif;
   font-size: 6.4rem;
   text-transform: uppercase;
@@ -331,7 +347,6 @@ html .media-wrapper.is-empty {
 }
 
 @media screen and (max-width: 1099px) {
-  #work .metas { grid-template-columns: repeat(2, 1fr); row-gap: 3.2rem; }
   #work .description { font-size: 2rem; }
 }
 @media screen and (max-width: 767px) {
@@ -339,8 +354,10 @@ html .media-wrapper.is-empty {
   #work .content { grid-template-columns: 1fr; }
   #work .content .media-wrapper:first-child { aspect-ratio: var(--ar); }
   #work .hero-media .media-wrapper { aspect-ratio: var(--ar); }
-  #work .metas { grid-template-columns: 1fr; }
-  #work .next-project .text { font-size: 4.4rem; }
+  /* One above the other, centred. */
+  #work .work-bottom { flex-direction: column; align-items: center; gap: 4.8rem; }
+  #work .project-step { align-items: center; text-align: center; }
+  #work .project-step .text { font-size: 4.4rem; }
 }
 
 /* =================================================================
@@ -361,10 +378,11 @@ html .media-wrapper.is-empty {
   align-items: start;
   align-content: start;
 }
-#info .title { margin-bottom: 3.2rem; }
+#info .title { margin-bottom: 6.4rem; }
 #info .title .line + .line { margin-top: 0.6rem; }
 #info .info-portrait .media-wrapper { aspect-ratio: 16 / 9; }
-#info .lead { max-width: 52rem; font-size: 2.2rem; line-height: 145%; }
+/* A softer grey than the heading, so the two read as heading and text. */
+#info .lead { max-width: 52rem; font-size: 2.2rem; line-height: 145%; color: rgba(var(--c-ink-rgb), 0.66); }
 
 /* What we offer and what we're best at: a section of its own, the two
    boxes side by side and the second a step lower, as on the reference.

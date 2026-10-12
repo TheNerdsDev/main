@@ -5,7 +5,7 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { studio, main, team, workIndex, info, contact, showcase, finale, projects, getNext } from '../src/content/site.js';
+import { studio, main, team, workIndex, info, contact, showcase, finale, projects, getNext, getPrev } from '../src/content/site.js';
 import { logoSvg } from '../src/content/logo.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -399,6 +399,7 @@ ${previews}
 
 const workPage = (p) => {
   const next = getNext(p.slug);
+  const prev = getPrev(p.slug);
   /* The WebP copy when there is one (scripts/media-variants.py) — the same
      picture, lighter. */
   const shot = (i) => {
@@ -408,10 +409,6 @@ const workPage = (p) => {
   const shots = Array.from({ length: p.shots }, (_, i) =>
     `        ${workMedia(p, shot(i), `${p.name} — detail ${i + 1}`)}`
   ).join('\n');
-
-  const deliverables = p.deliverables
-    .map((d) => `<li class="text">${esc(d)}</li>`)
-    .join('');
 
   /* Certificates pinned either side of the video (Work.js swings them and
      opens one whole on a click; without script, the link opens the image). */
@@ -452,8 +449,6 @@ ${header('projects', true)}
 
     <dl class="metas">
       <div class="meta"><dt class="label">Year</dt><dd class="text">${esc(p.year)}</dd></div>
-      <div class="meta"><dt class="label">Role</dt><dd class="text">${esc(p.role)}</dd></div>
-      <div class="meta"><dt class="label">Scope</dt><dd><ul class="meta-list">${deliverables}</ul></dd></div>
       ${p.github ? `<div class="meta"><dt class="label">Code</dt><dd><a class="text link" href="${esc(p.github)}" target="_blank" rel="noopener noreferrer"><span class="line-inner">GitHub &nearr;</span></a></dd></div>` : ''}
     </dl>
 
@@ -461,12 +456,17 @@ ${header('projects', true)}
 ${shots}
     </div>
 
-    <div class="work-bottom">
-      <a class="next-project link" href="/work/${next.slug}/" data-link>
-        <span class="label">Next project</span>
+    <!-- The project before and the one after (the list wraps round). -->
+    <nav class="work-bottom" aria-label="More projects">
+      <a class="project-step project-step--prev link" href="/work/${prev.slug}/" data-link>
+        <span class="label"><span aria-hidden="true">&larr; </span>Previous project</span>
+        <span class="text"><span class="line-inner">${esc(prev.name)}</span></span>
+      </a>
+      <a class="project-step project-step--next link" href="/work/${next.slug}/" data-link>
+        <span class="label">Next project<span aria-hidden="true"> &rarr;</span></span>
         <span class="text"><span class="line-inner">${esc(next.name)}</span></span>
       </a>
-    </div>
+    </nav>
 
   </div>
 </div>`
