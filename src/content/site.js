@@ -171,9 +171,26 @@ export const workIndex = {
 };
 
 export const info = {
-  title: ['Who we are'],
+  /* Each line must fit on one row — it is revealed behind its own mask. */
+  title: ['Two nerds.', 'No templates.'],
   lead:
-    'We are Meet and Prem, two developers based in Surat. We design and build websites, custom software and automation for businesses of every size. Every project is handled by the two of us, from the first conversation through to launch and beyond.'
+    "We're Meet and Prem, a two-person studio from Surat turning big ideas into fast websites, smart software and automation that does the heavy lifting. No hand-offs, no middlemen: the two of us who hear your idea are the two who build it.",
+  /* The two capsules under it, side by side. */
+  services: {
+    title: 'Services',
+    items: ['Consultation', 'UI/UX Design', 'Digital Strategy', 'AI Solutions']
+  },
+  specialties: {
+    title: 'Specialized in',
+    items: [
+      'Web Development',
+      'Social Media Management',
+      'Search Engine Optimization (SEO)',
+      'Business Automation',
+      'Motion Graphics & Video',
+      'Full-Stack Development'
+    ]
+  }
 };
 
 export const projects = [

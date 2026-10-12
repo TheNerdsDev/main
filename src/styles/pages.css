@@ -348,8 +348,9 @@ html .media-wrapper.is-empty {
 #info .title { padding: 0 var(--unit); margin-bottom: 3.2rem; }
 #info .title .line + .line { margin-top: 0.6rem; }
 
-/* A few lines about us on the left, straight under the heading; a 16:9
-   picture on the right, level with them at the top. */
+/* A few lines about us on the left, straight under the heading, and under
+   them two capsules side by side (what we offer, what we're best at); a
+   16:9 picture on the right, level with them at the top. */
 #info .info-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
@@ -361,9 +362,49 @@ html .media-wrapper.is-empty {
 #info .info-portrait .media-wrapper { aspect-ratio: 16 / 9; }
 #info .lead { max-width: 52rem; font-size: 2.2rem; line-height: 145%; }
 
+#info .info-pills {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.6rem;
+  margin-top: 4.8rem;
+}
+/* A horizontal cylinder: round at both ends, the same height side by side. */
+#info .info-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.1rem;
+  padding: 2.8rem 3.2rem;
+  border: 1px solid rgba(var(--c-ink-rgb), 0.85);
+  border-radius: 999px;
+  text-align: center;
+  background: rgba(var(--c-ink-rgb), 0.025);
+  box-shadow: 0 0 2.4rem rgba(var(--c-ink-rgb), 0.08), inset 0 0 2.4rem rgba(var(--c-ink-rgb), 0.05);
+}
+#info .info-pill-title {
+  font-family: 'Anton', 'Arial Narrow', sans-serif;
+  font-weight: 400;
+  font-size: 2.6rem;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+#info .info-pill-list li {
+  font-size: 1.65rem;
+  line-height: 1.42;
+  color: rgba(var(--c-ink-rgb), 0.82);
+}
+
 @media screen and (max-width: 1099px) {
   #info .info-grid { grid-template-columns: 1fr; gap: 4rem; margin-bottom: 10rem; }
   #info .lead { font-size: 2rem; }
+  #info .info-pills { max-width: 64rem; }
+}
+
+/* Phones: too narrow side by side — one above the other. */
+@media screen and (max-width: 599px) {
+  #info .info-pills { grid-template-columns: 1fr; }
 }
 
 /* =================================================================

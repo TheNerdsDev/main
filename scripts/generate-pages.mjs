@@ -108,6 +108,10 @@ const workMedia = (p, src, alt) =>
 const splitTitle = (lines) =>
   lines.map((l) => `<span class="line"><span class="line-inner">${esc(l)}</span></span>`).join('\n        ');
 
+/* Text with each of us named in our own colour (the first mention). */
+const teamNames = (text) =>
+  team.reduce((t, m) => t.replace(m.name, `<span class="about-name" style="color: ${m.colour}">${m.name}</span>`), esc(text));
+
 /* The closing screen — "Ready for liftoff?" — on the welcome page and
    About: planets shower down from the seam above and pile up along the
    bottom (fx/Finale.js, fx/PlanetShower.js). */
@@ -300,7 +304,7 @@ ${actions}
       <div class="about-stage">
 ${frame(meet, 'left')}
         <div class="about-body">
-          <p class="about-text">${team.reduce((t, m) => t.replace(m.name,`<span class="about-name" style="color: ${m.colour}">${m.name}</span>`), esc(main.about.text))}</p>
+          <p class="about-text">${teamNames(main.about.text)}</p>
           <div class="about-cta">
             <a class="about-button" href="/info/" data-link aria-label="${esc(main.about.button)}">
               <span class="about-button-text" aria-hidden="true">${buttonChars}</span>
@@ -464,6 +468,12 @@ ${shots}
 
 /* ----------------------------------------------------------------- info */
 
+/* One of the two capsules under About's intro: a heading and its list. */
+const infoPill = (key, { title, items }) => `          <section class="info-pill" aria-labelledby="info-${key}">
+            <h2 class="info-pill-title" id="info-${key}">${esc(title)}</h2>
+            <ul class="info-pill-list">${items.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
+          </section>`;
+
 const infoPage = () => shell({
   title: `${studio.name} — About`,
   description: info.lead,
@@ -478,7 +488,11 @@ ${header('info')}
 
     <div class="info-grid">
       <div class="info-body">
-        <p class="lead" data-split-lines>${esc(info.lead)}</p>
+        <p class="lead" data-split-lines>${teamNames(info.lead)}</p>
+        <div class="info-pills">
+${infoPill('services', info.services)}
+${infoPill('specialties', info.specialties)}
+        </div>
       </div>
       <div class="info-portrait">
         ${mediaBlock('/media/studio/portrait.jpg', 'The studio')}

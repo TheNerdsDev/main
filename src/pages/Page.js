@@ -20,7 +20,7 @@ export default class Page {
        values (a project's year, role and GitHub link; the contact page's
        hours, place, email and phones) and empty photo frames too. */
     this.fades = [
-      ...el.querySelectorAll('.label, .meta-list li, .metas dd, .contact-detail dd, .capability-list li, .project-meta, .project-index, .copyright, .back, .nav, .logo, .social-list li, .service li, .contact-form, .media-wrapper.is-empty')
+      ...el.querySelectorAll('.label, .meta-list li, .metas dd, .contact-detail dd, .capability-list li, .project-meta, .project-index, .copyright, .back, .nav, .logo, .social-list li, .service li, .contact-form, .info-pill, .media-wrapper.is-empty')
     ];
 
     this.prepare();
