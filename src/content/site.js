@@ -135,7 +135,6 @@ export const contact = {
     ],
     optional: 'Optional',
     button: 'Send Your Idea',
-    sending: 'Sending…',
     sent: {
       title: 'Got it — thank you!',
       text: "Your message is with us. We'll get back to you within 24 hours."
@@ -178,20 +177,53 @@ export const info = {
   title: ['A little', 'about us'],
   lead:
     'We’re The Nerds, a small team from Surat, India, who love building cool stuff for the web. From websites to custom software and automation, we help businesses bring their ideas to life. No middlemen, no unnecessary fuss — just us, working with you to make something great.',
-  /* The two boxes in their own section under the heading and photo. */
-  services: {
-    title: 'Services',
-    items: ['Consultation', 'UI/UX Design', 'Digital Strategy', 'AI Solutions']
-  },
-  specialties: {
-    title: 'Specialized in',
+  /* The two boxes in their own section under the heading and photo.
+     The Offer: the services clients hire us for. */
+  offer: {
+    title: 'The Offer',
     items: [
-      'Web Development',
+      'Consultation',
+      'UI/UX Design',
+      'Full Stack Development',
+      'Digital Strategy',
+      'AI Solutions',
       'Social Media Management',
       'Search Engine Optimization (SEO)',
       'Business Automation',
-      'Motion Graphics & Video',
-      'Full-Stack Development'
+      'Motion Graphics & Video'
+    ]
+  },
+  /* The Work: what comes out of it — the things we make, not the services
+     again. Hovering a kind (tapping, on a phone) opens its panel beside the
+     box: the line under its name, then what it covers. */
+  work: {
+    title: 'The Work',
+    kinds: [
+      {
+        name: 'Digital Platforms',
+        text: 'Websites, digital products, and online experiences.',
+        items: ['Marketing Websites & Landing Pages', 'E-commerce Stores', 'Web Applications & Portals', 'Content Management Systems (CMS)']
+      },
+      {
+        name: 'Intelligent Products',
+        text: 'AI-powered tools and connected digital systems.',
+        items: ['AI-Powered Applications', 'AI Chatbots & Virtual Assistants', 'Custom Business Tools', 'API Integrations']
+      },
+      {
+        name: 'Digital Performance',
+        text: 'Digital assets and measurement systems that support online growth.',
+        items: ['SEO-Ready Website Structures', 'Conversion-Focused Landing Pages', 'Analytics Dashboards', 'Performance Reports']
+      },
+      {
+        name: 'Visual Content',
+        text: 'Visual assets created for brands, campaigns, and digital platforms.',
+        items: ['Motion Graphics & Animations', 'Promotional Videos', 'Social Media Creatives', 'Digital Brand Assets']
+      },
+      {
+        name: 'Business Systems',
+        text: 'Practical systems that improve business operations.',
+        items: ['Automated Workflows', 'Admin Panels & Dashboards', 'Lead Management Systems', 'Reporting & Integration Pipelines']
+      }
     ]
   }
 };

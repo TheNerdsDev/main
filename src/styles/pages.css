@@ -395,7 +395,7 @@ html .media-wrapper.is-empty {
   aspect-ratio: 338 / 422;
   container-type: inline-size;
 }
-#info .info-card + .info-card { margin-top: calc(var(--card-w) * 0.43); }
+#info .info-cards > * + * { margin-top: calc(var(--card-w) * 0.43); }
 #info .info-card-frame {
   position: absolute;
   inset: 0;
@@ -455,6 +455,8 @@ html .media-wrapper.is-empty {
   stroke-dashoffset: var(--len);
 }
 #info .info-cards.is-armed .info-card-rise { transform: translateY(110%); }
+/* (The Work's rows have room around the words: down past it.) */
+#info .info-cards.is-armed .info-work-kind .info-card-rise { transform: translateY(calc(110% + 3cqw)); }
 #info .info-cards.is-in .info-card-edge {
   stroke-dashoffset: 0;
   transition: stroke-dashoffset 0.75s cubic-bezier(0.33, 1, 0.68, 1) calc(var(--i) * 0.12s);
@@ -464,8 +466,219 @@ html .media-wrapper.is-empty {
   transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1) calc(var(--i) * 0.12s + 0.1s);
 }
 #info .info-cards.is-in .info-card-list .info-card-rise {
+  transform: none;
   transition-duration: 0.5s;
   transition-delay: calc(var(--i) * 0.12s + 0.42s + var(--j) * 0.07s);
+}
+
+/* The Offer: nine services, set a little closer to fit the same box. */
+#info .info-card--offer .info-card-list { gap: 2.7cqw; margin-top: 9cqw; }
+#info .info-card--offer .info-card-list li { font-size: 4.25cqw; }
+
+/* The Work: the box, and its panel. The panel is measured in the box's
+   width too (.info-work is the box's width). */
+#info .info-work {
+  position: relative;
+  flex: none;
+  width: var(--card-w);
+  container-type: inline-size;
+}
+#info .info-work .info-card { width: 100%; }
+
+/* Its five kinds, as rows between hairlines; the open one lights up and
+   points at its panel. */
+#info .info-work-list { gap: 0; margin-top: 8cqw; border-top: 1px solid var(--c-line); }
+#info .info-work-list li { border-bottom: 1px solid var(--c-line); padding-bottom: 0; margin-bottom: 0; }
+#info .info-work-kind {
+  display: block;
+  width: 100%;
+  padding: 2.9cqw 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+#info .info-work-kind:focus-visible { outline: none; }
+#info .info-work-kind .info-card-rise { display: flex; align-items: baseline; gap: 3.2cqw; }
+#info .info-work-no {
+  font-family: 'Syne Mono', monospace;
+  font-size: 3.1cqw;
+  letter-spacing: 0.06em;
+  color: var(--c-dim);
+  transition: color 0.3s ease;
+}
+#info .info-work-name {
+  flex: 1;
+  font-size: 4.7cqw;
+  color: rgba(var(--c-ink-rgb), 0.82);
+  transition: color 0.3s ease, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+#info .info-work-arrow {
+  font-size: 4.2cqw;
+  opacity: 0;
+  transform: translateX(-1.6cqw);
+  transition: opacity 0.3s ease, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+#info .info-work-kind:hover .info-work-name,
+#info .info-work-kind.is-open .info-work-name,
+#info .info-work-kind:focus-visible .info-work-name { color: var(--c-ink); transform: translateX(1.2cqw); }
+#info .info-work-kind.is-open .info-work-no,
+#info .info-work-kind:focus-visible .info-work-no { color: var(--c-ink); }
+#info .info-work-kind.is-open .info-work-arrow,
+#info .info-work-kind:focus-visible .info-work-arrow { opacity: 1; transform: none; }
+
+/* The panel: the boxes' double outline, over a dark ground so it reads
+   against the stars. All five sit in one place (the tallest sets the
+   height), the open one showing; switching, the old one fades out as the
+   new one's lines rise in, one after another. */
+#info .info-work-box {
+  position: relative;
+  padding: 9cqw 9cqw 8cqw;
+  border: 1px solid rgba(var(--c-ink-rgb), 0.85);
+  border-radius: 1.6rem;
+  background: rgba(5, 6, 15, 0.86);
+}
+#info .info-work-box::before {
+  content: '';
+  position: absolute;
+  inset: 1rem;
+  border: 1px solid rgba(var(--c-ink-rgb), 0.85);
+  border-radius: 1.1rem;
+  pointer-events: none;
+}
+#info .info-work-details { display: grid; }
+#info .info-work-detail {
+  grid-area: 1 / 1;
+  visibility: hidden;
+  transition: visibility 0s 0.3s;
+}
+#info .info-work-detail.is-open { visibility: visible; transition: none; }
+#info .info-work-detail > p,
+#info .info-work-items li {
+  opacity: 0;
+  transform: translateY(1.2rem);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+#info .info-work-detail.is-open > p,
+#info .info-work-detail.is-open .info-work-items li {
+  opacity: 1;
+  transform: none;
+  transition: opacity 0.45s ease calc(0.08s + var(--k) * 0.05s), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1) calc(0.08s + var(--k) * 0.05s);
+}
+#info .info-work-head {
+  display: flex;
+  align-items: baseline;
+  gap: 2.6cqw;
+  font-size: 6.4cqw;
+  line-height: 1.15;
+  color: var(--c-ink);
+}
+#info .info-work-head .info-work-no { color: var(--c-dim); }
+#info .info-work-text {
+  margin-top: 2.6cqw;
+  font-size: 3.9cqw;
+  line-height: 1.45;
+  color: var(--c-dim);
+}
+#info .info-work-items {
+  display: flex;
+  flex-direction: column;
+  gap: 2.4cqw;
+  margin-top: 6cqw;
+}
+#info .info-work-items li {
+  position: relative;
+  padding-left: 5cqw;
+  font-size: 4.1cqw;
+  line-height: 1.35;
+  color: rgba(var(--c-ink-rgb), 0.86);
+}
+#info .info-work-items li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.68em;
+  width: 2.4cqw;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.7;
+}
+
+/* Under the box (phones, tablets, anything without a mouse): it opens
+   downwards, the page making room; tapping a kind again closes it. */
+#info .info-work-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  margin-top: 0;
+  transition: grid-template-rows 0.55s cubic-bezier(0.16, 1, 0.3, 1), margin-top 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+}
+#info .info-work-clip { min-height: 0; overflow: hidden; }
+#info .info-work.is-open .info-work-panel { grid-template-rows: 1fr; margin-top: 2.4rem; }
+#info .info-work-line { display: none; }
+#info .info-work-kind.is-open .info-work-arrow { transform: rotate(90deg); }
+
+/* Beside the box (wide screens with a mouse): it slides out from the box's
+   edge, level with the row, a hairline joining the two; moving to another
+   row, it glides up or down to meet it. */
+@media screen and (min-width: 1100px) and (hover: hover) {
+  #info .info-work-panel {
+    position: absolute;
+    top: 0;
+    left: calc(100% + 9cqw);
+    width: 92cqw;
+    display: block;
+    margin: 0;
+    opacity: 0;
+    visibility: hidden;
+    clip-path: inset(0 100% 0 0 round 1.6rem);
+    transform: translate3d(-4cqw, var(--panel-y, 0px), 0);
+    transition: clip-path 0.4s cubic-bezier(0.65, 0, 0.35, 1), transform 0.4s cubic-bezier(0.65, 0, 0.35, 1), opacity 0.3s ease 0.1s, visibility 0s 0.4s;
+  }
+  #info .info-work.is-open .info-work-panel {
+    margin: 0;
+    opacity: 1;
+    visibility: visible;
+    clip-path: inset(0 0 0 0 round 1.6rem);
+    transform: translate3d(0, var(--panel-y, 0px), 0);
+    transition: clip-path 0.65s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease, visibility 0s;
+  }
+  #info .info-work-clip { overflow: visible; }
+  #info .info-work-kind.is-open .info-work-arrow { transform: none; }
+  #info .info-work-line {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 100%;
+    width: 9cqw;
+    height: 1px;
+    background: rgba(var(--c-ink-rgb), 0.6);
+    transform-origin: left center;
+    transform: translateY(var(--row-y, 0px)) scaleX(0);
+    transition: transform 0.35s cubic-bezier(0.65, 0, 0.35, 1);
+    pointer-events: none;
+  }
+  #info .info-work.is-open .info-work-line {
+    transform: translateY(var(--row-y, 0px)) scaleX(1);
+    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  /* The pointer crosses the gap to the panel without letting go. */
+  #info .info-work.is-open::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 100%;
+    width: 9cqw;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #info .info-work-panel,
+  #info .info-work-line,
+  #info .info-work-detail > p,
+  #info .info-work-items li { transition: none !important; }
 }
 
 @media screen and (max-width: 1099px) {
@@ -478,7 +691,7 @@ html .media-wrapper.is-empty {
 @media screen and (max-width: 599px) {
   #info .info-services { --card-w: min(100%, 44rem); padding: 8rem var(--unit); }
   #info .info-cards { flex-direction: column; align-items: center; gap: 2.4rem; width: 100%; }
-  #info .info-card + .info-card { margin-top: 0; }
+  #info .info-cards > * + * { margin-top: 0; }
 }
 
 /* =================================================================

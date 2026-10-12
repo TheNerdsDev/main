@@ -10,8 +10,10 @@ const PHONE = /^[+\d\s().-]+$/;
 /**
  * The contact page's enquiry form. Checks it here (the function checks it
  * again), sends it to the function — which saves it to the database and
- * emails it to us — and shows how that went: sending, the thank-you, or
- * an error with our address to fall back on. Its words come from the page
+ * emails it to us — and shows the thank-you at once: the checks here are
+ * the function's own, so once they pass it's as good as through. Only if
+ * the sending then fails does the form come back, as filled in, with an
+ * error and our address to fall back on. Its words come from the page
  * (site.js → generate-pages.mjs).
  *
  * Errors come back from the function as codes per field (required,
@@ -67,15 +69,7 @@ export default class ContactForm {
     first?.focus();
   }
 
-  setBusy(on) {
-    this.busy = on;
-    this.button.disabled = on;
-    this.form.setAttribute('aria-busy', String(on));
-    this.status.classList.remove('is-error');
-    this.status.textContent = on ? this.text.sending : '';
-  }
-
-  onSubmit = async (e) => {
+  onSubmit = (e) => {
     e.preventDefault();
     if (this.busy) return;
 
@@ -84,45 +78,68 @@ export default class ContactForm {
     const errors = this.check(data);
     this.showErrors(errors);   // (also clears any left from a try before)
     if (Object.keys(errors).length) return;
+    this.status.classList.remove('is-error');
+    this.status.textContent = '';
     if (!ENDPOINT) {
       console.warn('[ContactForm] VITE_CONTACT_ENDPOINT is not set — see supabase/README.md');
       this.fail();
       return;
     }
 
-    this.setBusy(true);
+    /* Thanked straight away; it goes in the background. */
+    this.busy = true;
+    this.done();
+    this.post(data);
+  };
+
+  /**
+   * Off to the function. Sent as plain text (the function reads it as
+   * JSON either way): that's a "simple" request, with no permission check
+   * first — one round trip, not two. keepalive: it still goes through if
+   * they leave the page straight after.
+   */
+  async post(data) {
     try {
       const res = await fetch(ENDPOINT, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        keepalive: true,
+        headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
         body: JSON.stringify({ ...data, elapsed: Date.now() - this.opened, page: location.pathname })
       });
-      const body = await res.json().catch(() => ({}));
       if (res.ok) {
-        this.done();
+        this.busy = false;
         return;
       }
+      const body = await res.json().catch(() => ({}));
+      this.undo();
       if (res.status === 422 && body.errors) {
-        this.setBusy(false);
         this.showErrors(body.errors);
         return;
       }
       throw new Error(`HTTP ${res.status}`);
     } catch (err) {
       console.warn('[ContactForm]', err);
-      this.setBusy(false);
+      this.undo();
       this.fail();
     }
-  };
+  }
 
   /** Sent: the fields give way to the thank-you. */
   done() {
-    this.busy = false;
-    this.form.removeAttribute('aria-busy');
     this.form.classList.add('is-sent');
     this.sent.hidden = false;
     this.sent.focus({ preventScroll: true });
     gsap.from(this.sent.children, { opacity: 0, y: 16, duration: 0.8, ease: 'power3.out', stagger: 0.08 });
+  }
+
+  /** It didn't go after all: back to the form, just as they filled it in. */
+  undo() {
+    this.busy = false;
+    gsap.killTweensOf(this.sent.children);
+    gsap.set(this.sent.children, { clearProps: 'opacity,transform' });
+    this.sent.hidden = true;
+    this.form.classList.remove('is-sent');
+    this.button.focus({ preventScroll: true });
   }
 
   /** Couldn't send: say so, with our address to write to instead. */

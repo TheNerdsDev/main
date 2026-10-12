@@ -486,13 +486,40 @@ const OUTLINES = [
   { x: 10.5, y: 10.5, w: 317, h: 401, r: 11 }
 ];
 const perimeter = ({ w, h, r }) => (2 * (w + h - 4 * r) + 2 * Math.PI * r).toFixed(1);
-const infoCard = (key, { title, items }, i) => `        <section class="info-card" aria-labelledby="info-${key}" style="--i: ${i}">
+const infoCard = (key, title, list, i) => `        <section class="info-card info-card--${key}" aria-labelledby="info-${key}" style="--i: ${i}">
           <svg class="info-card-frame" viewBox="0 0 338 422" aria-hidden="true">${OUTLINES.map((o) => `<rect class="info-card-edge" x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" rx="${o.r}" style="--len: ${perimeter(o)}" />`).join('')}</svg>
           <div class="info-card-inner">
             <h2 class="info-card-title" id="info-${key}"><span class="info-card-rise">${esc(title)}</span></h2>
-            <ul class="info-card-list">${items.map((x, j) => `<li style="--j: ${j}"><span class="info-card-rise">${esc(x)}</span></li>`).join('')}</ul>
+            ${list}
           </div>
         </section>`;
+
+/* The Offer: the services, one per line. */
+const offerCard = ({ title, items }) => infoCard('offer', title,
+  `<ul class="info-card-list">${items.map((x, j) => `<li style="--j: ${j}"><span class="info-card-rise">${esc(x)}</span></li>`).join('')}</ul>`, 0);
+
+/* The Work: its kinds, numbered, each a button that opens its panel —
+   beside the box, level with the row, on a wide screen with a mouse;
+   under it otherwise (pages.css, Info.js). The panels share one place:
+   only the open one shows. */
+const workCard = ({ title, kinds }) => {
+  const no = (k) => String(k + 1).padStart(2, '0');
+  const rows = kinds.map((kind, k) => `<li style="--j: ${k}"><button class="info-work-kind" type="button" data-kind="${k}" aria-expanded="false" aria-controls="info-work-${k}"><span class="info-card-rise"><span class="info-work-no">${no(k)}</span><span class="info-work-name">${esc(kind.name)}</span><span class="info-work-arrow" aria-hidden="true">→</span></span></button></li>`).join('');
+  const panels = kinds.map((kind, k) => `
+              <div class="info-work-detail" id="info-work-${k}" role="region" aria-label="${esc(kind.name)}">
+                <p class="info-work-head" style="--k: 0"><span class="info-work-no">${no(k)}</span> ${esc(kind.name)}</p>
+                <p class="info-work-text" style="--k: 1">${esc(kind.text)}</p>
+                <ul class="info-work-items">${kind.items.map((x, j) => `<li style="--k: ${j + 2}">${esc(x)}</li>`).join('')}</ul>
+              </div>`).join('');
+  return `        <div class="info-work">
+${infoCard('work', title, `<ol class="info-card-list info-work-list">${rows}</ol>`, 1)}
+          <span class="info-work-line" aria-hidden="true"></span>
+          <div class="info-work-panel">
+            <div class="info-work-clip"><div class="info-work-box"><div class="info-work-details">${panels}
+            </div></div></div>
+          </div>
+        </div>`;
+};
 
 const infoPage = () => shell({
   title: `${studio.name} — About`,
@@ -516,12 +543,12 @@ ${header('info')}
       </div>
     </div>
 
-    <!-- Below, in a section of their own: what we offer and what we're
-         best at, two boxes stepping down the page. -->
+    <!-- Below, in a section of their own: what we offer and what we make,
+         two boxes stepping down the page. -->
     <section class="info-services" aria-label="What we do">
       <div class="info-cards">
-${infoCard('services', info.services, 0)}
-${infoCard('specialties', info.specialties, 1)}
+${offerCard(info.offer)}
+${workCard(info.work)}
       </div>
     </section>
 
@@ -552,7 +579,7 @@ const contactPage = () => {
     .join('');
 
   /* The enquiry form (core/ContactForm.js sends it). Its errors and the
-     sending/sent states are written by the script; the labels are here. */
+     sent state are written by the script; the labels are here. */
   const { form } = contact;
   const field = (f) => {
     const id = `cf-${f.name}`;
@@ -586,7 +613,7 @@ ${header('contact')}
 
       <p class="lead" data-split-lines>${lead}</p>
 
-      <form class="contact-form" data-contact-form data-mailto="${esc(studio.email)}" data-messages="${esc(JSON.stringify({ sending: form.sending, failed: form.failed, ...form.errors }))}" novalidate>
+      <form class="contact-form" data-contact-form data-mailto="${esc(studio.email)}" data-messages="${esc(JSON.stringify({ failed: form.failed, ...form.errors }))}" novalidate>
 ${form.fields.map(field).join('\n')}
           <!-- A trap for bots: hidden from people, filled in by scripts. -->
           <div class="field-trap" aria-hidden="true">
