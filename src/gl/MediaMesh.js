@@ -177,8 +177,13 @@ export default class MediaMesh extends Component {
   }
 
   leave() {
+    /* Its entrance first, the not-yet-started (staggered, delayed) part
+       included: starting later, that would override this, and an
+       overridden tween never completes — the page change awaiting it
+       would wait forever. */
+    gsap.killTweensOf(this.uniforms.uEnter);
     return gsap.to(this.uniforms.uEnter, {
-      value: 0, duration: 0.5, ease: 'power2.in', overwrite: 'auto'
+      value: 0, duration: 0.5, ease: 'power2.in'
     });
   }
 

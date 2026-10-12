@@ -8,7 +8,7 @@ import World from '../gl/World.js';
 import Cursor from './Cursor.js';
 import LogoRocket from '../fx/LogoRocket.js';
 import ContactForm from './ContactForm.js';
-import { createPage, loadPage, warmPages } from '../pages/index.js';
+import { buildPage, createPage, loadPage, warmPages } from '../pages/index.js';
 import { projects } from '../content/site.js';
 
 /**
@@ -112,15 +112,26 @@ export default class App {
   async transition(nextPageEl, title) {
     const outgoing = this.page;
 
-    /* 1 — pull the current page apart. */
-    await Promise.all([
-      outgoing.leave().then(() => {}),
-      this.world.media.leave(),
-      this.world.fadeTo(0.25, 0.55).then(() => {})
+    /* 1 — pull the current page apart, and meanwhile fetch the next page's
+       code: it has to be in hand before its markup goes in, or the markup
+       shows raw (text at full opacity, nothing hidden for its entrance)
+       while the code is still on the way. */
+    const code = loadPage(nextPageEl.dataset.page);
+    /* The exit animations, waited for — but never past 2.5s: an animation
+       cut short by another never reports done, and a page change left
+       waiting on it would freeze the site. */
+    await Promise.race([
+      Promise.all([
+        outgoing.leave().then(() => {}),
+        this.world.media.leave(),
+        this.world.fadeTo(0.25, 0.55).then(() => {})
+      ]),
+      new Promise((r) => setTimeout(r, 2500))
     ]);
+    const pageCode = await code;
 
-    /* 2 — swap the DOM. (No page until the next is built: its code may
-       still be on the way, and the loop mustn't run a destroyed one.) */
+    /* 2 — swap the DOM. (No page until the next is built: the loop mustn't
+       run a destroyed one.) */
     outgoing.destroy();
     this.page = null;
     this.hoistHeader(nextPageEl);
@@ -128,13 +139,14 @@ export default class App {
     this.pageEl = nextPageEl;
     document.title = title;
 
-    this.scroll.toTop(true);
+    this.scroll.toTop();
     this.scroll.resize();
     this.bindCopyButtons(this.pageEl);
     this.bindForms(this.pageEl);
 
-    /* 3 — build the incoming page. */
-    this.page = await createPage({ el: this.pageEl, world: this.world, app: this });
+    /* 3 — build the incoming page, in the same task as the swap: it hides
+       what its entrance reveals before the browser can paint it raw. */
+    this.page = buildPage(pageCode, { el: this.pageEl, world: this.world, app: this });
     store.pageId = this.page.id;
     this.world.media.create(this.pageEl, this.page.id);
 

@@ -13,6 +13,13 @@ export default class Info extends Page {
     this.unmagnet = magnetic([this.el.querySelector('.finale-button')]);
   }
 
+  /* The closing screen goes with the rest of the page (as on the welcome
+     page), rather than cutting out when it's swapped. */
+  onLeave(tl) {
+    const finale = this.el.querySelector('.finale');
+    if (finale) tl.to(finale, { opacity: 0, duration: 0.45, ease: 'power2.in' }, 0);
+  }
+
   resize() {
     super.resize();
     this.finaleFx?.resize();

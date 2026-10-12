@@ -9,7 +9,7 @@ export const studio = {
   tagline: 'Creative Development Studio',
   description:
     'A two-person studio building websites, software and automation for businesses that deserve better than a template.',
-  email: 'hello@thenerds.studio',
+  email: 'thenerds2k25@gmail.com',
   /* The header's way to the contact page. */
   contactLabel: 'Contact Us',
   location: 'Surat, IN — working remotely',
@@ -104,7 +104,7 @@ export const contact = {
   details: [
     { label: 'Response time', value: 'Within 24 hours' },
     { label: 'Based in', value: 'Surat, IN — working remotely' },
-    { label: 'Email', value: 'hello@thenerds.studio', href: 'mailto:hello@thenerds.studio' },
+    { label: 'Email', value: 'thenerds2k25@gmail.com', href: 'mailto:thenerds2k25@gmail.com' },
     {
       label: 'Phone',
       lines: [
@@ -132,7 +132,7 @@ export const contact = {
     sending: 'Sending…',
     sent: {
       title: 'Got it — thank you!',
-      text: "Your message is with us. We'll get back to you within two working days."
+      text: "Your message is with us. We'll get back to you within 24 hours."
     },
     /* Shown if it can't be sent; the address follows it. */
     failed: "That didn't go through. Please try again in a moment, or write to us at",

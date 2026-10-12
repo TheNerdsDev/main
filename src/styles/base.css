@@ -67,6 +67,9 @@ html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; }
 @media screen and (max-width: 767px)  { html { font-size: 2.5vw; } }
 
 html.is-transitioning { pointer-events: none; }
+/* …except the header: a tab clicked while a page is changing is where the
+   visitor wants to go next (the router takes them there once it's done). */
+html.is-transitioning .site-header { pointer-events: auto; }
 html.is-loading { overflow: hidden; }
 
 /* Everything that isn't a heading (Anton) or one of the mono accents (Syne
