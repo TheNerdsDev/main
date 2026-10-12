@@ -2,8 +2,15 @@ import {
   WebGLRenderer, Scene, PerspectiveCamera, AmbientLight, DirectionalLight, Mesh, Vector3
 } from 'three';
 import gsap from 'gsap';
-import { makeAsteroid, rockMaterial } from './asteroid.js';
+import { makeAsteroid, prebuildAsteroids, rockMaterial } from './asteroid.js';
 import { rand } from './particles.js';
+
+/* The last page's offscreen renderer and material, kept when it goes (as
+   RockStage keeps its own), so coming back doesn't build them again. */
+let kept = null;
+
+/* Each floating rock's shape, by its place in the row. */
+const shape = (i) => ({ seed: 31 + i * 17, detail: 5, craters: 12 + i * 2 });
 
 /**
  * The four free-floating space rocks around the sketches. Each is a real
@@ -12,12 +19,15 @@ import { rand } from './particles.js';
  * the rocks are on screen.
  */
 export default class SpaceRocks {
+  /** Build the shapes of the first `n` rocks while nothing else is going on. */
+  static prepare(n) { prebuildAsteroids(Array.from({ length: n }, (_, i) => shape(i))); }
+
   constructor(buttons) {
     this.items = buttons.map((btn, i) => ({
       btn,
       i,
       canvas: btn.querySelector('.duo-action-rock'),
-      geo: makeAsteroid({ seed: 31 + i * 17, detail: 5, craters: 12 + i * 2 }),
+      geo: makeAsteroid(shape(i)),
       rot: new Vector3(rand(0, 6.28), rand(0, 6.28), rand(0, 6.28)),
       spin: new Vector3(rand(0.15, 0.35), rand(0.3, 0.6), rand(-0.15, 0.15)),
       boost: 0,
@@ -26,8 +36,19 @@ export default class SpaceRocks {
     /* 0 → 1 as the rocks rush into each other: they spin up hard. */
     this.frenzy = 0;
 
-    this.renderer = new WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'low-power' });
-    this.renderer.setClearColor(0x000000, 0);
+    const reuse = kept && !kept.renderer.getContext().isContextLost();
+    if (reuse) {
+      ({ renderer: this.renderer, material: this.material } = kept);
+    } else {
+      if (kept) {
+        kept.material.dispose();
+        kept.renderer.dispose();
+      }
+      this.renderer = new WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'low-power' });
+      this.renderer.setClearColor(0x000000, 0);
+      this.material = rockMaterial(false, { bump: 1.2 });
+    }
+    kept = null;
     this.scene = new Scene();
     this.camera = new PerspectiveCamera(28, 1, 0.1, 50);
     this.camera.position.z = 4.4;
@@ -40,7 +61,6 @@ export default class SpaceRocks {
     rim.position.set(0.7, -0.2, -0.8);
     this.scene.add(key, rim);
 
-    this.material = rockMaterial(false, { bump: 1.2 });
     this.mesh = new Mesh(this.items[0]?.geo, this.material);
     this.scene.add(this.mesh);
 
@@ -80,8 +100,12 @@ export default class SpaceRocks {
     if (!c) return;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     this.size = Math.max(1, Math.round(c.offsetWidth * dpr));
-    this.renderer.setPixelRatio(1);
-    this.renderer.setSize(this.size, this.size, false);
+    /* (Only when it changes: resizing reallocates the drawing buffer.) */
+    const el = this.renderer.domElement;
+    if (this.renderer.getPixelRatio() !== 1 || el.width !== this.size || el.height !== this.size) {
+      this.renderer.setPixelRatio(1);
+      this.renderer.setSize(this.size, this.size, false);
+    }
     this.items.forEach((it) => {
       it.canvas.width = this.size;
       it.canvas.height = this.size;
@@ -109,6 +133,10 @@ export default class SpaceRocks {
     gsap.ticker.remove(this.tick);
     this.io.disconnect();
     this.handlers.forEach((off) => off());
+    if (!kept && !this.renderer.getContext().isContextLost()) {
+      kept = { renderer: this.renderer, material: this.material };
+      return;
+    }
     this.items.forEach((it) => it.geo.dispose());
     this.material.dispose();
     this.renderer.dispose();

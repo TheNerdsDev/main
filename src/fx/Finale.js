@@ -18,7 +18,8 @@ export default class Finale {
     const canvas = section.querySelector('.planet-canvas');
     const plain = () => {
       if (this.destroyed || this.io) return;
-      canvas?.remove();
+      /* (Looked up again: the planets may have swapped in a canvas of their own.) */
+      section.querySelector('.planet-canvas')?.remove();
       this.io = new IntersectionObserver((entries) => {
         if (entries.some((e) => e.isIntersecting)) section.classList.add('is-in');
       }, { threshold: 0.3 });

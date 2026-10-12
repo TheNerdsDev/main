@@ -1,7 +1,7 @@
 import {
   WebGLRenderer, Scene, OrthographicCamera, DirectionalLight, HemisphereLight,
   SphereGeometry, RingGeometry, InstancedMesh, MeshStandardMaterial, ShaderMaterial,
-  TextureLoader, Vector3, Vector2, Quaternion, Matrix4, Color,
+  TextureLoader, ImageBitmapLoader, Texture, Vector3, Vector2, Quaternion, Matrix4, Color,
   SRGBColorSpace, ACESFilmicToneMapping, RepeatWrapping,
   DoubleSide, BackSide, AdditiveBlending, DynamicDrawUsage
 } from 'three';
@@ -78,6 +78,20 @@ const texturesFor = (q) => ({
 });
 /* Colour maps are sRGB; normals, roughness and cloud cover are data. */
 const COLOUR = new Set(['earthDay', 'moon', 'mercury', 'mars', 'venus', 'jupiter', 'saturn', 'saturnRing', 'uranus', 'uranusRing', 'neptune']);
+/* Whether maps can be decoded as ImageBitmaps, the right way up: not in
+   Safari before 17 or Firefox before 98, which ignore the orientation
+   (the same test three.js's GLTFLoader makes). */
+const decodesBitmaps = () => {
+  if (typeof createImageBitmap === 'undefined') return false;
+  const ua = navigator.userAgent;
+  if (/^((?!chrome|android).)*safari/i.test(ua)) {
+    const v = ua.match(/Version\/(\d+)/);
+    return !!v && parseInt(v[1], 10) >= 17;
+  }
+  const ff = ua.match(/Firefox\/(\d+)\./);
+  return !ff || parseInt(ff[1], 10) >= 98;
+};
+
 /* Maps that scroll sideways need to wrap. */
 const WRAP = new Set(['venus', 'jupiter', 'earthClouds']);
 
@@ -254,11 +268,24 @@ export default class PlanetScene {
   /** Load the maps and build the materials and meshes. Resolves once everything can draw. */
   load(capacity) {
     if (this.loading) return this.loading;
-    const loader = new TextureLoader();
+    /* Decoded off the main thread, as bitmaps, where the browser does that
+       properly; a plain image was decoded during its upload instead, on
+       the main thread — tens of ms for each 2K map. */
+    const bitmaps = decodesBitmaps();
+    const loader = bitmaps
+      ? new ImageBitmapLoader().setOptions({ imageOrientation: 'flipY', premultiplyAlpha: 'none', colorSpaceConversion: 'none' })
+      : new TextureLoader();
     const urls = texturesFor(this.small ? '1k' : '2k');
     const aniso = this.renderer.capabilities.getMaxAnisotropy();
     const tex = {};
-    const jobs = Object.entries(urls).map(([key, url]) => loader.loadAsync(url).then((t) => {
+    const jobs = Object.entries(urls).map(([key, url]) => loader.loadAsync(url).then((img) => {
+      let t = img;
+      if (bitmaps) {
+        /* (Already the right way up: see imageOrientation.) */
+        t = new Texture(img);
+        t.flipY = false;
+        t.needsUpdate = true;
+      }
       if (COLOUR.has(key)) t.colorSpace = SRGBColorSpace;
       if (WRAP.has(key)) t.wrapS = RepeatWrapping;
       t.anisotropy = aniso;
@@ -401,15 +428,24 @@ export default class PlanetScene {
       } finally {
         counts.forEach(([m, c]) => { m.count = c; });
       }
+      this.warmed = true;
     })();
     return this.warming;
   }
 
   render(bodies, time) {
-    if (!this.ready) {
-      this.renderer.clear();
+    /* Nothing is drawn until warm() has put everything on the GPU: a draw
+       before then — even an empty one — uploaded every map and compiled
+       every material at once, freezing the page as it came in. Nor is an
+       empty sky redrawn every frame: cleared once, it stays clear. */
+    if (!this.warmed || !bodies.some((b) => b.live)) {
+      if (!this.blank) {
+        this.renderer.clear();
+        this.blank = true;
+      }
       return;
     }
+    this.blank = false;
     const { shared, meshes: M, m4, q, qs, qr, v, s, zAxis, yAxis } = this;
     shared.time.value = time;
     /* Clouds run a little ahead of the ground. */

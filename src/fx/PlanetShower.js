@@ -122,10 +122,18 @@ const plan = (w, h) => {
   return { unit, howMany: clamp((FILL * area) / (unit * unit), 0.6, 1.8) };
 };
 
+/* The scene — its WebGL context, its maps and its compiled shaders — lasts
+   the whole visit: a page that ends with the shower takes over the last
+   one's (canvas and all, see the constructor) rather than building it all
+   again, which on each visit to a page held up its entrance. */
+let kept = null;
+/* Whether WebGL2 works here — asked once (asking makes a context). */
+let webgl2 = null;
+
 export default class PlanetShower {
   static supported() {
-    const c = document.createElement('canvas');
-    return !!c.getContext('webgl2') && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (webgl2 === null) webgl2 = !!document.createElement('canvas').getContext('webgl2');
+    return webgl2 && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
 
   /** How many of each kind can ever fall at once (the widest screens). */
@@ -142,7 +150,6 @@ export default class PlanetShower {
    */
   constructor(section, canvas, { onShower } = {}) {
     this.section = section;
-    this.canvas = canvas;
     this.onShower = onShower;
     this.bodies = [];
     this.order = [];
@@ -153,13 +160,33 @@ export default class PlanetShower {
 
     /* Phones and small screens get 1K maps and lighter geometry. */
     const small = Math.min(window.screen?.width || 9999, window.screen?.height || 9999) < 820;
-    try {
-      this.scene = new PlanetScene(canvas, { small });
-    } catch {
-      this.dead = true;
-      return;
+    this.small = small;
+    const reuse = kept && kept.small === small && !kept.scene.renderer.getContext().isContextLost();
+    if (reuse) {
+      /* The last page's scene, ready to go: its canvas takes this one's place. */
+      canvas.replaceWith(kept.canvas);
+      canvas = kept.canvas;
+      this.scene = kept.scene;
+      this.scene.blank = false;
+    } else {
+      kept?.scene.dispose();
     }
-    canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); this.dead = true; this.stop(); });
+    kept = null;
+    this.canvas = canvas;
+    if (!reuse) {
+      try {
+        this.scene = new PlanetScene(canvas, { small });
+      } catch {
+        this.dead = true;
+        return;
+      }
+    }
+    this.onLost = (e) => {
+      e.preventDefault();
+      this.dead = true;
+      this.stop();
+    };
+    canvas.addEventListener('webglcontextlost', this.onLost);
 
     const local = (e) => {
       const r = this.section.getBoundingClientRect();
@@ -218,6 +245,31 @@ export default class PlanetShower {
       } else this.stop();
     }, { rootMargin: '100% 0px 100% 0px' });
     this.io.observe(section);
+    /* When to rain: armed once the section has gone (its top below 95% of
+       the screen — scrolled back up past it), it falls when the top comes
+       up past 72%. Watched by the browser, after it has drawn the frame,
+       rather than read in tick(): there it made the browser restyle the
+       page mid-frame, every frame, while the work reel above was moving. */
+    const last = (entries) => entries[entries.length - 1];
+    this.armIo = new IntersectionObserver((entries) => {
+      const e = last(entries);
+      if (!e.isIntersecting && e.boundingClientRect.top > 0) this.armed = true;
+    }, { rootMargin: '0px 0px -5% 0px' });
+    this.fireIo = new IntersectionObserver((entries) => {
+      if (last(entries).isIntersecting && this.armed) {
+        this.armed = false;
+        this.pending = true;
+      }
+    }, { rootMargin: '0px 0px -28% 0px' });
+    /* Drawn only while it's actually on screen: just above it the work
+       reel is moving, and the planets (which keep turning) needn't be
+       redrawn under it. The physics still runs while it's near. */
+    this.visIo = new IntersectionObserver((entries) => {
+      this.visible = last(entries).isIntersecting;
+    }, { rootMargin: '20% 0px 20% 0px' });   // (a little early, so it's never shown stale)
+    this.armIo.observe(section);
+    this.fireIo.observe(section);
+    this.visIo.observe(section);
     /* Watch the section's own size, so any change (window, rotation,
        devtools) refits the pile, whoever else notices it. */
     this.ro = new ResizeObserver(() => this.resize());
@@ -247,7 +299,7 @@ export default class PlanetShower {
       this.refit = setTimeout(() => {
         if (this.dead) return;
         const r = this.section.getBoundingClientRect();
-        if (r.top < window.innerHeight && r.bottom > 0 && this.scene.ready) this.shower({ reveal: false });
+        if (r.top < window.innerHeight && r.bottom > 0 && this.scene.warmed) this.shower({ reveal: false });
         else {
           this.bodies = [];
           this.order = [];
@@ -547,17 +599,11 @@ export default class PlanetShower {
     this.last = now;
     this.time += dt;
 
-    /* Arm once the section has gone (scrolled back up past it); a fresh
-       shower falls the next time it comes in. In between, nothing resets. */
-    const r = this.section.getBoundingClientRect();
-    const vh = window.innerHeight;
-    if (r.top > vh * 0.95) this.armed = true;
-    else if (this.armed && r.top < vh * 0.72) {
-      this.armed = false;
-      this.pending = true;
-    }
-    /* Let it fall once the maps are in (they start loading well before). */
-    if (this.pending && this.scene.ready) {
+    /* (`pending`: the section has come in — see armIo/fireIo. A fresh
+       shower falls each time it comes in; in between, nothing resets.)
+       Let it fall once the maps are in and on the GPU (they start loading
+       well before). */
+    if (this.pending && this.scene.warmed) {
       this.pending = false;
       if (this.section.clientWidth !== this.W || this.section.clientHeight !== this.H) this.resize();
       this.shower();
@@ -576,7 +622,7 @@ export default class PlanetShower {
         if (!this.awake) break;
       }
     }
-    this.draw();
+    if (this.visible) this.draw();
   };
 
   draw() {
@@ -587,12 +633,25 @@ export default class PlanetShower {
     this.stop();
     clearTimeout(this.refit);
     this.io?.disconnect();
+    this.armIo?.disconnect();
+    this.fireIo?.disconnect();
+    this.visIo?.disconnect();
     this.ro?.disconnect();
     this.section.removeEventListener('pointerdown', this.onDown);
     this.section.removeEventListener('pointermove', this.onMove);
     this.section.removeEventListener('pointerup', this.onUp);
     this.section.removeEventListener('pointercancel', this.onUp);
     this.section.removeEventListener('pointerleave', this.onLeave);
-    this.scene?.dispose();
+    this.canvas?.removeEventListener('webglcontextlost', this.onLost);
+    if (!this.scene) return;
+    if (this.dead) {
+      this.scene.dispose();
+      return;
+    }
+    /* Kept, emptied, for the next page that has the shower — out of this
+       page, so it doesn't hold the rest of the old page in memory. */
+    this.scene.render([], 0);
+    this.canvas.remove();
+    kept = { scene: this.scene, canvas: this.canvas, small: this.small };
   }
 }

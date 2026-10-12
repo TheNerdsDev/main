@@ -15,6 +15,7 @@ uniform float uInkAmount;
 uniform float uDpr;
 uniform float uOpacity;     // stack depth fade, 0..1
 uniform float uBlur;        // stack depth-of-field radius, plane px
+uniform float uLift;        // brightens the black & white grade, 0 = none
 
 varying vec2 vUv;
 varying float vDepth;
@@ -74,6 +75,8 @@ void main() {
   l = pow(l, 1.0 / 2.2);                     // linear -> perceptual
   l = clamp((l - 0.06) / 0.78, 0.0, 1.0);    // levels
   l = pow(l, 0.90);                          // gamma
+  // Lifts the shadows and mid-tones, leaving black and white where they are.
+  l = 1.0 - pow(1.0 - l, 1.0 + uLift);
   vec3 mono = vec3(l);
   vec3 photo = mix(12.92 * col, 1.055 * pow(col, vec3(1.0 / 2.4)) - 0.055, step(0.0031308, col));
 

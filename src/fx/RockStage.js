@@ -2,8 +2,19 @@ import {
   WebGLRenderer, Scene, PerspectiveCamera, AmbientLight, DirectionalLight, Mesh, Vector3
 } from 'three';
 import gsap from 'gsap';
-import { makeAsteroid, rockMaterial } from './asteroid.js';
+import { makeAsteroid, prebuildAsteroids, rockMaterial } from './asteroid.js';
 import { rand } from './particles.js';
+
+/* The shapes: one detailed hero rock, a handful of chunks it breaks into. */
+const HERO = { seed: 7, detail: 5, craters: 13 };
+const CHUNKS = Array.from({ length: 8 }, (_, i) => ({ seed: 101 + i * 13, detail: 1, chunk: true, rough: 1.5 }));
+
+/* The last welcome page's renderer, canvas and materials, kept when it
+   goes (one at a time): coming back to it then doesn't stop, mid page
+   change, to make a new WebGL renderer, size its full-screen drawing buffer
+   and build the rock shaders — they're all still there, rocks on the GPU
+   included. */
+let kept = null;
 
 /* Camera distance chosen so one world unit is one CSS pixel at z = 0. */
 const PERSPECTIVE = 1000;
@@ -16,14 +27,26 @@ const GRAVITY = 1500;
  * is in the air.
  */
 export default class RockStage {
-  constructor() {
-    this.canvas = document.createElement('canvas');
-    this.canvas.className = 'rock-canvas';
-    this.canvas.setAttribute('aria-hidden', 'true');
-    document.body.appendChild(this.canvas);
+  /** Build the rock shapes while nothing else is going on (asteroid.js keeps them). */
+  static prepare() { prebuildAsteroids([HERO, ...CHUNKS]); }
 
-    this.renderer = new WebGLRenderer({ canvas: this.canvas, alpha: true, antialias: true, powerPreference: 'high-performance' });
-    this.renderer.setClearColor(0x000000, 0);
+  constructor() {
+    const reuse = kept && !kept.renderer.getContext().isContextLost();
+    if (reuse) {
+      ({ canvas: this.canvas, renderer: this.renderer, rockMat: this.rockMat, chunkMat: this.chunkMat } = kept);
+      this.canvas.style.zIndex = '';
+    } else {
+      if (kept) RockStage.release(kept);
+      this.canvas = document.createElement('canvas');
+      this.canvas.className = 'rock-canvas';
+      this.canvas.setAttribute('aria-hidden', 'true');
+      this.renderer = new WebGLRenderer({ canvas: this.canvas, alpha: true, antialias: true, powerPreference: 'high-performance' });
+      this.renderer.setClearColor(0x000000, 0);
+      this.rockMat = rockMaterial(false, { bump: 1.4, seed: 3.7 });
+      this.chunkMat = rockMaterial(true, { bump: 1.1, seed: 9.1 });
+    }
+    kept = null;
+    document.body.appendChild(this.canvas);
 
     this.scene = new Scene();
     this.camera = new PerspectiveCamera(45, 1, 10, 4000);
@@ -41,10 +64,8 @@ export default class RockStage {
     this.scene.add(key, fill, this.rim);
 
     /* Built once and shared: one detailed hero rock, a handful of chunk shapes. */
-    this.rockGeo = makeAsteroid({ seed: 7, detail: 5, craters: 13 });
-    this.rockMat = rockMaterial(false, { bump: 1.4, seed: 3.7 });
-    this.chunkGeos = Array.from({ length: 8 }, (_, i) => makeAsteroid({ seed: 101 + i * 13, detail: 1, chunk: true, rough: 1.5 }));
-    this.chunkMat = rockMaterial(true, { bump: 1.1, seed: 9.1 });
+    this.rockGeo = makeAsteroid(HERO);
+    this.chunkGeos = CHUNKS.map((c) => makeAsteroid(c));
 
     this.warm();
     this.prime();
@@ -106,8 +127,13 @@ export default class RockStage {
   resize() {
     this.w = window.innerWidth;
     this.h = window.innerHeight;
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    this.renderer.setSize(this.w, this.h, false);
+    /* Resized only when it has to be: every resize reallocates the
+       full-screen (antialiased) drawing buffer. */
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    if (this.renderer.getPixelRatio() !== dpr || this.canvas.width !== Math.floor(this.w * dpr) || this.canvas.height !== Math.floor(this.h * dpr)) {
+      this.renderer.setPixelRatio(dpr);
+      this.renderer.setSize(this.w, this.h, false);
+    }
     this.camera.fov = (2 * Math.atan(this.h / 2 / PERSPECTIVE) * 180) / Math.PI;
     this.camera.aspect = this.w / this.h;
     this.camera.updateProjectionMatrix();
@@ -235,11 +261,21 @@ export default class RockStage {
   destroy() {
     this.destroyed = true;
     gsap.ticker.remove(this.tick);
-    this.rockGeo.dispose();
-    this.chunkGeos.forEach((g) => g.dispose());
-    this.rockMat.dispose();
-    this.chunkMat.dispose();
-    this.renderer.dispose();
     this.canvas.remove();
+    const parts = { canvas: this.canvas, renderer: this.renderer, rockMat: this.rockMat, chunkMat: this.chunkMat };
+    if (!kept && !this.renderer.getContext().isContextLost()) {
+      this.renderer.clear();
+      kept = parts;
+    } else {
+      this.rockGeo.dispose();
+      this.chunkGeos.forEach((g) => g.dispose());
+      RockStage.release(parts);
+    }
+  }
+
+  static release({ renderer, rockMat, chunkMat }) {
+    rockMat.dispose();
+    chunkMat.dispose();
+    renderer.dispose();
   }
 }

@@ -26,28 +26,34 @@ export default class Page {
     this.prepare();
   }
 
+  /* (Each list only if it has anything in it — GSAP warns about an empty
+     one, and some pages have no fades of their own.) */
   prepare() {
-    gsap.set(this.lines, { yPercent: 115 });
-    gsap.set(this.fades, { opacity: 0, y: 12 });
+    if (this.lines.length) gsap.set(this.lines, { yPercent: 115 });
+    if (this.fades.length) gsap.set(this.fades, { opacity: 0, y: 12 });
   }
 
   enter() {
     const tl = gsap.timeline();
 
-    tl.to(this.lines, {
-      yPercent: 0,
-      duration: 1.2,
-      ease: 'power4.out',
-      stagger: 0.055
-    }, 0);
+    if (this.lines.length) {
+      tl.to(this.lines, {
+        yPercent: 0,
+        duration: 1.2,
+        ease: 'power4.out',
+        stagger: 0.055
+      }, 0);
+    }
 
-    tl.to(this.fades, {
-      opacity: 1,
-      y: 0,
-      duration: 0.9,
-      ease: 'power3.out',
-      stagger: 0.025
-    }, 0.25);
+    if (this.fades.length) {
+      tl.to(this.fades, {
+        opacity: 1,
+        y: 0,
+        duration: 0.9,
+        ease: 'power3.out',
+        stagger: 0.025
+      }, 0.25);
+    }
 
     this.world?.media.enter();
     this.onEnter?.(tl);
@@ -62,19 +68,23 @@ export default class Page {
     this.enterTl?.kill();
     const tl = gsap.timeline();
 
-    tl.to(this.lines, {
-      yPercent: -115,
-      duration: 0.55,
-      ease: 'power3.in',
-      stagger: 0.02
-    }, 0);
+    if (this.lines.length) {
+      tl.to(this.lines, {
+        yPercent: -115,
+        duration: 0.55,
+        ease: 'power3.in',
+        stagger: 0.02
+      }, 0);
+    }
 
-    tl.to(this.fades, {
-      opacity: 0,
-      y: -10,
-      duration: 0.4,
-      ease: 'power2.in'
-    }, 0);
+    if (this.fades.length) {
+      tl.to(this.fades, {
+        opacity: 0,
+        y: -10,
+        duration: 0.4,
+        ease: 'power2.in'
+      }, 0);
+    }
 
     this.onLeave?.(tl);
     return tl;

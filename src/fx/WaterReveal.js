@@ -151,6 +151,13 @@ const DRAIN = 0.75;
  * One WebGL canvas covers the reel's stage and draws every wet card, so
  * sweeping across the cards is seamless. Cards name their video in
  * `data-video`; the thumbnail is the card's own image.
+ *
+ * The page drives it (Main.js): it says which card the pointer is on —
+ * whether the pointer moved onto it or the reel carried it under a still
+ * pointer — through enter(), point() and leave(), and `layout(i)` gives
+ * where card i's photo is on the stage this frame. Worked out from cached
+ * measurements, not read back from the page, so drawing never forces the
+ * browser to lay the page out mid-frame.
  */
 export default class WaterReveal {
   static supported() {
@@ -158,7 +165,7 @@ export default class WaterReveal {
       && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
 
-  constructor(stage, cards) {
+  constructor(stage, cards, layout) {
     this.stage = stage;
     this.canvas = document.createElement('canvas');
     this.canvas.className = 'water-canvas';
@@ -174,41 +181,80 @@ export default class WaterReveal {
     this.gl = gl;
     this.canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); this.dead = true; this.stop(); });
 
-    this.cards = cards
-      .map((card) => ({
-        card,
-        media: card.querySelector('.show-card-media'),
-        img: card.querySelector('.show-card-img'),
-        url: card.dataset.video
-      }))
-      .filter((c) => c.media && c.url)
-      .map((c) => ({ ...c, p: 0, target: 0, clock: 0, full: 0, seed: Math.random() * 40 }));
-
-    this.handlers = [];
-    this.cards.forEach((c) => {
-      /* Positions are fractions of the card, so they hold while it grows into focus. */
-      const local = (e) => {
-        const r = c.media.getBoundingClientRect();
-        return { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height };
-      };
-      const enter = (e) => this.enter(c, local(e));
-      const move = (e) => { c.pointer = local(e); };
-      const leave = () => { c.target = 0; c.pointer = null; };
-      c.card.addEventListener('pointerenter', enter);
-      c.card.addEventListener('pointermove', move);
-      c.card.addEventListener('pointerleave', leave);
-      this.handlers.push(() => {
-        c.card.removeEventListener('pointerenter', enter);
-        c.card.removeEventListener('pointermove', move);
-        c.card.removeEventListener('pointerleave', leave);
-      });
-    });
+    this.layout = layout;
+    /* Indexed as the page's cards are; a card without a video stays dry. */
+    this.cards = cards.map((card, i) => ({
+      i,
+      card,
+      media: card.querySelector('.show-card-media'),
+      img: card.querySelector('.show-card-img'),
+      url: card.dataset.video,
+      p: 0, target: 0, clock: 0, full: 0, seed: Math.random() * 40
+    }));
+    this.wet = this.cards.filter((c) => c.media && c.url);
 
     this.running = false;
+    this.resize();
     /* Get each thumbnail ready off the main thread while nothing's going
        on, so the first hover doesn't stall uploading a full-size photo. */
     const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 200));
-    this.cards.forEach((c) => idle(() => this.prepThumb(c)));
+    this.wet.forEach((c) => idle(() => this.prepThumb(c)));
+  }
+
+  /* ------------------------------------------------- driven by the page */
+
+  /** The pointer is on card i, at `at` (fractions of its photo). */
+  enter(i, at) {
+    const c = this.cards?.[i];
+    if (!c?.url || this.dead) return;
+    this.ensureVideo(c);
+    this.prepThumb(c);
+    c.target = 1;
+    c.pointer = at;
+    /* A fresh pour starts where the pointer came in; if the water hasn't
+       drained yet it simply flows back out from where it was. */
+    if (c.p < 0.04) {
+      c.origin = at;
+      c.ptr = { ...at };
+      c.clock = 0;
+      c.full = 0;
+      c.seed = Math.random() * 40;
+    }
+    this.start();
+  }
+
+  /** Where on card i the pointer is now. */
+  point(i, at) {
+    const c = this.cards?.[i];
+    if (c?.target) c.pointer = at;
+  }
+
+  /** The pointer is off card i: the water drains back. */
+  leave(i) {
+    const c = this.cards?.[i];
+    if (!c) return;
+    c.target = 0;
+    c.pointer = null;
+  }
+
+  /**
+   * Get every card's video loaded (not playing) ahead of the first hover,
+   * one at a time while nothing else is going on, so the water never waits
+   * on the network. They're small; the page calls this once the reel is
+   * coming into view.
+   */
+  preload() {
+    if (this.preloaded || this.dead) return;
+    this.preloaded = true;
+    const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 200));
+    let k = 0;
+    const next = () => {
+      const c = this.wet[k++];
+      if (!c || this.dead) return;
+      if (!c.video) this.makeVideo(c);
+      idle(next);
+    };
+    idle(next);
   }
 
   /**
@@ -280,38 +326,19 @@ export default class WaterReveal {
     return true;
   }
 
-  enter(c, at) {
-    if (this.dead) return;
-    this.ensureVideo(c);
-    this.prepThumb(c);
-    /* Read once per hover, not every frame. */
-    c.radius = parseFloat(getComputedStyle(c.media).borderTopLeftRadius) || 0;
-    c.target = 1;
-    c.pointer = at;
-    /* A fresh pour starts where the pointer came in; if the water hasn't
-       drained yet it simply flows back out from where it was. */
-    if (c.p < 0.04) {
-      c.origin = at;
-      c.ptr = { ...at };
-      c.clock = 0;
-      c.full = 0;
-      c.seed = Math.random() * 40;
-    }
-    this.start();
+  ensureVideo(c) {
+    if (!c.video) this.makeVideo(c);
+    c.video.play().catch(() => {});
   }
 
-  ensureVideo(c) {
-    if (c.video) {
-      c.video.play().catch(() => {});
-      return;
-    }
+  makeVideo(c) {
     const v = document.createElement('video');
     v.muted = true;
     v.loop = true;
     v.playsInline = true;
     v.preload = 'auto';
     v.src = c.url;
-    v.play().catch(() => {});
+    v.load();
     c.video = v;
     /* Upload a frame only when the video has a new one (a 30fps clip on a
        60–120Hz screen otherwise re-uploads the same frame 2–4 times). */
@@ -351,10 +378,16 @@ export default class WaterReveal {
     gsap.ticker.remove(this.tick);
   }
 
+  /** On a resize (not per frame — reading the stage's size would make the
+      browser lay the page out mid-frame). */
   resize() {
+    if (this.dead) return;
     const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
     const w = this.stage.clientWidth;
     const h = this.stage.clientHeight;
+    /* The photos' rounded corners (the same on every card). */
+    const media = this.wet[0]?.media;
+    this.radius = media ? parseFloat(getComputedStyle(media).borderTopLeftRadius) || 0 : 0;
     if (w === this.w && h === this.h && dpr === this.dpr) return;
     this.w = w;
     this.h = h;
@@ -367,17 +400,15 @@ export default class WaterReveal {
     const gl = this.gl;
     if (this.dead) return;
     const dt = Math.min(deltaMs / 1000, 1 / 30);
-    this.resize();
     gl.disable(gl.SCISSOR_TEST);
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.enable(gl.SCISSOR_TEST);
 
-    const box = this.stage.getBoundingClientRect();
     const dpr = this.dpr;
     let busy = false;
 
-    for (const c of this.cards) {
+    for (const c of this.wet) {
       /* Spread out, or drain back. */
       const rate = c.target ? 1 / SPREAD : 1 / DRAIN;
       c.p += Math.sign(c.target - c.p) * Math.min(Math.abs(c.target - c.p), dt * rate);
@@ -396,11 +427,12 @@ export default class WaterReveal {
       if (c.p >= 1) c.full += dt;
       else c.full = 0;
 
-      const r = c.media.getBoundingClientRect();
-      const W = r.width;
-      const H = r.height;
-      const x = Math.round((r.left - box.left) * dpr);
-      const y = Math.round((box.bottom - r.bottom) * dpr);
+      /* Where the photo is on the stage this frame (the page's model). */
+      const r = this.layout(c.i);
+      const W = r.w;
+      const H = r.h;
+      const x = Math.round(r.x * dpr);
+      const y = Math.round((this.h - r.y - H) * dpr);
       const w = Math.round(W * dpr);
       const h = Math.round(H * dpr);
       if (x + w < 0 || x > this.canvas.width) continue;
@@ -431,7 +463,7 @@ export default class WaterReveal {
       gl.uniform1f(this.u.uTime, c.clock);
       gl.uniform1f(this.u.uCalm, Math.min(1, c.full / 1.4));
       gl.uniform1f(this.u.uSeed, c.seed);
-      gl.uniform1f(this.u.uRadius, c.radius || 0);
+      gl.uniform1f(this.u.uRadius, this.radius * r.s);
 
       /* The video frame. */
       const v = c.video;
@@ -441,7 +473,15 @@ export default class WaterReveal {
       gl.bindTexture(gl.TEXTURE_2D, c.vtex);
       if (ready && c.fresh !== false) {
         try {
-          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, v);
+          /* The first frame allocates the texture; after that each new
+             frame is written into it in place. */
+          if (c.vw === v.videoWidth && c.vh === v.videoHeight) {
+            gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, v);
+          } else {
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, v);
+            c.vw = v.videoWidth;
+            c.vh = v.videoHeight;
+          }
           if (c.fresh) c.fresh = false;
         } catch { /* a frame that can't be read yet */ }
       }
@@ -464,8 +504,7 @@ export default class WaterReveal {
         } catch { /* not decodable yet */ }
       }
       if (c.thumbReady) {
-        const ir = c.img.getBoundingClientRect();
-        gl.uniform4f(this.u.uThumbRect, ir.left - r.left, ir.top - r.top, ir.width, ir.height);
+        gl.uniform4f(this.u.uThumbRect, r.tx, r.ty, r.tw, r.th);
         gl.uniform2f(this.u.uThumbSize, c.img.naturalWidth, c.img.naturalHeight);
       }
       gl.uniform1f(this.u.uHasThumb, c.thumbReady ? 1 : 0);
@@ -478,7 +517,7 @@ export default class WaterReveal {
 
   destroy() {
     this.stop();
-    this.handlers?.forEach((off) => off());
+    this.dead = true;
     this.cards?.forEach((c) => {
       c.bitmap?.close();
       if (c.video) {

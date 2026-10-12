@@ -9,7 +9,7 @@ export const studio = {
   tagline: 'Creative Development Studio',
   description:
     'A two-person studio building websites, software and automation for businesses that deserve better than a template.',
-  email: 'thenerds2k25@gmail.com',
+  email: 'getintouch@thenerds.dev',
   /* The header's way to the contact page. */
   contactLabel: 'Contact Us',
   location: 'Surat, IN — working remotely',
@@ -30,7 +30,7 @@ export const main = {
   scrollLabel: 'Scroll Down',
   about: {
     text:
-      "We're Meet & Prem; the Nerds, two curious minds who get way too excited about turning simple ideas into something creative. If you can dream it up, we'll probably nerd out building it.",
+      "Hi, we're Meet and Prem, two curious developers who love turning simple ideas into something creative. If you can dream it up, we'll happily nerd out building it.",
     button: 'About Us',
     /* Shown in the empty frames until a scroll rolls the photos in. */
     hint: 'Scroll Down'
@@ -64,11 +64,13 @@ export const main = {
  *
  *   photo     the square photo in About's frame (Meet's on the left, Prem's
  *             on the right); photoAlt describes it
+ *   surname   set beside the first name under that photo
  */
 export const team = [
   {
     id: 'prem',
     name: 'Prem',
+    surname: 'Kajiwala',
     colour: '#39FF14',
     portrait: '/media/team/prem.webp',
     portraitAngry: '/media/team/prem-angry.webp',
@@ -82,6 +84,7 @@ export const team = [
   {
     id: 'meet',
     name: 'Meet',
+    surname: 'Raval',
     colour: '#2F8CFF',
     portrait: '/media/team/meet.webp',
     portraitAngry: '/media/team/meet-angry.webp',
@@ -99,7 +102,7 @@ export const contact = {
   title: ['Got an idea?', "Let's talk."],
   /* **word** renders bold. */
   lead:
-    "Got something in mind? We build **websites**, **custom software** and **automation** that work as hard as you do. Tell us about it — you'll hear back within 24 hours.",
+    "We build **websites**, **custom software** and **automation** that work as hard as you do. Tell us what you have in mind, and you'll hear back within 24 hours.",
   /* In the order they're laid out, two to a row (so Phone sits right
      under Based in). A detail with `href` is a link; one with `lines` lists
      a name and a link per line, and takes two rows' height, so the column
@@ -107,7 +110,7 @@ export const contact = {
   details: [
     { label: 'Response time', value: 'Within 24 hours' },
     { label: 'Based in', value: 'Surat, IN — working remotely' },
-    { label: 'Email', value: 'thenerds2k25@gmail.com', href: 'mailto:thenerds2k25@gmail.com' },
+    { label: 'Email', value: 'getintouch@thenerds.dev', href: 'mailto:getintouch@thenerds.dev' },
     {
       label: 'Phone',
       lines: [
@@ -157,9 +160,9 @@ export const showcase = {
 
 /* The closing section of the landing page, under the planet shower. */
 export const finale = {
-  title: ['Ready for liftoff?'],
+  title: ['Got a big idea?'],
   /* One line each. */
-  text: ['Dreaming something up?', 'Two nerds are ready to bring it down to earth.'],
+  text: ['Big, small, or somewhere in between.', "Let's build something worth talking about."],
   button: 'Contact us'
 };
 
@@ -167,13 +170,30 @@ export const finale = {
 export const workIndex = {
   title: ["Work we're", 'proud of'],
   intro:
-    "A selection of the websites, software and tools we've designed and built from scratch. Pick one to see how it came together."
+    "Websites, software and tools we've designed and built from the ground up. Open any project to see how it came together."
 };
 
 export const info = {
-  title: ['Who we are'],
+  /* Each line must fit on one row — it is revealed behind its own mask. */
+  title: ['A little', 'about us'],
   lead:
-    'We are Meet and Prem, two developers based in Surat. We design and build websites, custom software and automation for businesses of every size. Every project is handled by the two of us, from the first conversation through to launch and beyond.'
+    'We’re The Nerds, a small team from Surat, India, who love building cool stuff for the web. From websites to custom software and automation, we help businesses bring their ideas to life. No middlemen, no unnecessary fuss — just us, working with you to make something great.',
+  /* The two boxes in their own section under the heading and photo. */
+  services: {
+    title: 'Services',
+    items: ['Consultation', 'UI/UX Design', 'Digital Strategy', 'AI Solutions']
+  },
+  specialties: {
+    title: 'Specialized in',
+    items: [
+      'Web Development',
+      'Social Media Management',
+      'Search Engine Optimization (SEO)',
+      'Business Automation',
+      'Motion Graphics & Video',
+      'Full-Stack Development'
+    ]
+  }
 };
 
 export const projects = [
@@ -189,7 +209,7 @@ export const projects = [
     pageVideo: true,
     excerpt: 'Live CSS battle platform',
     description:
-      'A CSS battle platform for the Vivacity 2K26 tech fest. Contestants recreate a target design in HTML and CSS against the clock, and every attempt is scored pixel by pixel — on more than 60 machines over an offline LAN.',
+      'A CSS battle platform built for the Vivacity 2K26 tech fest. Contestants recreate a target design in HTML and CSS against the clock, and every attempt is scored pixel by pixel, across more than 60 machines on an offline LAN.',
     deliverables: ['Code editor', 'Pixel-accurate scoring', 'Live timer', 'Offline LAN setup'],
     /* Its GitHub repository: "Code — GitHub ↗" on the project's page
        (left out while empty). */
@@ -220,7 +240,7 @@ export const projects = [
     pageVideo: true,
     excerpt: 'Local-first task scheduler',
     description:
-      'A local-first task scheduler: plan the day, track what got done, stay focused. Your day at a glance on the dashboard, a month calendar and analytics on streaks and trends, desktop reminders, and themes from dark to sandstone.',
+      'A local-first task scheduler for planning the day, tracking what got done and staying focused. It brings a dashboard with your day at a glance, a month calendar, analytics on streaks and trends, desktop reminders, and themes from dark to sandstone.',
     deliverables: ['Dashboard', 'Calendar', 'Analytics', 'Desktop reminders'],
     github: 'https://github.com/premkajiwala-hub/Task-Pilot',
     /* Detail shots 01–03: the dashboard (wide), the calendar and analytics. */
@@ -268,7 +288,7 @@ export const projects = [
     accent: '#6B8F1F',
     excerpt: 'Local grocery storefront',
     description:
-      'A grocer with eight hundred products and no time to manage a website. We built the storefront and the automation that keeps stock, pricing and delivery slots in sync on their own.',
+      'An online storefront for a grocer with eight hundred products and no time to manage a website. We built the store, and the automation that keeps stock, pricing and delivery slots in sync on their own.',
     deliverables: ['Storefront', 'Inventory sync', 'Delivery slots', 'Infrastructure'],
     github: '',
     shots: 3,

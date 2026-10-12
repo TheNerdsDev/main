@@ -18,4 +18,5 @@ export const buildPage = (mod, opts) => new (mod?.default || Page)(opts);
 
 export const createPage = async (opts) => buildPage(await loadPage(opts.el.dataset.page), opts);
 
-export const warmPages = () => Object.values(LOADERS).forEach((load) => load().catch(() => {}));
+/* Each page's code, and whatever a page prepares ahead of a visit (its `warm`). */
+export const warmPages = () => Object.values(LOADERS).forEach((load) => load().then((m) => m?.warm?.()).catch(() => {}));

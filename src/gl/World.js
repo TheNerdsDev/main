@@ -158,8 +158,47 @@ export default class World {
     tween(this.compositeMaterial.uniforms.uAccent);
   }
 
+  /**
+   * Build every shader the first frames will need while the loader is still
+   * up — in parallel, on the graphics driver's own threads where the browser
+   * offers that (compileAsync) — each set for the target it's drawn into
+   * (the world into its offscreen target, the ink into its own, the
+   * composite onto the canvas) — then draw one frame, unseen (the canvas
+   * is still transparent behind the loader), which sets up the offscreen
+   * targets and puts the stars' geometry on the GPU. Left to the first
+   * real frame, all of it landed just as the curtain lifted, and the
+   * loading animation hitched there.
+   */
+  async warm() {
+    const r = this.renderer;
+    if (r.compileAsync) {
+      const jobs = [];
+      try {
+        r.setRenderTarget(this.sceneRT);
+        jobs.push(r.compileAsync(this.scene, this.camera));
+        r.setRenderTarget(this.ink.write);
+        jobs.push(r.compileAsync(this.ink.scene, this.ink.camera));
+        r.setRenderTarget(null);
+        jobs.push(r.compileAsync(this.quadScene, this.quadCamera));
+      } catch {
+        /* Compiled on first use instead. */
+      }
+      r.setRenderTarget(null);
+      await Promise.all(jobs).catch(() => {});
+    }
+    try {
+      this.loop(gsap.ticker.time);
+    } catch {
+      /* Set up on the first real frame instead. */
+    }
+  }
+
   reveal() {
-    gsap.to(this.canvas, { opacity: 1, duration: 1.2, ease: 'power2.out' });
+    /* The canvas fades up on the compositor: the page's entrance has the
+       main thread busy just then, and a fade driven from script stuttered. */
+    this.canvas.animate([{ opacity: 0 }, { opacity: 1 }], {
+      duration: 1200, easing: 'cubic-bezier(0.5, 1, 0.89, 1)', fill: 'forwards'
+    });
     gsap.to(this.uniforms.uIntro, { value: 1, duration: 2.4, ease: 'power2.out' });
   }
 

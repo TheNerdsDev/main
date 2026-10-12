@@ -397,6 +397,63 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
   pointer-events: none;
 }
 
+/* Our names under the photos, in the site's own type and plain ink: the
+   first name in the headline face, the surname beside it small in the
+   mono, tracked out — centred under each frame. Hung below the frame (not
+   in the flow), so the frames and the text keep one centre line. Hover
+   the photo or the name: the letters of the first name roll over one by
+   one, and the surname lights up. */
+#main .about-who {
+  position: absolute;
+  top: calc(100% + 1.8rem);
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: baseline;
+  gap: 0.4rem 1.4rem;
+  margin: 0;
+}
+#main .about-who-name { position: relative; }
+#main .about-who-first {
+  display: flex;
+  overflow: hidden;
+  font-family: 'Anton', 'Arial Narrow', sans-serif;
+  font-weight: 400;
+  font-size: 3.4rem;
+  line-height: 1.04;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--c-ink);
+}
+#main .about-who-char {
+  position: relative;
+  display: inline-block;
+  transition: transform 0.6s var(--ease-out);
+  transition-delay: calc(var(--i) * 35ms);
+}
+#main .about-who-char::after {
+  content: attr(data-c);
+  position: absolute;
+  left: 0; top: 100%;
+}
+#main .about-who-last {
+  font-family: 'Syne Mono', ui-monospace, monospace;
+  font-size: 1.25rem;
+  letter-spacing: 0.32em;
+  margin-right: -0.32em;   /* the tracking would trail the last letter */
+  text-transform: uppercase;
+  color: rgba(var(--c-ink-rgb), 0.62);
+  transition: color 0.5s var(--ease-out);
+}
+#main .about-frame:hover .about-who-char { transform: translateY(-100%); }
+#main .about-frame:hover .about-who-last { color: rgba(var(--c-ink-rgb), 0.92); }
+@media (prefers-reduced-motion: reduce) {
+  #main .about-who-char,
+  #main .about-who-last { transition: none; }
+}
+
 #main .about-body {
   position: relative;
   z-index: 2;
@@ -494,6 +551,14 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
 :is(#main, #info) .about-button:hover .about-button-char,
 :is(#main, #info) .about-button:focus-visible .about-button-char { transform: translateY(-100%); }
 
+/* The welcome page's About Us: a step up from the base size. */
+#main .about-cta .about-button { padding: 2rem 4.6rem; }
+#main .about-cta .about-button-text { font-size: 1.7rem; }
+@media screen and (max-width: 767px) {
+  #main .about-cta .about-button { padding: 1.7rem 3.8rem; }
+  #main .about-cta .about-button-text { font-size: 1.55rem; }
+}
+
 /* ---------------------------------------------------------- showcase */
 
 /* A pinned stage; Main.js sizes the runway so the scroll pulls the reel
@@ -556,20 +621,20 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
   color: var(--c-ink);
 }
 /* The card's contents. Focus and dimming happen here rather than on the
-   card itself, which GSAP animates in (it pins `scale` on what it moves). */
+   card itself, which GSAP animates in (it pins `scale` on what it moves).
+   The card pointed at ("hot" — Main.js works out which, so it holds when
+   the reel slides a card under a still pointer) comes forward and the
+   rest step back: Main.js scales them, from this origin, and its own
+   model of the reel knows where they are. */
 #main .show-card-inner {
   position: relative;
   display: flex;
   flex-direction: column;
   gap: 1.4rem;
   transform-origin: 50% 40%;
-  transition: scale 0.7s var(--ease-out), opacity 0.6s var(--ease-out), filter 0.6s var(--ease-out);
+  transition: opacity 0.6s var(--ease-out), filter 0.6s var(--ease-out);
 }
-/* Hovering one card brings it forward; the rest step back and dim. */
-#main .show-card:hover .show-card-inner,
-#main .show-card:focus-visible .show-card-inner { scale: 1.08; }
-#main .showcase-track:has(.show-card:hover) .show-card:not(:hover) .show-card-inner {
-  scale: 0.93;
+#main .showcase-track.has-hot .show-card:not(.is-hot) .show-card-inner {
   opacity: 0.4;
   filter: saturate(0.5) brightness(0.75);
 }
@@ -602,8 +667,7 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
   transition: opacity 0.5s var(--ease-out);
   pointer-events: none;
 }
-#main .show-card:hover .show-card-inner::before,
-#main .show-card:focus-visible .show-card-inner::before { opacity: 1; }
+#main .show-card.is-hot .show-card-inner::before { opacity: 1; }
 #main .show-card-img {
   position: absolute;
   inset: 0;
@@ -618,16 +682,16 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
    still. */
 @media screen and (min-width: 768px) {
   #main .show-card-img { will-change: transform; }
+  /* Scaled every frame of a hover change: kept on its own layer, so that's
+     compositing, not repainting the card. */
+  #main .show-card-inner { will-change: transform; }
 }
 /* A screenshot with its own frame (`screenshot` in site.js) is shown whole
    and still — no zoom, no drift — so it sits centred, and lines up with
    its hover video. */
 #main .show-card.is-still .show-card-img { transform: none; will-change: auto; }
-#main .show-card:hover .show-card-img { filter: saturate(1.05) brightness(1.04); }
+#main .show-card.is-hot .show-card-img { filter: saturate(1.05) brightness(1.04); }
 #main .show-card:focus-visible { outline: none; }
-/* While the reel slides (Main.js), the cards passing under the pointer
-   don't each light up. */
-#main .showcase.is-moving .show-card { pointer-events: none; }
 
 /* Spreading water + project video on hover (fx/WaterReveal.js), drawn over the cards. */
 #main .water-canvas {
@@ -652,7 +716,7 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
   background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat;
   transition: background-size 0.5s var(--ease-out);
 }
-#main .show-card:hover .show-card-name { background-size: 100% 1px; }
+#main .show-card.is-hot .show-card-name { background-size: 100% 1px; }
 
 /* The way through to the full index: a rectangle beside the heading. */
 #main .showcase-heading { display: flex; align-items: flex-end; gap: 3.2rem; flex-wrap: wrap; }
@@ -813,8 +877,12 @@ html.no-webgl #main .about-hint { display: none; }
   #main .sketch-gasp { font-size: 4.4rem; }
   #main .duo-action { width: 5.8rem; height: 5.8rem; }
 
-  #main .about-stage { column-gap: 1.6rem; row-gap: 5.6rem; }
+  /* (The gap under the frames leaves room for the names hung below them.) */
+  #main .about-stage { column-gap: 1.6rem; row-gap: 6.4rem; }
   #main .about-frame { padding: 0.7rem; }
+  #main .about-who { top: calc(100% + 1.2rem); gap: 0.2rem 1rem; }
+  #main .about-who-first { font-size: 2.8rem; }
+  #main .about-who-last { font-size: 1.05rem; letter-spacing: 0.24em; margin-right: -0.24em; }
   #main .about-hint { gap: 1rem; font-size: 1.1rem; letter-spacing: 0.22em; padding-left: 0.22em; }
   #main .about-text { font-size: 2.1rem; }
   #main .about-cta { margin-top: 3.2rem; }
@@ -831,6 +899,8 @@ html.no-webgl #main .about-hint { display: none; }
     row-gap: 0;
   }
   #main .about-frame { width: min(100%, 32rem, 58vh); }
+  #main .about-who { top: calc(100% + 1rem); }
+  #main .about-who-first { font-size: min(2.8rem, 6vh); }
   #main .about-text { font-size: min(2.1rem, 4.6vh); }
   #main .about-cta { margin-top: 2rem; }
 }

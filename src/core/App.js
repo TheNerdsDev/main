@@ -76,8 +76,11 @@ export default class App {
        it. The landing then plays on a quiet main thread. */
     this.page = await createPage({ el: this.pageEl, world: this.world, app: this });
     this.world.media.create(this.pageEl, this.page.id);
+    /* …and its shaders, in parallel, while the rocket comes in to land. */
+    const warmed = this.world.warm();
 
     await this.loader.finish();
+    await Promise.race([warmed, new Promise((r) => setTimeout(r, 600))]);
 
     gsap.ticker.add(this.loop);
 
