@@ -62,9 +62,8 @@ export const main = {
  *   crown  top of the head, where the dizzy stars circle
  *   hand   where a thrown rock leaves from
  *
- *
- * (In About, in the spaceship portholes, we're cartoon astronauts — drawn
- * in content/astronauts.js.)
+ *   photo     the square photo in About's frame (Meet's on the left, Prem's
+ *             on the right); photoAlt describes it
  */
 export const team = [
   {
@@ -76,7 +75,9 @@ export const team = [
     aspect: 0.8,
     hit: [0.5, 0.46],
     crown: [0.5, 0.3],
-    hand: [0.86, 0.84]
+    hand: [0.86, 0.84],
+    photo: '/media/team/about-prem.webp',
+    photoAlt: 'Prem, working at a laptop by a sunny window'
   },
   {
     id: 'meet',
@@ -87,7 +88,9 @@ export const team = [
     aspect: 0.8,
     hit: [0.495, 0.405],
     crown: [0.49, 0.235],
-    hand: [0.14, 0.84]
+    hand: [0.14, 0.84],
+    photo: '/media/team/about-meet.webp',
+    photoAlt: 'Meet, working at a sticker-covered laptop'
   }
 ];
 

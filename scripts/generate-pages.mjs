@@ -7,7 +7,6 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { studio, main, team, workIndex, info, contact, showcase, finale, projects, getNext } from '../src/content/site.js';
 import { logoSvg } from '../src/content/logo.js';
-import { astronaut } from '../src/content/astronauts.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -250,42 +249,16 @@ const mainPage = () => {
     .join('');
   const buttonChars = rollChars(main.about.button);
 
-  /* A spaceship porthole (main-page.css): a riveted metal rim with a status
-     light, and through the glass each of us in our own cabin, as a cartoon
-     astronaut (content/astronauts.js) — a console of blinking lights in
-     front, space drifting past the window behind. A shutter covers it
-     until the first scroll irises it open. */
-  const LEDS = ['neon', 'amber', 'neon', 'white', 'red', 'neon', 'amber'];
-  const porthole = (m, side) => `      <figure class="porthole porthole-${side}" data-porthole="${m.id}" style="--neon: ${m.colour}">
-        <div class="porthole-body">
-          <div class="porthole-rim" aria-hidden="true">${Array.from({ length: 8 }, (_, i) => `<span class="porthole-bolt" style="--i: ${i}"></span>`).join('')}</div>
-          <div class="porthole-window">
-            <div class="porthole-shutter" aria-hidden="true">
-              <span class="porthole-hint">${esc(main.about.hint)}</span>
-              <svg class="porthole-hint-arrow" viewBox="0 0 16 10"><path d="M1 1.5 8 8.5l7-7" /></svg>
-            </div>
-            <div class="porthole-view">
-              <div class="porthole-space" aria-hidden="true">
-                <span class="porthole-stars"></span>
-                <span class="porthole-stars porthole-stars-near"></span>
-                <span class="porthole-rock porthole-rock-1"></span>
-                <span class="porthole-rock porthole-rock-2"></span>
-                <span class="porthole-rock porthole-rock-3"></span>
-              </div>
-              <div class="porthole-cabin" aria-hidden="true"></div>
-              <div class="porthole-crew">
-                <div class="porthole-crew-wave">
-${astronaut(m.id, { mirror: side === 'right', label: `${esc(m.name)}, as a cartoon astronaut` })}
-                </div>
-              </div>
-              <div class="porthole-console" aria-hidden="true">
-                <span class="porthole-screen"></span>
-                ${LEDS.map((c, i) => `<span class="porthole-led porthole-led-${c}" style="--i: ${i}"></span>`).join('')}
-              </div>
-            </div>
-            <div class="porthole-glass" aria-hidden="true"></div>
-          </div>
-          <span class="porthole-ring" aria-hidden="true"></span>
+  /* A square frame with corner brackets in each person's colour: empty but
+     for "Scroll down" until the first scroll cuts the photo in (Main.js). */
+  const frame = (m, side) => `      <figure class="about-frame about-frame-${side}" data-frame="${m.id}" style="--neon: ${m.colour}">
+        <div class="about-photos">
+          <span class="about-hint" aria-hidden="true">
+            <span class="about-hint-text">${esc(main.about.hint)}</span>
+            <svg class="about-hint-arrow" viewBox="0 0 16 10"><path d="M1 1.5 8 8.5l7-7" /></svg>
+          </span>
+          <img class="about-photo" src="${m.photo}" alt="${esc(m.photoAlt)}" width="960" height="960" decoding="async" fetchpriority="low" />
+          <span class="about-flash" aria-hidden="true"></span>
         </div>
       </figure>`;
 
@@ -327,10 +300,7 @@ ${actions}
          About sequence forwards, scrolling back plays it in reverse. -->
     <section class="about" id="about" aria-label="About us">
       <div class="about-stage">
-        <div class="about-pair">
-${porthole(meet, 'left')}
-${porthole(prem, 'right')}
-        </div>
+${frame(meet, 'left')}
         <div class="about-body">
           <p class="about-text">${team.reduce((t, m) => t.replace(m.name,`<span class="about-name" style="color: ${m.colour}">${m.name}</span>`), esc(main.about.text))}</p>
           <div class="about-cta">
@@ -339,6 +309,7 @@ ${porthole(prem, 'right')}
             </a>
           </div>
         </div>
+${frame(prem, 'right')}
       </div>
     </section>
 

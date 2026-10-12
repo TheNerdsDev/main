@@ -12,7 +12,6 @@ import Finale from '../fx/Finale.js';
 import magnetic from '../fx/magnetic.js';
 import { PALETTE } from '../gl/World.js';
 import { clamp } from '../fx/particles.js';
-import { REACH } from '../content/astronauts.js';
 
 /*
  * Two "pages", joined by a guided move rather than a free scroll:
@@ -24,11 +23,10 @@ import { REACH } from '../content/astronauts.js';
  *                  handing the scroll back, it carries on: the rocks spiral
  *                  in, collide in the centre and crumble, their pieces
  *                  swirling out across the page.
- *   About          two spaceship portholes slide in, shutters shut,
- *                  asking for a scroll. Now your scroll drives everything,
- *                  both ways: the shutters iris open on the two of us,
- *                  cartoon astronauts in our cabins; we reach out to each
- *                  other in a 20-shot burst; the text unfolds.
+ *   About          two square frames rise in, empty, asking for a scroll.
+ *                  Now your scroll drives everything, both ways: a photo
+ *                  of each of us cuts into its frame with a camera flash;
+ *                  the text unfolds.
  *   About → Home   scroll back into the collision and it plays in reverse
  *                  on its own, then glides you home again.
  *
@@ -51,9 +49,9 @@ const SCATTERED = 0.42;
 /* The first scroll doesn't stop at About: the page carries itself on.
    The rocks start closing in LEAD s before the glide lands (no settling
    in first), are drawn in (DRAW_IN s) and collide, the pieces burst out
-   (BURST s), a beat, then the two portholes slide in, shutters shut, with
-   "Scroll down" on them (FRAMES s). The scroll is handed back there — the
-   windows open only for it. Scrolling back into that stretch plays it in reverse
+   (BURST s), a beat, then the two frames rise in, empty, with "Scroll
+   down" in them (FRAMES s). The scroll is handed back there — the photos
+   come in only for it. Scrolling back into that stretch plays it in reverse
    (UNSMASH s) and glides home. */
 const LEAD = 0.35;
 const DRAW_IN = 0.5;
@@ -66,14 +64,10 @@ const UNSMASH = 1.1;
 const FOLLOW = 0.16;
 
 /* The About brief's own clock (timeline seconds, scrubbed by the scroll):
-   the portholes are in, shut, by HAND_BACK; their shutters iris open from
-   IRIS; from ROLL_AT, over ROLL, each of us reaches out in SHOTS steps —
-   a burst, not a glide. */
+   the frames are in, empty, by HAND_BACK; the photos cut in from REVEAL,
+   and settle for a moment before the text follows. */
 const HAND_BACK = 1;
-const IRIS = 1.1;
-const ROLL_AT = 1.75;
-const ROLL = 3.2;
-const SHOTS = 20;
+const REVEAL = 1.1;
 
 /** The landing page: welcome, the two of us in neon, and a short hello. */
 export default class Main extends Page {
@@ -86,18 +80,9 @@ export default class Main extends Page {
     this.duoEl = q('[data-duo]');
     this.about = q('.about');
     this.aboutText = q('.about-text');
-    this.stageEl = q('.about-stage');
-    this.pair = q('.about-pair');
-    this.portholes = [...this.el.querySelectorAll('.porthole')];
-    /* Each astronaut's reaching arm: shoulder and elbow, posed by roll(). */
-    this.arms = this.portholes.map((p) => {
-      const joint = (s) => {
-        const el = p.querySelector(s);
-        return el ? { el, pivot: el.dataset.pivot } : null;
-      };
-      return { arm: joint('.astro-arm'), fore: joint('.astro-fore') };
-    });
-    this.shotAt = -1;
+    this.frames = [...this.el.querySelectorAll('.about-frame')];
+    /* Decoded ahead, so a photo never cuts in half-drawn. */
+    this.frames.forEach((f) => f.querySelector('.about-photo')?.decode?.().catch(() => {}));
     this.button = q('.about-button');
     this.finale = q('.finale');
     this.finaleButton = q('.finale-button');
@@ -149,7 +134,6 @@ export default class Main extends Page {
     this.cue?.addEventListener('click', this.onCue);
     /* The About Us and Contact us buttons lean after the cursor. */
     this.unmagnet = magnetic([this.button, this.finaleButton]);
-    this.bindTilt();
     this.finaleFx = this.finale ? new Finale(this.finale) : null;
 
     this.measure();
@@ -432,45 +416,38 @@ export default class Main extends Page {
 
   /**
    * One paused timeline for the whole About sequence; scroll sets its
-   * position. The portholes slide in from either side, shutters shut,
-   * "Scroll down" on them (that much plays on its own — see smash). Then,
-   * only as you scroll: the prompt goes, the shutters iris open on each of
-   * us in our cabin; we reach out to each other, shot by shot (roll()); the
-   * text rises line by line, then the button. Scrolling back plays it
+   * position. The frames rise in, empty, "Scroll down" in them (that much
+   * plays on its own — see smash). Then, only as you scroll: the prompt
+   * goes, each photo cuts in from below with a camera flash and settles,
+   * the text rises line by line, then the button. Scrolling back plays it
    * exactly in reverse.
    */
   buildAbout() {
     this.aboutTl?.kill();
     const tl = gsap.timeline({ paused: true });
-    const [left, right] = this.portholes;
-    const all = (s) => this.portholes.flatMap((p) => [...p.querySelectorAll(s)]);
 
-    if (left) tl.fromTo(left, { opacity: 0, x: -140 }, { opacity: 1, x: 0, duration: 0.8, ease: 'power3.out' }, 0);
-    if (right) tl.fromTo(right, { opacity: 0, x: 140 }, { opacity: 1, x: 0, duration: 0.8, ease: 'power3.out' }, 0.08);
-    const hints = all('.porthole-hint, .porthole-hint-arrow');
-    tl.fromTo(hints, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.35, ease: 'power2.out' }, 0.5)
-      /* …held until the scroll comes, then gone as the shutters open. */
-      .to(hints, { opacity: 0, y: -8, duration: 0.2, ease: 'power2.in' }, HAND_BACK + 0.02);
+    this.frames.forEach((f, fi) => {
+      tl.fromTo(f, { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: 0.7, ease: 'power2.out' }, fi * 0.1);
+    });
+    const hints = this.frames.map((f) => f.querySelector('.about-hint')).filter(Boolean);
+    tl.fromTo(hints, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power2.out' }, 0.5)
+      /* …held until the scroll comes, then gone as the photos arrive. */
+      .to(hints, { opacity: 0, y: -10, duration: 0.25, ease: 'power2.in' }, HAND_BACK + 0.02);
 
-    /* The iris: the view grows out from the middle as the blades turn away. */
-    tl.fromTo(all('.porthole-view'), { '--iris': '0%' }, { '--iris': '75%', duration: 0.85, ease: 'power2.inOut', stagger: 0.08 }, IRIS)
-      .fromTo(all('.porthole-shutter'), { rotate: 0 }, { rotate: 60, duration: 0.85, ease: 'power2.inOut', stagger: 0.08 }, IRIS);
-    /* …and there they are, leaning in towards each other. */
-    const [crewL, crewR] = this.portholes.map((p) => p.querySelector('.porthole-crew'));
-    if (crewL) tl.fromTo(crewL, { xPercent: -6 }, { xPercent: 0, duration: 0.9, ease: 'power2.out' }, IRIS + 0.2);
-    if (crewR) tl.fromTo(crewR, { xPercent: 6 }, { xPercent: 0, duration: 0.9, ease: 'power2.out' }, IRIS + 0.28);
+    this.frames.forEach((f, fi) => {
+      const photo = f.querySelector('.about-photo');
+      const flash = f.querySelector('.about-flash');
+      if (!photo) return;
+      const at = REVEAL + fi * 0.08;
+      tl.fromTo(photo, { clipPath: 'inset(100% 0% 0% 0%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 0.55, ease: 'power2.out' }, at)
+        .fromTo(photo, { scale: 1.14 }, { scale: 1, duration: 1.3, ease: 'power2.out' }, at);
+      if (flash) {
+        tl.fromTo(flash, { opacity: 0 }, { opacity: 0.45, duration: 0.08, ease: 'none', immediateRender: false }, at)
+          .fromTo(flash, { opacity: 0.45 }, { opacity: 0, duration: 0.35, ease: 'power2.out', immediateRender: false }, at + 0.08);
+      }
+    });
 
-    /* The burst: from ROLL_AT, over ROLL, they reach out (roll()). */
-    tl.to({}, { duration: 0 }, ROLL_AT + ROLL);
-
-    let textAt = ROLL_AT + ROLL + 0.2;
-    /* On a phone the windows are stacked: they draw back and up together,
-       to make room for the text at the foot of the screen. */
-    const shrink = this.pairShrink();
-    if (shrink) {
-      tl.fromTo(this.pair, { scale: 1, y: 0 }, { scale: shrink.s, y: shrink.y, duration: 0.6, ease: 'power2.inOut' }, textAt);
-      textAt += 0.5;
-    }
+    const textAt = REVEAL + 1.2;
     const lines = this.aboutSplit?.lines || [];
     const LINE_STEP = 0.42;
     if (lines.length) {
@@ -492,99 +469,11 @@ export default class Main extends Page {
     /* A short hold so the finished section sits still before the page moves on. */
     tl.to({}, { duration: 0.6 });
 
-    /* Up to the shut portholes, it plays on its own (see smash). */
+    /* Up to the empty frames, it plays on its own (see smash). */
     this.briefAuto = HAND_BACK / tl.duration();
 
     tl.progress(this.aboutP);
     this.aboutTl = tl;
-    this.roll(this.aboutP);
-  }
-
-  /**
-   * The burst: which of the SHOTS poses the reaching arms are in, at About
-   * progress p — a straight cut from one to the next, like a burst of
-   * photos. The shoulder swings the arm up from the side to straight out;
-   * the elbow bends a little more on the way, then straightens.
-   */
-  roll(p) {
-    if (!this.aboutTl || !this.arms.length) return;
-    const t = p * this.aboutTl.duration();
-    const i = clamp(Math.floor(((t - ROLL_AT) / ROLL) * SHOTS), 0, SHOTS - 1);
-    if (i === this.shotAt) return;
-    this.shotAt = i;
-    const k = i / (SHOTS - 1);
-    const e = k * k * (3 - 2 * k);
-    const shoulder = REACH.rest + (REACH.out - REACH.rest) * e;
-    const elbow = REACH.bendRest * (1 - e) + REACH.bendMid * Math.sin(Math.PI * e);
-    for (const { arm, fore } of this.arms) {
-      arm?.el.setAttribute('transform', `rotate(${shoulder.toFixed(2)} ${arm.pivot})`);
-      fore?.el.setAttribute('transform', `rotate(${elbow.toFixed(2)} ${fore.pivot})`);
-    }
-  }
-
-  /**
-   * Phones, with the windows stacked: how far the pair must draw back (s)
-   * and rise (y, px) for the text at the foot of the screen to fit under
-   * it. Null where it fits as it is (side by side, wider screens).
-   */
-  pairShrink() {
-    const body = this.el.querySelector('.about-body');
-    if (!this.pair || !body || getComputedStyle(this.pair).display === 'contents') return null;
-    gsap.set(this.pair, { clearProps: 'transform' });
-    if (getComputedStyle(body).position !== 'absolute') return null;
-    const header = document.querySelector('.site-header');
-    const top = (header?.offsetHeight || 0) + 12;
-    const gap = 18;
-    const pairTop = this.pair.offsetTop;
-    const h = this.pair.offsetHeight;
-    const bottom = body.offsetTop - gap;
-    if (pairTop >= top && pairTop + h <= bottom) return null;
-    return { s: Math.min(1, (bottom - top) / h), y: top - pairTop };
-  }
-
-  /**
-   * The portholes lean after the cursor — or, on a phone, the tilt of the
-   * phone, where the browser gives it without asking (iOS asks, so there
-   * they hold still). main-page.css turns --px/--py into the lean and each
-   * layer's own shift (see updateTilt).
-   */
-  bindTilt() {
-    this.tilt = { x: 0, y: 0, tx: 0, ty: 0 };
-    if (!this.portholes.length || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
-      this.tiltEvent = 'pointermove';
-      this.onTilt = (e) => {
-        this.tilt.tx = (e.clientX / window.innerWidth) * 2 - 1;
-        this.tilt.ty = (e.clientY / window.innerHeight) * 2 - 1;
-      };
-    } else if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission !== 'function') {
-      this.tiltEvent = 'deviceorientation';
-      this.onTilt = (e) => {
-        if (e.gamma == null || e.beta == null) return;
-        this.tilt.tx = clamp(e.gamma / 30, -1, 1);
-        this.tilt.ty = clamp((e.beta - 50) / 30, -1, 1);
-      };
-    } else {
-      return;
-    }
-    window.addEventListener(this.tiltEvent, this.onTilt, { passive: true });
-  }
-
-  /** Ease the lean after the pointer — only while the windows are on screen. */
-  updateTilt(scroll, vh) {
-    const t = this.tilt;
-    if (!this.onTilt || !this.aboutH) return;
-    const near = scroll > this.aboutTop - vh && scroll < this.aboutTop + this.aboutH;
-    const k = 1 - Math.pow(1 - 0.08, gsap.ticker.deltaRatio(60));
-    const x = t.x + ((near ? t.tx : 0) - t.x) * k;
-    const y = t.y + ((near ? t.ty : 0) - t.y) * k;
-    if (Math.abs(x - t.x) < 0.0005 && Math.abs(y - t.y) < 0.0005) return;
-    t.x = x;
-    t.y = y;
-    for (const p of this.portholes) {
-      p.style.setProperty('--px', x.toFixed(3));
-      p.style.setProperty('--py', y.toFixed(3));
-    }
   }
 
   /**
@@ -697,7 +586,6 @@ export default class Main extends Page {
     if (aboutNext !== this.aboutP) {
       this.aboutP = aboutNext;
       this.aboutTl.progress(aboutNext);
-      this.roll(aboutNext);
     }
 
     /* The rocks: drawn together, collide, scatter across the page. */
@@ -720,10 +608,8 @@ export default class Main extends Page {
     }
 
     this.updateShowcase(scroll, vh, ease);
-    this.updateTilt(scroll, vh);
 
-    /* The portholes' endless little animations (drifting stars, blinking
-       lights…) rest while About is out of sight. */
+    /* The "Scroll down" arrows' bob rests while About is out of sight. */
     const away = scroll < this.aboutTop - vh || scroll > this.aboutTop + this.aboutH;
     if (away !== this.aboutAway) {
       this.aboutAway = away;
@@ -788,7 +674,6 @@ export default class Main extends Page {
     if (this.state === 'toAbout' || this.state === 'toHome') this.lenis?.start();
     this.cue?.removeEventListener('click', this.onCue);
     this.unmagnet?.();
-    if (this.onTilt) window.removeEventListener(this.tiltEvent, this.onTilt);
     gsap.killTweensOf([this.cue, this.journey, ...this.heroLines()]);
     this.pullTl?.kill();
     if (this.streakEl) {
