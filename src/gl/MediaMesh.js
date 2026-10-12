@@ -58,7 +58,10 @@ export default class MediaMesh extends Component {
       uGrain:      { value: 0.045 },
       uSpeed:      { value: 0 },
       uOpacity:    { value: 1 },
-      uBlur:       { value: 0 }
+      uBlur:       { value: 0 },
+      /* The work page's stack: a brighter black and white, so the cards
+         read clearly against the dark (the rest keep the deeper grade). */
+      uLift:       { value: stack === null ? 0 : 0.55 }
     };
 
     this.material = new ShaderMaterial({

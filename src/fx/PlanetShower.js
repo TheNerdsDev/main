@@ -245,6 +245,31 @@ export default class PlanetShower {
       } else this.stop();
     }, { rootMargin: '100% 0px 100% 0px' });
     this.io.observe(section);
+    /* When to rain: armed once the section has gone (its top below 95% of
+       the screen — scrolled back up past it), it falls when the top comes
+       up past 72%. Watched by the browser, after it has drawn the frame,
+       rather than read in tick(): there it made the browser restyle the
+       page mid-frame, every frame, while the work reel above was moving. */
+    const last = (entries) => entries[entries.length - 1];
+    this.armIo = new IntersectionObserver((entries) => {
+      const e = last(entries);
+      if (!e.isIntersecting && e.boundingClientRect.top > 0) this.armed = true;
+    }, { rootMargin: '0px 0px -5% 0px' });
+    this.fireIo = new IntersectionObserver((entries) => {
+      if (last(entries).isIntersecting && this.armed) {
+        this.armed = false;
+        this.pending = true;
+      }
+    }, { rootMargin: '0px 0px -28% 0px' });
+    /* Drawn only while it's actually on screen: just above it the work
+       reel is moving, and the planets (which keep turning) needn't be
+       redrawn under it. The physics still runs while it's near. */
+    this.visIo = new IntersectionObserver((entries) => {
+      this.visible = last(entries).isIntersecting;
+    }, { rootMargin: '20% 0px 20% 0px' });   // (a little early, so it's never shown stale)
+    this.armIo.observe(section);
+    this.fireIo.observe(section);
+    this.visIo.observe(section);
     /* Watch the section's own size, so any change (window, rotation,
        devtools) refits the pile, whoever else notices it. */
     this.ro = new ResizeObserver(() => this.resize());
@@ -574,16 +599,9 @@ export default class PlanetShower {
     this.last = now;
     this.time += dt;
 
-    /* Arm once the section has gone (scrolled back up past it); a fresh
-       shower falls the next time it comes in. In between, nothing resets. */
-    const r = this.section.getBoundingClientRect();
-    const vh = window.innerHeight;
-    if (r.top > vh * 0.95) this.armed = true;
-    else if (this.armed && r.top < vh * 0.72) {
-      this.armed = false;
-      this.pending = true;
-    }
-    /* Let it fall once the maps are in and on the GPU (they start loading
+    /* (`pending`: the section has come in — see armIo/fireIo. A fresh
+       shower falls each time it comes in; in between, nothing resets.)
+       Let it fall once the maps are in and on the GPU (they start loading
        well before). */
     if (this.pending && this.scene.warmed) {
       this.pending = false;
@@ -604,7 +622,7 @@ export default class PlanetShower {
         if (!this.awake) break;
       }
     }
-    this.draw();
+    if (this.visible) this.draw();
   };
 
   draw() {
@@ -615,6 +633,9 @@ export default class PlanetShower {
     this.stop();
     clearTimeout(this.refit);
     this.io?.disconnect();
+    this.armIo?.disconnect();
+    this.fireIo?.disconnect();
+    this.visIo?.disconnect();
     this.ro?.disconnect();
     this.section.removeEventListener('pointerdown', this.onDown);
     this.section.removeEventListener('pointermove', this.onMove);

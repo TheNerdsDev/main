@@ -180,11 +180,15 @@ export default class LoaderLogo {
     const dy = ((-uy * 7 + ny * side * 2.5) * (life / 1000)) / (r1 * 2) * 100;
     const s0 = PUFF.r0 / r1;
     const at40 = { s: s0 + (1 - s0) * 0.64, o: 0.9 * Math.pow(0.6, 1.4) };
-    this.play(el, [
+    const drift = this.play(el, [
       { transform: `translate(0, 0) scale(${s0.toFixed(3)})`, opacity: 0.9 },
       { transform: `translate(${(dx * 0.4).toFixed(2)}%, ${(dy * 0.4).toFixed(2)}%) scale(${at40.s.toFixed(3)})`, opacity: at40.o, offset: 0.4 },
       { transform: `translate(${dx.toFixed(2)}%, ${dy.toFixed(2)}%) scale(1)`, opacity: 0 }
     ], { duration: life, delay: at, easing: 'linear', fill: 'forwards' });
+    /* Gone once it has faded: each puff is a layer of its own for the
+       compositor, and the ones already spent needn't stay on the books
+       through the landing and the curtain lifting. */
+    drift.finished.then(() => el.remove(), () => {});
     return el;
   }
 

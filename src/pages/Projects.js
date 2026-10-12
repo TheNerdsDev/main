@@ -19,7 +19,7 @@ const STACK = {
     focus: 0.5,           // focus line, × viewport height
     smoothing: 0.14,      // extra damping on top of Lenis, per 60fps frame (1 = none)
     scaleStep: 0.075,     // scale lost per card of distance → 0.925, 0.85, 0.775
-    opacity: [1, 0.8, 0.36, 0.1],   // at distance 0, 1, 2, 3
+    opacity: [1, 0.9, 0.52, 0.16],  // at distance 0, 1, 2, 3
     blur:    [0, 1.6, 4.5, 8],      // px, at distance 0, 1, 2, 3
     rotX: 3,              // deg per card — the column leans back above and below the focus
     rotY: -1.5,           // deg, a constant turn so the stack is never dead flat
@@ -33,7 +33,7 @@ const STACK = {
     focus: 0.5,
     smoothing: 1,         // in flow the layout already tracks the finger — never lag it
     scaleStep: 0.065,
-    opacity: [1, 0.75, 0.35, 0.1],
+    opacity: [1, 0.86, 0.48, 0.15],
     blur:    [0, 1.4, 3.5, 6],
     rotX: 1.8,
     rotY: -1,
@@ -46,7 +46,7 @@ const STACK = {
     focus: 0.55,
     smoothing: 1,
     scaleStep: 0.06,
-    opacity: [1, 0.72, 0.32, 0.1],
+    opacity: [1, 0.84, 0.45, 0.15],
     blur:    [0, 1.2, 3, 5],
     rotX: 1.2,
     rotY: 0,

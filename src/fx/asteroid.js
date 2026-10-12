@@ -79,7 +79,34 @@ const fbm = (noise, x, y, z, octaves) => {
  *   rough    surface noise strength
  *   chunk    a broken fragment: blockier, flat-shaded, no craters
  */
-export const makeAsteroid = ({ seed = 1, detail = 4, craters = 10, rough = 1, chunk = false } = {}) => {
+/* Every rock is the same shape each time from the same settings, and a
+   detailed one takes ~25 ms to build — so each is built once and kept:
+   coming back to the welcome page reuses them instead of building them all
+   again in the middle of the page change. (A page that leaves disposes its
+   rocks' GPU copies; the shapes stay, and go back up on first use.) */
+const built = new Map();
+
+export const makeAsteroid = (opts = {}) => {
+  const { seed = 1, detail = 4, craters = 10, rough = 1, chunk = false } = opts;
+  const key = `${seed}|${detail}|${craters}|${rough}|${chunk}`;
+  if (!built.has(key)) built.set(key, buildAsteroid({ seed, detail, craters, rough, chunk }));
+  return built.get(key);
+};
+
+/** Build the given rocks ahead of need, one per idle moment. */
+export const prebuildAsteroids = (list) => {
+  const later = (fn) => ('requestIdleCallback' in window ? requestIdleCallback(fn, { timeout: 3000 }) : setTimeout(fn, 200));
+  const todo = [...list];
+  const step = () => {
+    const opts = todo.shift();
+    if (!opts) return;
+    makeAsteroid(opts);
+    later(step);
+  };
+  later(step);
+};
+
+const buildAsteroid = ({ seed, detail, craters, rough, chunk }) => {
   const rand = prng(seed);
   const noise = makeNoise(rand);
 

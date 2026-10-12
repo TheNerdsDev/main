@@ -252,7 +252,9 @@ const mainPage = () => {
   const buttonChars = rollChars(main.about.button);
 
   /* A square frame with corner brackets in each person's colour: empty but
-     for "Scroll down" until the first scroll cuts the photo in (Main.js). */
+     for "Scroll down" until the first scroll cuts the photo in (Main.js),
+     and our name set under it (read out whole; the rolling letters are for
+     the eye only). */
   const frame = (m, side) => `      <figure class="about-frame about-frame-${side}" data-frame="${m.id}" style="--neon: ${m.colour}">
         <div class="about-photos">
           <span class="about-hint" aria-hidden="true">
@@ -262,6 +264,11 @@ const mainPage = () => {
           <img class="about-photo" src="${m.photo}" alt="${esc(m.photoAlt)}" width="960" height="960" decoding="async" fetchpriority="low" />
           <span class="about-flash" aria-hidden="true"></span>
         </div>
+        <figcaption class="about-who">
+          <span class="sr-only">${esc(m.name)} ${esc(m.surname)}</span>
+          <span class="about-who-name" aria-hidden="true"><span class="about-who-first">${[...m.name].map((c, i) => `<span class="about-who-char" style="--i: ${i}" data-c="${esc(c)}">${esc(c)}</span>`).join('')}</span></span>
+          <span class="about-who-last" aria-hidden="true">${esc(m.surname)}</span>
+        </figcaption>
       </figure>`;
 
   return shell({
@@ -468,11 +475,24 @@ ${shots}
 
 /* ----------------------------------------------------------------- info */
 
-/* One of the two capsules under About's intro: a heading and its list. */
-const infoPill = (key, { title, items }) => `          <section class="info-pill" aria-labelledby="info-${key}">
-            <h2 class="info-pill-title" id="info-${key}">${esc(title)}</h2>
-            <ul class="info-pill-list">${items.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
-          </section>`;
+/* One of About's two boxes: a heading and its list inside a double
+   outline. The outline is drawn in SVG, in the box's own 338 × 422 units
+   (the box keeps that shape, so it scales evenly), so it can draw itself on
+   as the boxes come into view; each line of text rises in behind its own
+   mask (pages.css, Info.js). The two lengths are each outline's perimeter,
+   for the drawing. */
+const OUTLINES = [
+  { x: 0.75, y: 0.75, w: 336.5, h: 420.5, r: 16 },
+  { x: 10.5, y: 10.5, w: 317, h: 401, r: 11 }
+];
+const perimeter = ({ w, h, r }) => (2 * (w + h - 4 * r) + 2 * Math.PI * r).toFixed(1);
+const infoCard = (key, { title, items }, i) => `        <section class="info-card" aria-labelledby="info-${key}" style="--i: ${i}">
+          <svg class="info-card-frame" viewBox="0 0 338 422" aria-hidden="true">${OUTLINES.map((o) => `<rect class="info-card-edge" x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" rx="${o.r}" style="--len: ${perimeter(o)}" />`).join('')}</svg>
+          <div class="info-card-inner">
+            <h2 class="info-card-title" id="info-${key}"><span class="info-card-rise">${esc(title)}</span></h2>
+            <ul class="info-card-list">${items.map((x, j) => `<li style="--j: ${j}"><span class="info-card-rise">${esc(x)}</span></li>`).join('')}</ul>
+          </div>
+        </section>`;
 
 const infoPage = () => shell({
   title: `${studio.name} — About`,
@@ -482,22 +502,28 @@ const infoPage = () => shell({
   <div class="page-content" id="page-content" tabindex="-1">
 ${header('info')}
 
-    <h1 class="title" data-split>
-        ${splitTitle(info.title)}
-    </h1>
-
+    <!-- The heading and a few lines about us on the left; the photo on the
+         right, level with the top of the heading. -->
     <div class="info-grid">
       <div class="info-body">
+        <h1 class="title" data-split>
+        ${splitTitle(info.title)}
+        </h1>
         <p class="lead" data-split-lines>${teamNames(info.lead)}</p>
-        <div class="info-pills">
-${infoPill('services', info.services)}
-${infoPill('specialties', info.specialties)}
-        </div>
       </div>
       <div class="info-portrait">
         ${mediaBlock('/media/studio/portrait.jpg', 'The studio')}
       </div>
     </div>
+
+    <!-- Below, in a section of their own: what we offer and what we're
+         best at, two boxes stepping down the page. -->
+    <section class="info-services" aria-label="What we do">
+      <div class="info-cards">
+${infoCard('services', info.services, 0)}
+${infoCard('specialties', info.specialties, 1)}
+      </div>
+    </section>
 
 ${finaleSection()}
 

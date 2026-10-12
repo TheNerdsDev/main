@@ -5,6 +5,7 @@ import Page from './Page.js';
 import FxLayer from '../fx/FxLayer.js';
 import Duo from '../fx/Duo.js';
 import RockStage from '../fx/RockStage.js';
+import SpaceRocks from '../fx/SpaceRocks.js';
 import Scatter from '../fx/Scatter.js';
 import { Crumble } from '../fx/Zap.js';
 import WaterReveal from '../fx/WaterReveal.js';
@@ -12,6 +13,7 @@ import Finale from '../fx/Finale.js';
 import magnetic from '../fx/magnetic.js';
 import { PALETTE } from '../gl/World.js';
 import { clamp } from '../fx/particles.js';
+import { main } from '../content/site.js';
 
 /*
  * Two "pages", joined by a guided move rather than a free scroll:
@@ -27,12 +29,12 @@ import { clamp } from '../fx/particles.js';
  *                  The next one plays the rest on its own: a photo of each
  *                  of us cuts into its frame with a camera flash; the text
  *                  and button unfold.
- *   …and back      one scroll up out of the work reel glides back up to
- *                  About, text and all. From there each part plays in
- *                  reverse at the pace it played forwards: the next scroll
- *                  takes the text and photos back to the empty frames, the
- *                  one after the frames, the collision and the glide
- *                  back home.
+ *   …and back      scrolling up out of the work reel is an ordinary scroll
+ *                  back to About, text and all. From there each part plays
+ *                  in reverse at the pace it played forwards: the next
+ *                  scroll takes the text and photos back to the empty
+ *                  frames, the one after the frames, the collision and the
+ *                  glide back home.
  *
  * One scroll, one step: after each, the scroll is handed back only once
  * the gesture is over (QUIET s without a wheel or touch), so the tail of a
@@ -78,6 +80,16 @@ const FOLLOW = 0.16;
 const HAND_BACK = 1;
 const REVEAL = 1.1;
 
+/**
+ * Arriving from another page: build the rocks' shapes in idle moments
+ * beforehand (pages/index.js warms each page's code), so coming here
+ * doesn't stop to build them mid page change.
+ */
+export const warm = () => {
+  RockStage.prepare();
+  SpaceRocks.prepare(main.rocks);
+};
+
 /** The landing page: welcome, the two of us in neon, and a short hello. */
 export default class Main extends Page {
   constructor(opts) {
@@ -106,10 +118,18 @@ export default class Main extends Page {
     this.showBar = q('.showcase-progress-bar');
     this.showX = 0;
     this.showIn = -1;
+    this.showStage = q('.showcase-stage');
+    this.showInners = this.showCards.map((c) => c.querySelector('.show-card-inner'));
+    /* Each photo's sideways drift (% of its width) and each card's hover
+       scale, as last written — the reel's model of itself (see cardPhoto). */
+    this.showShift = this.showCards.map(() => 0);
+    this.showScale = this.showCards.map(() => ({ v: 1 }));
     /* Hovering a card floods it with water from the pointer outwards, and
        the project's video plays under it. */
-    const showStage = q('.showcase-stage');
-    if (showStage && WaterReveal.supported()) this.water = new WaterReveal(showStage, this.showCards);
+    if (this.showStage && WaterReveal.supported()) {
+      this.water = new WaterReveal(this.showStage, this.showCards, (i) => this.cardPhoto(i));
+    }
+    this.bindReel();
 
     this.fx = new FxLayer();
     this.stage = new RockStage();
@@ -135,7 +155,6 @@ export default class Main extends Page {
     this.entered = false;
     this.held = false;
     this.inputAt = 0;
-    this.lastScroll = 0;
     this.onInput = () => { this.inputAt = performance.now(); };
     for (const type of ['wheel', 'touchmove', 'keydown']) {
       window.addEventListener(type, this.onInput, { passive: true, capture: true });
@@ -251,21 +270,6 @@ export default class Main extends Page {
       stopped coming in (loop() lets go). */
   release() {
     this.held = true;
-  }
-
-  /**
-   * Scrolling back up out of the work reel: one scroll carries the viewer
-   * all the way back up to About, text and all — the next one is what
-   * takes the text away.
-   */
-  backToText() {
-    if (!this.lenis) return;
-    const to = this.aboutAt(1);
-    const d = clamp(0.5 + ((store.scroll - to) / store.height) * 0.8, 0.5, GLIDE);
-    this.state = 'toText';
-    this.lenis.stop();
-    this.glideEnd = performance.now() + (d + 0.6) * 1000;
-    this.lenis.scrollTo(to, { duration: d, easing: glideEase, force: true, onComplete: () => this.settle('text', to) });
   }
 
   /**
@@ -544,8 +548,8 @@ export default class Main extends Page {
    * position. The frames rise in, empty, "Scroll down" in them (that much
    * plays on its own — see smash). Then, with the next scroll (goText):
    * the prompt goes, each photo cuts in from below with a camera flash and
-   * settles, the text rises line by line, then the button. Going back plays
-   * it exactly in reverse (goPhotos).
+   * settles, our names rise in under them, the text rises line by line,
+   * then the button. Going back plays it exactly in reverse (goPhotos).
    */
   buildAbout() {
     this.aboutTl?.kill();
@@ -570,6 +574,9 @@ export default class Main extends Page {
         tl.fromTo(flash, { opacity: 0 }, { opacity: 0.45, duration: 0.08, ease: 'none', immediateRender: false }, at)
           .fromTo(flash, { opacity: 0.45 }, { opacity: 0, duration: 0.35, ease: 'power2.out', immediateRender: false }, at + 0.08);
       }
+      /* …and the name rises in under it once the photo's there. */
+      const who = f.querySelector('.about-who');
+      if (who) tl.fromTo(who, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out' }, at + 0.45);
     });
 
     const textAt = REVEAL + 1.2;
@@ -630,6 +637,32 @@ export default class Main extends Page {
          transform forced a style recalculation per card per frame. */
       this.showCentres = this.showCards.map((c) => c.offsetLeft + c.offsetWidth / 2);
       this.showQ = null;
+
+      /* Where every card, and the photo in it, sits on the stage with
+         nothing moving: the reel's slide, the cards' rise-in and their
+         hover scale are added as they happen (cardBox, cardPhoto). Read
+         here, once, so finding the card under the pointer every frame
+         never makes the browser lay the page out. */
+      const stageBox = this.showStage.getBoundingClientRect();
+      const slid = this.showPinned ? this.showX : 0;
+      this.stageLeft = stageBox.left;
+      this.stageH = this.showStage.offsetHeight;
+      this.stageDocTop = stageBox.top + window.scrollY;
+      this.showH = this.show.offsetHeight;
+      this.reelGeo = this.showCards.map((card, i) => {
+        const r = card.getBoundingClientRect();
+        const inner = this.showInners[i];
+        const media = inner.querySelector('.show-card-media');
+        return {
+          x: r.left - stageBox.left - slid,
+          y: r.top - stageBox.top - (gsap.getProperty(card, 'y') || 0),
+          w: card.offsetWidth,
+          h: card.offsetHeight,
+          ix: inner.offsetLeft, iy: inner.offsetTop, iw: inner.offsetWidth, ih: inner.offsetHeight,
+          mx: media.offsetLeft, my: media.offsetTop, mw: media.offsetWidth, mh: media.offsetHeight,
+          still: card.classList.contains('is-still')
+        };
+      });
     }
     if (!this.about) return;
     /* The page's real scroll, not store.scroll: on a reload the browser
@@ -649,16 +682,9 @@ export default class Main extends Page {
       this.showP = p;
       this.showTl.progress(p);
     }
+    /* On its way in: get the videos loaded before anyone hovers. */
+    if (reveal > 0) this.water?.preload();
     if (!this.showPinned) return;
-
-    /* Cards sliding under a still pointer would each flood with water,
-       start their video and dim the rest, one after another, all the way
-       along — so while the reel moves they don't take the pointer
-       (main-page.css); it settles on whichever is under it once it stops. */
-    if (this.showMoving && performance.now() - this.showMovedAt > 220) {
-      this.showMoving = false;
-      this.show.classList.remove('is-moving');
-    }
 
     /* Straight from the scroll, which is smoothed already — easing it
        again left the reel trailing behind. */
@@ -669,11 +695,6 @@ export default class Main extends Page {
     if (Math.abs(x - this.showX) < 0.05 && q === this.showQ) return;
     this.showX = x;
     this.showQ = q;
-    this.showMovedAt = performance.now();
-    if (!this.showMoving) {
-      this.showMoving = true;
-      this.show.classList.add('is-moving');
-    }
     this.showTrack.style.transform = `translate3d(${this.showX.toFixed(1)}px, 0, 0)`;
     this.showBar.style.transform = `scaleX(${q.toFixed(4)})`;
 
@@ -691,8 +712,151 @@ export default class Main extends Page {
       if (!img) return;
       const c = this.showCentres[i] + this.showX;
       if (c < -vw * 0.5 || c > vw * 1.5) return;
-      img.style.transform = `translate3d(${(((c - vw / 2) / vw) * -7).toFixed(2)}%, 0, 0) scale(1.14)`;
+      const shift = ((c - vw / 2) / vw) * -7;
+      this.showShift[i] = shift;
+      img.style.transform = `translate3d(${shift.toFixed(2)}%, 0, 0) scale(1.14)`;
     });
+  }
+
+  /* ------------------------------------------------- the reel's hover */
+
+  /**
+   * Which card is "hot" (pointed at) is worked out here, from where the
+   * cards are, not left to the browser's :hover — which only notices a
+   * card has arrived under the pointer once the pointer moves. So it's
+   * the same whether the pointer moves onto a card or the scroll carries
+   * a card under a pointer that's holding still: the card comes forward,
+   * the others step back, and the water pours (fx/WaterReveal.js) — at
+   * once. Keyboard focus brings a card forward too (without the water).
+   */
+  bindReel() {
+    this.hot = -1;
+    this.focusHot = -1;
+    if (!this.show) return;
+    this.onReelFocus = (e) => {
+      const card = e.target.closest?.('.show-card');
+      const k = card ? this.showCards.indexOf(card) : -1;
+      this.focusHot = e.type === 'focusin' && k !== -1 && card.matches(':focus-visible') ? k : -1;
+      this.updateHot();
+    };
+    this.showTrack.addEventListener('focusin', this.onReelFocus);
+    this.showTrack.addEventListener('focusout', this.onReelFocus);
+
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    this.reelPtr = null;
+    this.onReelMove = (e) => {
+      if (e.pointerType === 'touch') return;
+      this.reelPtr = { x: e.clientX, y: e.clientY };
+      this.updateHot();
+    };
+    this.onReelOut = (e) => {
+      if (e.relatedTarget) return;
+      this.reelPtr = null;
+      this.updateHot();
+    };
+    window.addEventListener('pointermove', this.onReelMove, { passive: true });
+    document.addEventListener('pointerout', this.onReelOut, { passive: true });
+  }
+
+  /** The reel's stage on screen: its top, px (sticky over its runway when pinned). */
+  stageTop(scroll) {
+    if (!this.showPinned) return this.stageDocTop - scroll;
+    const natural = this.showTop - scroll;
+    return Math.min(Math.max(natural, 0), natural + this.showH - this.stageH);
+  }
+
+  /** Card i's box on the stage now: slid along with the reel, risen in. */
+  cardBox(i) {
+    const g = this.reelGeo[i];
+    return {
+      x: g.x + (this.showPinned ? this.showX : 0),
+      y: g.y + (gsap.getProperty(this.showCards[i], 'y') || 0),
+      w: g.w,
+      h: g.h
+    };
+  }
+
+  /**
+   * Card i's photo on the stage now — with the hover scale (from 50% 40%
+   * of the card, as main-page.css sets it) — and, relative to it, the
+   * picture inside (overscanned and drifting sideways). What the water
+   * is drawn over.
+   */
+  cardPhoto(i) {
+    const g = this.reelGeo[i];
+    const c = this.cardBox(i);
+    const s = this.showScale[i].v;
+    const ix = c.x + g.ix;
+    const iy = c.y + g.iy;
+    const ox = ix + g.iw * 0.5;
+    const oy = iy + g.ih * 0.4;
+    const w = g.mw * s;
+    const h = g.mh * s;
+    const k = g.still ? 1 : 1.14;
+    return {
+      x: ox + (ix + g.mx - ox) * s,
+      y: oy + (iy + g.my - oy) * s,
+      w, h, s,
+      tx: (w - w * k) / 2 + (this.showShift[i] / 100) * w,
+      ty: (h - h * k) / 2,
+      tw: w * k,
+      th: h * k
+    };
+  }
+
+  /** Find the card under the pointer; `motion`: the reel moved, not the pointer. */
+  updateHot(motion = false) {
+    let i = -1;
+    let at = null;
+    const ptr = this.reelPtr;
+    if (ptr && this.reelGeo && this.showP > 0.05) {
+      const sx = ptr.x - this.stageLeft;
+      const sy = ptr.y - this.stageTop(store.scroll);
+      if (sy >= 0 && sy < this.stageH) {
+        for (let k = 0; k < this.reelGeo.length; k++) {
+          const c = this.cardBox(k);
+          if (sx >= c.x && sx < c.x + c.w && sy >= c.y && sy < c.y + c.h) {
+            i = k;
+            break;
+          }
+        }
+      }
+      if (i !== -1) {
+        const m = this.cardPhoto(i);
+        at = { x: (sx - m.x) / m.w, y: (sy - m.y) / m.h };
+      }
+    }
+    const next = i !== -1 ? i : this.focusHot;
+    if (next !== this.hot) this.setHot(next, at, motion);
+    else if (at) this.water?.point(i, at);
+  }
+
+  setHot(i, at, motion) {
+    const prev = this.hot;
+    this.hot = i;
+    if (prev !== -1) {
+      this.showCards[prev].classList.remove('is-hot');
+      this.water?.leave(prev);
+    }
+    if (i !== -1) {
+      this.showCards[i].classList.add('is-hot');
+      if (at) this.water?.enter(i, at);
+    }
+    this.showTrack.classList.toggle('has-hot', i !== -1);
+    /* The one pointed at comes forward, the rest step back. */
+    this.showInners.forEach((el, k) => {
+      const o = this.showScale[k];
+      gsap.to(o, {
+        v: i === -1 ? 1 : k === i ? 1.08 : 0.93,
+        duration: 0.7,
+        ease: 'expo.out',
+        overwrite: 'auto',
+        onUpdate: () => { el.style.transform = `scale(${o.v.toFixed(4)})`; }
+      });
+    });
+    /* Carried onto (or off) a card under a still pointer: the cursor's
+       "View" wouldn't otherwise hear of it. */
+    if (motion) this.app?.cursor?.target(i !== -1 ? this.showCards[i] : this.showStage);
   }
 
   /* ----------------------------------------------------------- loop */
@@ -712,7 +876,6 @@ export default class Main extends Page {
       const s = this.state;
       const now = performance.now();
       const text = this.aboutAt(1);
-      const up = scroll < this.lastScroll - 0.5;
       if (this.held && !s.startsWith('to') && now - this.inputAt > QUIET * 1000) {
         this.held = false;
         this.lenis?.start();
@@ -723,11 +886,8 @@ export default class Main extends Page {
       } else if ((s === 'about' || s === 'text') && scroll < this.handBack - 3) this.goHome();
       else if (s === 'about' && scroll > this.handBack + 3) this.goText();
       else if (s === 'text' && scroll < text - 3) this.goPhotos();
-      /* Out of the reel and up towards About: the rest of the way in one go. */
-      else if (s === 'text' && up && this.show && scroll > text + 3 && scroll < this.showTop - 3) this.backToText();
       else if (s.startsWith('to') && now > this.glideEnd) this.finishGlide();
     }
-    this.lastScroll = scroll;
 
     const end = this.aboutTop + this.aboutH - vh;
 
@@ -762,6 +922,8 @@ export default class Main extends Page {
     }
 
     this.updateShowcase(scroll, vh, ease);
+    /* The reel (or the page) moved under the pointer: still on the same card? */
+    if (this.reelPtr && this.reelGeo) this.updateHot(true);
 
     /* The "Scroll down" arrows' bob rests while About is out of sight. */
     const away = scroll < this.aboutTop - vh || scroll > this.aboutTop + this.aboutH;
@@ -784,6 +946,7 @@ export default class Main extends Page {
     } else if (this.state === 'text' && store.scroll < this.aboutAt(1)) {
       this.lenis?.scrollTo(this.aboutAt(1), { immediate: true, force: true });
     }
+    this.water?.resize();
     this.fx.resize();
     this.stage.resize();
     this.duo?.resize();
@@ -832,6 +995,15 @@ export default class Main extends Page {
       window.removeEventListener(type, this.onInput, { capture: true });
     }
     this.cue?.removeEventListener('click', this.onCue);
+    if (this.onReelMove) {
+      window.removeEventListener('pointermove', this.onReelMove);
+      document.removeEventListener('pointerout', this.onReelOut);
+    }
+    if (this.onReelFocus) {
+      this.showTrack.removeEventListener('focusin', this.onReelFocus);
+      this.showTrack.removeEventListener('focusout', this.onReelFocus);
+    }
+    gsap.killTweensOf(this.showScale);
     this.unmagnet?.();
     gsap.killTweensOf([this.cue, this.journey, ...this.heroLines()]);
     this.pullTl?.kill();

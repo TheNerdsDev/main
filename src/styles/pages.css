@@ -107,6 +107,8 @@ html .media-wrapper.is-empty {
 /* Pointed at: green, like the header links. */
 #projects .project-title:hover,
 #projects .project-title:focus-visible { color: #0ACD88; }
+/* The colour says it; no underline. */
+#projects .project-title::after { content: none; }
 
 @media screen and (max-width: 1365px) and (pointer: coarse) {
   #projects .text-wrapper, #projects .project-index { position: static; width: auto; pointer-events: auto; }
@@ -345,66 +347,138 @@ html .media-wrapper.is-empty {
    INFO
    ================================================================= */
 #info .page-content { padding: 18rem 0 0; }
-#info .title { padding: 0 var(--unit); margin-bottom: 3.2rem; }
-#info .title .line + .line { margin-top: 0.6rem; }
 
-/* A few lines about us on the left, straight under the heading, and under
-   them two capsules side by side (what we offer, what we're best at); a
-   16:9 picture on the right, level with them at the top. */
+/* The heading and a few lines about us on the left; a 16:9 photo on the
+   right, its top level with the top of the heading. It fills the first
+   screen, so nothing of the section below shows at its foot. */
 #info .info-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
   gap: calc(var(--unit) * 2);
   padding: 0 var(--unit);
-  margin-bottom: 14rem;
+  min-height: calc(100vh - 18rem);
+  min-height: calc(100svh - 18rem);
   align-items: start;
+  align-content: start;
 }
+#info .title { margin-bottom: 3.2rem; }
+#info .title .line + .line { margin-top: 0.6rem; }
 #info .info-portrait .media-wrapper { aspect-ratio: 16 / 9; }
 #info .lead { max-width: 52rem; font-size: 2.2rem; line-height: 145%; }
 
-#info .info-pills {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1.6rem;
-  margin-top: 4.8rem;
-}
-/* A horizontal cylinder: round at both ends, the same height side by side. */
-#info .info-pill {
+/* What we offer and what we're best at: a section of its own, the two
+   boxes side by side and the second a step lower, as on the reference.
+   Each box is 338 × 422 (in its own units), and everything inside it is
+   measured in fractions of its width (container units), so it keeps those
+   proportions at any size: the double outline 10 apart, text set in 15%
+   from the sides. The gap between them is 12.7% of a box, the step down
+   43%. */
+#info .info-services {
+  --card-w: clamp(30rem, 23vw, 42rem);
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1.1rem;
-  padding: 2.8rem 3.2rem;
-  border: 1px solid rgba(var(--c-ink-rgb), 0.85);
-  border-radius: 999px;
-  text-align: center;
-  background: rgba(var(--c-ink-rgb), 0.025);
-  box-shadow: 0 0 2.4rem rgba(var(--c-ink-rgb), 0.08), inset 0 0 2.4rem rgba(var(--c-ink-rgb), 0.05);
+  min-height: 100vh;
+  min-height: 100svh;
+  padding: 12rem var(--unit);
 }
-#info .info-pill-title {
-  font-family: 'Anton', 'Arial Narrow', sans-serif;
-  font-weight: 400;
-  font-size: 2.6rem;
-  line-height: 1;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+#info .info-cards {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: calc(var(--card-w) * 0.127);
 }
-#info .info-pill-list li {
-  font-size: 1.65rem;
-  line-height: 1.42;
+#info .info-card {
+  position: relative;
+  flex: none;
+  width: var(--card-w);
+  aspect-ratio: 338 / 422;
+  container-type: inline-size;
+}
+#info .info-card + .info-card { margin-top: calc(var(--card-w) * 0.43); }
+#info .info-card-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+#info .info-card-edge {
+  fill: none;
+  stroke: rgba(var(--c-ink-rgb), 0.85);
+  stroke-width: 1.15;
+}
+#info .info-card-inner {
+  position: absolute;
+  inset: 0;
+  padding: 4.6rem 4.4rem 0;
+  padding: 16.5cqw 15cqw 0;
+}
+#info .info-card-title {
+  font-family: 'STIX Two Text', Georgia, 'Times New Roman', serif;
+  font-weight: 500;
+  font-size: 3.6rem;
+  font-size: 11cqw;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+  color: var(--c-ink);
+  white-space: nowrap;
+}
+#info .info-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  gap: 5.2cqw;
+  margin-top: 4rem;
+  margin-top: 12.5cqw;
+}
+#info .info-card-list li {
+  font-size: 1.5rem;
+  font-size: 4.4cqw;
+  line-height: 1.3;
   color: rgba(var(--c-ink-rgb), 0.82);
+}
+/* Each line of text has its own mask to rise through (room left for the
+   descenders). */
+#info .info-card-title,
+#info .info-card-list li { overflow: hidden; padding-bottom: 0.14em; margin-bottom: -0.14em; }
+#info .info-card-rise { display: block; }
+
+/* The entrance (Info.js arms it, then plays it each time the boxes come
+   into view, and sets it back once they're out of sight), as on the
+   reference: each box's double outline draws itself on, clockwise from its
+   top left corner; as it starts, the heading rises in; then the list, one
+   line after another. The second box follows the first a beat later. Only
+   the arrival is animated — the reset happens out of sight. */
+#info .info-cards.is-armed .info-card-edge {
+  stroke-dasharray: var(--len) var(--len);
+  stroke-dashoffset: var(--len);
+}
+#info .info-cards.is-armed .info-card-rise { transform: translateY(110%); }
+#info .info-cards.is-in .info-card-edge {
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 0.75s cubic-bezier(0.33, 1, 0.68, 1) calc(var(--i) * 0.12s);
+}
+#info .info-cards.is-in .info-card-rise {
+  transform: none;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1) calc(var(--i) * 0.12s + 0.1s);
+}
+#info .info-cards.is-in .info-card-list .info-card-rise {
+  transition-duration: 0.5s;
+  transition-delay: calc(var(--i) * 0.12s + 0.42s + var(--j) * 0.07s);
 }
 
 @media screen and (max-width: 1099px) {
-  #info .info-grid { grid-template-columns: 1fr; gap: 4rem; margin-bottom: 10rem; }
+  #info .info-grid { grid-template-columns: 1fr; gap: 4rem; }
   #info .lead { font-size: 2rem; }
-  #info .info-pills { max-width: 64rem; }
 }
 
-/* Phones: too narrow side by side — one above the other. */
+/* Phones: no room side by side — one box above the other, full width,
+   still the same shape. */
 @media screen and (max-width: 599px) {
-  #info .info-pills { grid-template-columns: 1fr; }
+  #info .info-services { --card-w: min(100%, 44rem); padding: 8rem var(--unit); }
+  #info .info-cards { flex-direction: column; align-items: center; gap: 2.4rem; width: 100%; }
+  #info .info-card + .info-card { margin-top: 0; }
 }
 
 /* =================================================================
@@ -437,26 +511,75 @@ html .media-wrapper.is-empty {
 #contact .form-sent-title,
 #contact .label { color: var(--c-heading); }
 
-/* The enquiry form: a pane of frosted glass on the starfield — a faint
-   sheen across it, a bright edge along the top, the stars blurred behind.
-   Short fields two to a row, the long ones full width. */
+/* The enquiry form: a pane of glass floating over the starfield. Back to
+   front: the stars behind it, blurred and a little richer (backdrop
+   filter); a cool tint that shifts across the pane — blue at the top
+   left, a breath of violet at the top right, the site's green low on the
+   right — over the night sky's own colour; a soft reflection across the
+   upper corner (::after); a hairline edge that catches the light along
+   the top and left and fades round the sides (::before); and under it a
+   shadow in three layers — where it nearly touches, falling away, and
+   far below with a little of the blue in it — so it floats. The fields
+   are set into it: darker wells with an inner shadow. Short fields two
+   to a row, the long ones full width. */
 #contact .contact-form {
+  position: relative;
+  isolation: isolate;
   grid-column: 2; grid-row: 1 / -1;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 2.4rem 2rem;
   padding: 4.4rem 4rem 4rem;
-  border: 1px solid rgba(var(--c-ink-rgb), 0.2);
-  border-radius: 2.4rem;
+  border-radius: 2.8rem;
   background:
-    linear-gradient(135deg, rgba(var(--c-ink-rgb), 0.12) 0%, rgba(var(--c-ink-rgb), 0.04) 42%, rgba(var(--c-ink-rgb), 0.08) 100%),
-    rgba(var(--c-bg-rgb), 0.38);
-  -webkit-backdrop-filter: blur(18px) saturate(140%);
-  backdrop-filter: blur(18px) saturate(140%);
+    radial-gradient(120% 80% at 0% 0%, rgba(120, 170, 255, 0.22), transparent 55%),
+    radial-gradient(70% 60% at 90% 8%, rgba(146, 89, 238, 0.13), transparent 60%),
+    radial-gradient(90% 70% at 100% 100%, rgba(10, 205, 136, 0.14), transparent 60%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.015) 50%, rgba(255, 255, 255, 0.04)),
+    rgba(var(--c-bg-rgb), 0.42);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  backdrop-filter: blur(22px) saturate(160%);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.28),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
-    0 2.4rem 6rem rgba(0, 0, 0, 0.45);
+    inset 0 1px 0 rgba(255, 255, 255, 0.32),
+    inset 1px 0 0 rgba(255, 255, 255, 0.07),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.04),
+    inset 0 0 3.2rem rgba(140, 180, 255, 0.06),
+    0 0.2rem 0.4rem rgba(0, 0, 0, 0.25),
+    0 2rem 4rem -1.2rem rgba(0, 0, 0, 0.5),
+    0 5rem 10rem -3rem rgba(20, 60, 140, 0.35);
+}
+/* The edge: bright where the light falls (top left), fading round the
+   sides, a faint green glint again at the bottom right. */
+#contact .contact-form::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  padding: 1px;
+  border-radius: inherit;
+  background: linear-gradient(150deg,
+    rgba(255, 255, 255, 0.55),
+    rgba(255, 255, 255, 0.14) 28%,
+    rgba(255, 255, 255, 0.05) 55%,
+    rgba(10, 205, 136, 0.28) 86%,
+    rgba(255, 255, 255, 0.3));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  pointer-events: none;
+}
+/* The reflection: a soft sheen across the upper left, the way a window
+   holds the light, and a brighter glare along the top. */
+#contact .contact-form::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background:
+    linear-gradient(118deg, rgba(255, 255, 255, 0.13) 0%, rgba(255, 255, 255, 0.045) 22%, transparent 34%),
+    radial-gradient(55% 18% at 32% 0%, rgba(255, 255, 255, 0.1), transparent 70%);
+  pointer-events: none;
 }
 #contact .field { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
 /* The site's label look (not .label itself: those fade in one by one as
@@ -472,24 +595,31 @@ html .media-wrapper.is-empty {
 #contact .contact-form-foot,
 #contact .form-sent { grid-column: 1 / -1; }
 #contact .field-optional { text-transform: none; letter-spacing: 0; color: rgba(var(--c-ink-rgb), 0.5); }
+/* A field: a well set into the glass — darker, shaded along its top
+   edge, a thin light along the bottom where the pane's surface turns. */
 #contact .field-input {
   width: 100%;
   padding: 1.4rem 1.6rem;
-  border: 1px solid rgba(var(--c-ink-rgb), 0.22);
-  border-radius: 1.2rem;
-  background: rgba(var(--c-bg-rgb), 0.32);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1.4rem;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.14));
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35), inset 0 -1px 0 rgba(255, 255, 255, 0.05);
   color: var(--c-ink);
   font: inherit;
   font-size: 1.7rem;
   line-height: 140%;
-  transition: border-color 0.4s var(--ease-out), box-shadow 0.4s var(--ease-out);
+  transition: border-color 0.4s var(--ease-out), box-shadow 0.4s var(--ease-out), background-color 0.4s var(--ease-out);
 }
 #contact textarea.field-input { resize: vertical; min-height: 9rem; }
-#contact .field-input:hover { border-color: rgba(var(--c-ink-rgb), 0.4); }
+#contact .field-input:hover { border-color: rgba(255, 255, 255, 0.24); }
 #contact .field-input:focus {
   outline: none;
   border-color: #0ACD88;
-  box-shadow: 0 0 0 1px #0ACD88, 0 0 1.6rem rgba(10, 205, 136, 0.25);
+  background-color: rgba(10, 205, 136, 0.04);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.35),
+    0 0 0 1px #0ACD88,
+    0 0 1.6rem rgba(10, 205, 136, 0.25);
 }
 /* The browser's autofill paints its own fill; keep it on the night sky. */
 #contact .field-input:-webkit-autofill {
@@ -585,7 +715,7 @@ html .media-wrapper.is-empty {
   #contact .lead { font-size: 1.55rem; }
   #contact .contact-details { grid-template-columns: 1fr; }
   #contact .contact-detail-tall { grid-row: auto; }
-  #contact .contact-form { grid-template-columns: 1fr; padding: 3.2rem 2.4rem; border-radius: 2rem; }
+  #contact .contact-form { grid-template-columns: 1fr; padding: 3.2rem 2.4rem; border-radius: 2.2rem; }
   #contact .field-input { font-size: max(16px, 1.6rem); }   /* 16px+, or phones zoom into the field */
   #contact .shout-button { width: 100%; }
 }
