@@ -120,16 +120,22 @@ function seg(options, value, onPick) {
   return wrap;
 }
 
-/** A drop area that also opens the file picker. */
-function dropzone({ title, sub, accept, onFile, disabled }) {
-  const input = h('input', { type: 'file', accept, hidden: true, onChange: () => { if (input.files[0]) onFile(input.files[0]); input.value = ''; } });
+/** A drop area that also opens the file picker. `onFiles` (instead of
+    `onFile`) takes several at once, in the order given. */
+function dropzone({ title, sub, accept, onFile, onFiles, disabled }) {
+  const take = (list) => {
+    const files = [...list];
+    if (!files.length) return;
+    if (onFiles) onFiles(files); else onFile(files[0]);
+  };
+  const input = h('input', { type: 'file', accept, hidden: true, multiple: !!onFiles, onChange: () => { take(input.files); input.value = ''; } });
   const zone = h('div', {
     class: 'drop', tabindex: disabled ? -1 : 0, role: 'button', 'aria-disabled': String(!!disabled),
     onClick: () => !disabled && input.click(),
     onKeydown: (e) => { if (!disabled && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); input.click(); } },
     onDragover: (e) => { if (disabled) return; e.preventDefault(); zone.classList.add('is-over'); },
     onDragleave: () => zone.classList.remove('is-over'),
-    onDrop: (e) => { e.preventDefault(); zone.classList.remove('is-over'); if (!disabled && e.dataTransfer.files[0]) onFile(e.dataTransfer.files[0]); }
+    onDrop: (e) => { e.preventDefault(); zone.classList.remove('is-over'); if (!disabled) take(e.dataTransfer.files); }
   }, h('b', {}, title), h('small', {}, sub), input);
   if (disabled) zone.style.opacity = '0.45';
   return zone;
@@ -173,6 +179,7 @@ async function save() {
   const btn = $('#save');
   btn.disabled = true;
   btn.textContent = 'Saving…';
+  btn.dataset.saving = '1';
   try {
     const keep = location.hash;
     apply(await call('PUT', '/api/content', S.draft));
@@ -184,7 +191,8 @@ async function save() {
     chrome();
     return false;
   } finally {
-    btn.textContent = 'Save';
+    delete btn.dataset.saving;
+    chrome();
   }
 }
 
@@ -199,7 +207,10 @@ function changed() { chrome(); }
 /** Top bar, nav and side panel. */
 function chrome() {
   const d = S.draft && dirty();
-  $('#save').disabled = !d;
+  const saveBtn = $('#save');
+  saveBtn.disabled = !d;
+  /* (Not while a save is going: it says "Saving…" then.) */
+  if (!saveBtn.dataset.saving) saveBtn.textContent = d ? 'Save' : 'Saved ✓';
   $('#dirty').hidden = !d;
   const n = S.git?.changes?.length || 0;
   const count = $('#publish-count');
@@ -350,14 +361,33 @@ function projectEditor(p) {
   const m = () => S.media[slug] || {};
   const wrap = h('div', {});
 
-  /* Header: the name, and whether it's on the site. */
+  /* Header: the name, and whether it's on the site — with, while it's
+     hidden, what it takes to show it (a new project starts hidden). */
   const showSwitch = h('input', {
     type: 'checkbox', checked: !p.hidden, disabled: !m().thumb && p.hidden,
-    onChange: (e) => { p.hidden = !e.target.checked; changed(); }
+    onChange: (e) => { p.hidden = !e.target.checked; changed(); showState(); }
   });
+  const hiddenBox = h('div', { class: 'hidden-box' });
+  const showState = () => {
+    const thumb = !!m().thumb;
+    const saved = S.saved.projects.find((x) => x.slug === slug);
+    hiddenBox.innerHTML = '';
+    hiddenBox.hidden = !saved?.hidden;
+    if (hiddenBox.hidden) return;
+    const step = (done, text) => h('li', { class: done ? 'is-done' : '' }, h('span', { class: 'step-mark' }, done ? '✓' : ''), text);
+    hiddenBox.append(
+      h('b', {}, 'Hidden — not on the site yet'),
+      h('p', {}, 'It isn’t on the Work page or the home page reel until you show it:'),
+      h('ol', { class: 'steps' },
+        step(thumb, 'Add a thumbnail (below)'),
+        step(!p.hidden, 'Switch on “Shown on the site” (top right)'),
+        step(false, 'Save')));
+  };
   wrap.append(h('div', { class: 'page-head' },
     h('div', {}, h('h1', {}, p.name), h('p', {}, `thenerds.dev/work/${slug}/`)),
-    h('label', { class: 'switch', title: !m().thumb ? 'Add a thumbnail first' : '' }, showSwitch, 'Shown on the site')));
+    h('label', { class: 'switch', title: !m().thumb ? 'Add a thumbnail first' : '' }, showSwitch, 'Shown on the site')),
+    hiddenBox);
+  showState();
 
   /* Details. */
   const text = (label, key, opts = {}) => {
@@ -434,7 +464,7 @@ function projectEditor(p) {
     const upload = (file) => {
       if (!pictureOk(file)) return toast('That isn’t a picture this takes — use PNG, JPG or WebP.', 'error');
       run(frame, 'Uploading…', (prog) => send(`/api/upload?slug=${slug}&kind=thumb&mode=${thumbMode}`, file, prog))
-        .then((r) => { if (r) { showSwitch.disabled = false; drawThumb(); } });
+        .then((r) => { if (r) { showSwitch.disabled = false; drawThumb(); showState(); } });
     };
     thumbCard.append(
       h('div', { class: 'card-head' }, h('div', {}, h('h2', {}, 'Thumbnail'), h('p', {}, 'The picture on its card — the home page reel and the Work page. Saved as 1600 × 1200 (4:3).'))),
@@ -513,17 +543,40 @@ function projectEditor(p) {
               arrange(ids.filter((x) => x !== s.id), {}, 'Removing…');
             } }, '✕')))));
     });
-    const add = (file) => {
-      if (!pictureOk(file)) return toast('That isn’t a picture this takes — use PNG, JPG or WebP.', 'error');
-      run(grid, 'Uploading…', (prog) => send(`/api/upload?slug=${slug}&kind=shot&mode=${shotMode}`, file, prog)).then((r) => r && drawShots());
+    /* One or several, added in order into the free places (one at a time —
+       each is converted before the next goes up). */
+    const add = async (files) => {
+      const pics = files.filter(pictureOk);
+      if (pics.length < files.length) toast('Skipped what isn’t a picture — use PNG, JPG or WebP.', 'error');
+      for (const [k, file] of pics.entries()) {
+        const label = pics.length > 1 ? `Uploading ${k + 1} of ${pics.length}…` : 'Uploading…';
+        const r = await run(grid, label, (prog) => send(`/api/upload?slug=${slug}&kind=shot&mode=${shotMode}`, file, prog));
+        if (!r) break;
+      }
+      drawShots();
     };
+    /* The page's own layout, as places to fill: the wide one at the top, two
+       side by side under it — and, once those are in, room for more (they
+       go on two to a row). Only the next free place takes a drop, so each
+       lands where it's shown; several dropped at once fill them in turn. */
+    const places = list.length < 3 ? 3 : list.length + 1;
+    for (let n = list.length + 1; n <= places; n++) {
+      const next = n === list.length + 1;
+      const title = n === 1 ? 'Add the wide screenshot' : n <= 3 ? `Add screenshot ${n}` : 'Add another';
+      const sub = !next ? `After screenshot ${n - 1}`
+        : n === 1 ? 'Drop one here, or several at once (they fill all three) — or click'
+          : n <= 3 ? `Drop ${n === 2 ? 'one or two' : 'one'} here, or click`
+            : 'Drop pictures here, or click — two to a row';
+      grid.append(h('div', { class: `shot shot-empty ${next ? '' : 'is-later'}` },
+        h('div', { class: 'frame' }, dropzone({ title, sub, accept: IMG, onFiles: add, disabled: !next })),
+        h('div', { class: 'shot-bar' }, h('span', { class: 'label' }, n === 1 ? '1 · Wide, at the top' : n <= 3 ? `${n} · Under it, side by side` : String(n)))));
+    }
     shotsCard.append(
-      h('div', { class: 'card-head' }, h('div', {}, h('h2', {}, 'Screenshots'), h('p', {}, 'On the project’s page, under the description: the first one wide (2.1 : 1), the rest two to a row (1.62 : 1). Each is fitted to its place.'))),
-      list.length ? grid : h('p', { class: 'note' }, p.photos === false && p.shots ? 'No screenshots yet — its page shows empty frames until you add one.' : 'No screenshots yet.'),
-      h('div', { class: 'field', style: 'margin-top:16px' }, h('span', { class: 'label' }, 'New screenshots'),
+      h('div', { class: 'card-head' }, h('div', {}, h('h2', {}, 'Screenshots'), h('p', {}, 'On the project’s page, under the description: one wide at the top (2.1 : 1) and two side by side under it (1.62 : 1). More go on two to a row. Each is fitted to its place.'))),
+      h('div', { class: 'field', style: 'margin-bottom:16px' }, h('span', { class: 'label' }, 'New screenshots'),
         seg([['fit', 'Keep them whole'], ['fill', 'Fill the frame']], shotMode, (v) => { shotMode = v; }),
         h('span', { class: 'hint' }, 'Keep whole: on a dark backdrop, so the hover zoom never cuts them (app screenshots). Fill: cropped to the frame (photos, designed images).')),
-      h('div', { style: 'margin-top:12px' }, dropzone({ title: 'Add a screenshot', sub: 'Drop a picture here, or click — PNG, JPG or WebP', accept: IMG, onFile: add })));
+      grid);
   }
 
   drawThumb();
@@ -613,6 +666,10 @@ function home() {
     plus.disabled = n >= shown.length;
     list.innerHTML = '';
     shown.forEach((p, i) => list.append(h('div', { class: `home-item ${i < n ? 'is-on' : ''}` }, h('b', {}, pad(i + 1)), p.name, i < n ? '' : h('span', { style: 'margin-left:auto;font-size:12px' }, 'Work page only'))));
+    /* Hidden ones too, so a new project isn't simply missing here. */
+    S.draft.projects.filter((p) => p.hidden).forEach((p) => list.append(
+      h('a', { class: 'home-item is-hidden', href: `#/projects/${p.slug}` }, h('b', {}, '—'), p.name,
+        h('span', { style: 'margin-left:auto;font-size:12px' }, 'Hidden — show it on the site first ↗'))));
   };
   const set = (n) => { S.draft.home.showcase = Math.max(1, Math.min(n, shown.length)); changed(); draw(); };
   minus.addEventListener('click', () => set(S.draft.home.showcase - 1));

@@ -194,7 +194,8 @@ h1, h2, h3 { margin: 0; font-weight: 600; }
 .note { color: var(--dim); font-size: 13px; }
 .warn-box { padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(244, 162, 97, 0.35); background: rgba(244, 162, 97, 0.07); color: #f8c393; font-size: 13px; }
 
-.shots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+/* As on the project's page: the first wide, the rest two to a row. */
+.shots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .shot { display: flex; flex-direction: column; gap: 8px; }
 .shot:first-child { grid-column: 1 / -1; }
 .shot .frame { aspect-ratio: 1.62 / 1; }
@@ -203,6 +204,10 @@ h1, h2, h3 { margin: 0; font-weight: 600; }
 .shot-bar { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
 .shot-bar .label { white-space: nowrap; }
 .shot-tools { display: flex; gap: 4px; }
+/* A place still to fill: its drop area takes the frame's shape. */
+.shot-empty .frame { border: 0; background: none; overflow: visible; }
+.shot-empty .drop { position: absolute; inset: 0; min-height: 0; padding: 12px; }
+.shot-empty.is-later .label { color: var(--faint); }
 
 /* ----------------------------------------------------------- lists */
 .list { display: flex; flex-direction: column; gap: 6px; }
@@ -217,6 +222,19 @@ h1, h2, h3 { margin: 0; font-weight: 600; }
 .home-item { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line); color: var(--faint); }
 .home-item.is-on { color: var(--ink); border-color: rgba(10, 205, 136, 0.35); background: rgba(10, 205, 136, 0.05); }
 .home-item b { font-family: 'Anton', sans-serif; font-weight: 400; width: 26px; }
+.home-item.is-hidden { border-style: dashed; text-decoration: none; }
+.home-item.is-hidden:hover { color: var(--dim); border-color: var(--line-2); }
+
+/* A hidden project: what it takes to show it. */
+.hidden-box { margin: -6px 0 18px; padding: 14px 16px; border-radius: 10px; border: 1px solid rgba(239, 77, 90, 0.35); background: rgba(239, 77, 90, 0.06); font-size: 14px; }
+.hidden-box b { color: #ff9aa2; }
+.hidden-box p { margin: 4px 0 8px; color: var(--dim); }
+.steps { display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 0; padding: 0; list-style: none; counter-reset: step; }
+.steps li { display: flex; align-items: center; gap: 8px; color: var(--ink); counter-increment: step; }
+.step-mark { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--line-2); font-size: 11px; color: var(--dim); }
+.step-mark:empty::before { content: counter(step); }
+.steps li.is-done { color: var(--dim); }
+.steps li.is-done .step-mark { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); font-weight: 700; }
 .stepper { display: inline-flex; align-items: center; gap: 14px; }
 .stepper output { font-family: 'Anton', sans-serif; font-size: 44px; min-width: 50px; text-align: center; line-height: 1; }
 

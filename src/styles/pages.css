@@ -762,14 +762,15 @@ html .media-wrapper.is-empty {
   gap: 2.4rem 2rem;
   padding: 4.4rem 4rem 4rem;
   border-radius: 2.8rem;
+  /* Kept light, so the sky shows through: a thin tint, a soft blur. */
   background:
-    radial-gradient(120% 80% at 0% 0%, rgba(120, 170, 255, 0.22), transparent 55%),
-    radial-gradient(70% 60% at 90% 8%, rgba(146, 89, 238, 0.13), transparent 60%),
-    radial-gradient(90% 70% at 100% 100%, rgba(10, 205, 136, 0.14), transparent 60%),
-    linear-gradient(160deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.015) 50%, rgba(255, 255, 255, 0.04)),
-    rgba(var(--c-bg-rgb), 0.42);
-  -webkit-backdrop-filter: blur(22px) saturate(160%);
-  backdrop-filter: blur(22px) saturate(160%);
+    radial-gradient(120% 80% at 0% 0%, rgba(120, 170, 255, 0.13), transparent 55%),
+    radial-gradient(70% 60% at 90% 8%, rgba(146, 89, 238, 0.08), transparent 60%),
+    radial-gradient(90% 70% at 100% 100%, rgba(10, 205, 136, 0.09), transparent 60%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.01) 50%, rgba(255, 255, 255, 0.025)),
+    rgba(var(--c-bg-rgb), 0.14);
+  -webkit-backdrop-filter: blur(9px) saturate(140%);
+  backdrop-filter: blur(9px) saturate(140%);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.32),
     inset 1px 0 0 rgba(255, 255, 255, 0.07),
@@ -833,8 +834,8 @@ html .media-wrapper.is-empty {
   padding: 1.4rem 1.6rem;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 1.4rem;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.14));
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35), inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.08));
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3), inset 0 -1px 0 rgba(255, 255, 255, 0.05);
   color: var(--c-ink);
   font: inherit;
   font-size: 1.7rem;
