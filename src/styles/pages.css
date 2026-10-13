@@ -715,22 +715,23 @@ html .media-wrapper.is-empty {
 /* =================================================================
    CONTACT
    ================================================================= */
-/* Starts just under the header, so the whole form is in view on arrival. */
-#contact .page-content { padding: 10.5rem 0 6rem; }
+/* Starts just under the header, so the whole form is in view on arrival,
+   and ends just after it: no empty space to scroll into. */
+#contact .page-content { padding: 10.5rem 0 4rem; }
 #contact .title { grid-column: 1; }
 #contact .title .line + .line { margin-top: 0.6rem; }
 
 /* Two columns: the heading, lead and details down the left; the form on
-   the right, its top level with the heading's. The last row is flexible
-   and takes up the form's extra height, so the left column keeps its own
-   spacing instead of being stretched to match. */
+   the right, its top level with the heading's. The details' row is the
+   flexible one: it takes up the form's extra height, so the left column
+   keeps its own spacing instead of being stretched to match — and nothing
+   (no empty row, no margin) runs on below the form. */
 #contact .contact-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-template-rows: auto auto auto 1fr;
+  grid-template-rows: auto auto 1fr;
   gap: 7rem calc(var(--unit) * 2);
   padding: 0 var(--unit);
-  margin-bottom: 10rem;
   align-items: start;
 }
 #contact .lead { grid-column: 1; max-width: 46rem; font-size: 1.7rem; line-height: 150%; color: rgba(var(--c-ink-rgb), 0.78); }
@@ -818,6 +819,7 @@ html .media-wrapper.is-empty {
 /* The site's label look (not .label itself: those fade in one by one as
    the page enters, and the form arrives as a whole), brighter to read. */
 #contact .field-label {
+  font-family: var(--font-subtext);
   font-size: 1.4rem;
   line-height: 110%;
   letter-spacing: 0.04em;
@@ -1013,7 +1015,6 @@ html.no-webgl .back { position: static; display: inline-block; margin: 0 var(--u
   #projects .title { font-size: 7.4rem; }
 }
 
-/* No footer: the scrolling pages just get some breathing room at the end
-   (About ends on the closing screen instead). */
-#work .page-content,
-#contact .page-content { padding-bottom: 10rem; }
+/* No footer: the work pages just get some breathing room at the end
+   (About ends on the closing screen instead; Contact ends at its form). */
+#work .page-content { padding-bottom: 10rem; }

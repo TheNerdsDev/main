@@ -36,6 +36,9 @@ a { color: inherit; text-decoration: none; }
   --ease-in-out: cubic-bezier(0.76, 0, 0.24, 1);
   --dur: 0.8s;
 
+  /* The subtext's face (.subtext) — also the contact form's labels. */
+  --font-subtext: 'Atkinson Hyperlegible', 'Inter', system-ui, sans-serif;
+
   /* Tells the inline first-paint styles (scripts/generate-pages.mjs) that
      the real stylesheet is in, so the loader can show its contents. */
   --styled: visible;
@@ -127,7 +130,7 @@ h1 {
 /* The subtext under each page's heading: its own voice next to Anton, and
    made for reading (Atkinson Hyperlegible; loaded in main.js, and waited
    for before the page splits it into lines — core/App.js). */
-.subtext { font-family: 'Atkinson Hyperlegible', 'Inter', system-ui, sans-serif; font-weight: 400; }
+.subtext { font-family: var(--font-subtext); font-weight: 400; }
 .subtext strong { font-weight: 700; }
 .overline, .project-meta, .nav, .logo, .back, .copied, .project-title {
   font-size: 1.5rem;
