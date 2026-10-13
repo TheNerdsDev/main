@@ -28,6 +28,8 @@ export const main = {
   /* **word** renders bold. */
   intro: 'Blending **creativity** and **technology** to build experiences that feel genuinely different',
   scrollLabel: 'Scroll Down',
+  /* Pinned to one of the space rocks until a visitor throws one (fx/Duo.js). */
+  rockHint: { click: 'Click a rock', tap: 'Tap a rock', line: 'and throw it at the other nerd' },
   about: {
     text:
       "Hi, we're Meet and Prem, two curious developers who love turning simple ideas into something creative. If you can dream it up, we'll happily nerd out building it.",

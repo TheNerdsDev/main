@@ -296,6 +296,87 @@ html.lenis-stopped { overflow: hidden; }
 /* In the air: can't be clicked again until it has drifted back. */
 #main .duo-action.is-away { pointer-events: none; }
 
+/* The hint riding one rock until a visitor throws one (fx/Duo.js): the
+   cursor's dashed target ring, turning, a slow ping, and a line under it.
+   Placed and sized from the script; never in the way of a click. */
+#main .rock-hint {
+  position: absolute;
+  top: 0; left: 0;
+  z-index: 20;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.7s var(--ease-out);
+  will-change: transform;
+}
+#main .rock-hint.is-on { opacity: 1; }
+#main .rock-hint-ring {
+  position: absolute;
+  top: 0; left: 0;
+  translate: -50% -50%;
+  border-radius: 50%;
+}
+#main .rock-hint-ring::before,
+#main .rock-hint-ping {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: 50%;
+}
+#main .rock-hint-ring::before {
+  border: 1px dashed rgba(var(--c-ink-rgb), 0.75);
+  animation: rock-hint-turn 18s linear infinite;
+}
+#main .rock-hint-ping {
+  border: 1px solid rgba(var(--c-ink-rgb), 0.55);
+  animation: rock-hint-ping 2.6s var(--ease-out) infinite;
+}
+#main .rock-hint-label {
+  position: absolute;
+  top: 0; left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+  text-align: center;
+  text-shadow: 0 0 0.8rem rgba(var(--c-bg-rgb), 0.95), 0 0 0.3rem rgba(var(--c-bg-rgb), 0.9);
+}
+/* A soft dark haze behind the words, so they read even where there's no
+   clear side and they cross a sketch (phones, mostly). */
+#main .rock-hint-label::before {
+  content: '';
+  position: absolute;
+  inset: -0.8rem -1.4rem;
+  z-index: -1;
+  border-radius: 50%;
+  background: rgba(var(--c-bg-rgb), 0.72);
+  filter: blur(1.2rem);
+}
+#main .rock-hint-cta {
+  font-family: 'Syne Mono', monospace;
+  font-size: 1.3rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--c-ink);
+}
+#main .rock-hint-line {
+  font-size: 1.45rem;
+  font-style: italic;
+  color: var(--c-dim);
+}
+#main .rock-hint:not(.is-on) .rock-hint-ring::before,
+#main .rock-hint:not(.is-on) .rock-hint-ping { animation-play-state: paused; }
+
+@keyframes rock-hint-turn { to { rotate: 360deg; } }
+@keyframes rock-hint-ping {
+  0% { scale: 1; opacity: 0.7; }
+  70%, 100% { scale: 1.6; opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #main .rock-hint-ring::before { animation: none; }
+  #main .rock-hint-ping { display: none; }
+}
+
 /* --------------------------------------------------------------- about */
 
 /* A tall runway; the stage inside it is pinned while the scroll position
