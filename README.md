@@ -30,7 +30,11 @@ binary error.
 
 ## Making it yours
 
-Nearly everything lives in **one file**: `src/content/site.js`.
+**Projects, the About page's two boxes, the home page reel and maintenance
+mode are edited in the CMS: `npm run cms`** (a dashboard at
+http://localhost:5190 — see `cms/README.md`). It writes `src/content/cms.js`.
+
+Everything else lives in **one file**: `src/content/site.js`.
 
 | What | Where |
 |---|---|
@@ -41,8 +45,8 @@ Nearly everything lives in **one file**: `src/content/site.js`.
 | The closing section (heading, text, button) | `finale` |
 | Work index headline and intro | `workIndex` |
 | Contact page heading, lead and details | `contact` |
-| About page copy, services, stack | `info` |
-| Projects (name, year, role, description, accent colour, hover video) | `projects` |
+| About page heading and intro | `info` (its two boxes: the CMS) |
+| Projects, The Offer, The Work, how many projects the home reel shows, maintenance mode | the CMS → `src/content/cms.js` |
 | Colours, spacing, type scale | `:root` in `src/styles/base.css` |
 
 After editing content, run `npm run pages` (or just `npm run dev` / `npm run

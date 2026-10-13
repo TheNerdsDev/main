@@ -9,7 +9,7 @@ const root = process.cwd();
 function collectPages(dir = root, found = {}, depth = 0) {
   if (depth > 3) return found;
   for (const entry of readdirSync(dir)) {
-    if (['node_modules', 'dist', '.git', 'src', 'scripts', 'public'].includes(entry)) continue;
+    if (['node_modules', 'dist', '.git', 'src', 'scripts', 'public', 'cms', 'supabase', '.cms-trash', '.cms-tmp'].includes(entry)) continue;
     const full = join(dir, entry);
     if (statSync(full).isDirectory()) collectPages(full, found, depth + 1);
   }

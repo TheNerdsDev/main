@@ -1,0 +1,166 @@
+/* The maintenance page (scripts/generate-pages.mjs → maintenancePage,
+   src/maintenance.js). Built on base.css: the same tokens, type and rem. */
+
+/* Syne Mono (SIL Open Font License — see /fonts/SyneMono-OFL.txt). */
+@font-face {
+  font-family: 'Syne Mono';
+  src: url('/fonts/SyneMono-Regular.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+body.maint { min-height: 100vh; min-height: 100svh; }
+
+.maint-stars {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+/* A faint glow behind the words, in the two of them: blue and green. */
+body.maint::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(64rem 44rem at 56% 40%, rgba(47, 140, 255, 0.1), transparent 70%),
+    radial-gradient(48rem 34rem at 42% 60%, rgba(57, 255, 20, 0.06), transparent 70%);
+}
+
+.maint-main {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100svh;
+  padding: 6rem var(--unit);
+  text-align: center;
+}
+
+.maint-logo .logo-mark { height: 4.4rem; }
+
+/* The two of them, circling: a green and a blue light on a dashed orbit
+   round a small star — the site's rocks and cursor, in miniature. */
+.maint-orbit {
+  position: relative;
+  width: 15rem;
+  height: 15rem;
+  margin: 5.6rem 0 4.4rem;
+}
+.maint-orbit::after {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 0.7rem; height: 0.7rem;
+  margin: -0.35rem 0 0 -0.35rem;
+  border-radius: 50%;
+  background: var(--c-ink);
+  box-shadow: 0 0 1.4rem rgba(var(--c-ink-rgb), 0.8), 0 0 4rem rgba(var(--c-ink-rgb), 0.25);
+}
+.maint-orbit-ring,
+.maint-orbit-arm {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+.maint-orbit-ring {
+  border: 1px dashed rgba(var(--c-ink-rgb), 0.32);
+  animation: maint-turn 60s linear infinite reverse;
+}
+.maint-orbit-arm { animation: maint-turn 10s linear infinite; }
+.maint-orbit-arm i {
+  position: absolute;
+  top: 50%;
+  width: 1.3rem; height: 1.3rem;
+  margin-top: -0.65rem;
+  border-radius: 50%;
+}
+.maint-orbit-a {
+  left: -0.65rem;
+  background: #39FF14;
+  box-shadow: 0 0 1.2rem #39FF14, 0 0 3.2rem rgba(57, 255, 20, 0.45);
+}
+.maint-orbit-b {
+  right: -0.65rem;
+  background: #2F8CFF;
+  box-shadow: 0 0 1.2rem #2F8CFF, 0 0 3.2rem rgba(47, 140, 255, 0.45);
+}
+
+.maint-kicker {
+  margin-bottom: 2.2rem;
+  font-family: 'Syne Mono', monospace;
+  font-size: 1.3rem;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--c-heading);
+}
+.maint-title {
+  max-width: 13ch;
+  font-size: 9.2rem;
+  line-height: 92%;
+}
+.maint-text {
+  max-width: 54rem;
+  margin-top: 3rem;
+  font-size: 1.9rem;
+  line-height: 150%;
+  color: rgba(var(--c-ink-rgb), 0.76);
+}
+.maint-back {
+  margin-top: 2.4rem;
+  padding: 0.9rem 1.8rem;
+  border: 1px solid var(--c-line);
+  border-radius: 99px;
+  font-family: 'Syne Mono', monospace;
+  font-size: 1.25rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.maint-reach {
+  margin-top: 5.2rem;
+  font-size: 1.5rem;
+  color: var(--c-dim);
+}
+.maint-reach a {
+  color: var(--c-ink);
+  border-bottom: 1px solid var(--c-line);
+  transition: color 0.3s var(--ease-out), border-color 0.3s var(--ease-out);
+}
+.maint-reach a:hover,
+.maint-reach a:focus-visible { color: var(--c-heading); border-color: var(--c-heading); outline: none; }
+
+/* In, one after another. */
+.maint-main > * { animation: maint-in 1.4s var(--ease-out) both; }
+.maint-main > :nth-child(2) { animation-delay: 0.1s; }
+.maint-main > :nth-child(3) { animation-delay: 0.2s; }
+.maint-main > :nth-child(4) { animation-delay: 0.28s; }
+.maint-main > :nth-child(5) { animation-delay: 0.36s; }
+.maint-main > :nth-child(6) { animation-delay: 0.44s; }
+.maint-main > :nth-child(7) { animation-delay: 0.52s; }
+
+@keyframes maint-turn { to { rotate: 360deg; } }
+@keyframes maint-in {
+  from { opacity: 0; translate: 0 2.4rem; }
+}
+
+@media screen and (max-width: 767px) {
+  .maint-logo .logo-mark { height: 3.8rem; }
+  .maint-orbit { width: 12rem; height: 12rem; margin: 4.4rem 0 3.6rem; }
+  .maint-title { font-size: 6.6rem; }
+  .maint-text { font-size: 1.6rem; }
+  .maint-reach { margin-top: 4rem; font-size: 1.4rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .maint-orbit-ring,
+  .maint-orbit-arm,
+  .maint-main > * { animation: none; }
+}

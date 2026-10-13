@@ -1,15 +1,32 @@
 /**
  * Generates every route's index.html from src/content/site.js.
  * Run with `npm run pages` (wired into predev / prebuild).
+ *
+ * `--build` (prebuild): pages for the published site. With maintenance on
+ * (CMS → Maintenance), that's the maintenance page at every address and
+ * nothing else. Without it (dev, the CMS): always the real pages — with a
+ * reminder while maintenance is on — and the maintenance page at
+ * /maintenance/ to preview.
  */
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync, readdirSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { studio, main, team, workIndex, info, contact, showcase, finale, projects, getNext, getPrev } from '../src/content/site.js';
+import { studio, maintenance, main, team, workIndex, info, contact, showcase, finale, projects, getNext, getPrev } from '../src/content/site.js';
 import { logoSvg } from '../src/content/logo.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const BUILD = process.argv.includes('--build');
+
+/* On this computer, while maintenance is on: a corner note on every page,
+   so it's never forgotten — the real pages are still here to work on. */
+const maintenanceNote = !BUILD && maintenance.on
+  ? `
+<a href="/maintenance/" style="position:fixed;left:1.6rem;bottom:1.6rem;z-index:200;display:flex;align-items:center;gap:.8rem;padding:.9rem 1.4rem;border-radius:99px;background:rgba(5,6,15,.88);border:1px solid rgba(244,162,97,.55);color:#f8c393;font:500 1.3rem/1.2 'Inter',system-ui,sans-serif;letter-spacing:.02em;text-decoration:none;backdrop-filter:blur(8px);pointer-events:auto">
+  <span style="width:.8rem;height:.8rem;border-radius:50%;background:#f4a261;box-shadow:0 0 .8rem #f4a261"></span>
+  Maintenance is on — visitors see the maintenance page once published. Preview ↗
+</a>`
+  : '';
 
 /* ---------------------------------------------------------------- shell */
 
@@ -57,7 +74,7 @@ const shell = ({ title, description, pageId, body, bodyClass = '' }) => `<!docty
 <div class="overlay" aria-hidden="true"></div>
 
 ${body}
-
+${maintenanceNote}
 <script type="module" src="/src/main.js"></script>
 </body>
 </html>
@@ -201,7 +218,9 @@ const showcaseSection = () => {
   const srcset = (slug) => existsSync(join(root, 'public', 'media', slug, 'featured-960.webp'))
     ? ` srcset="/media/${slug}/featured-960.webp 960w, /media/${slug}/featured.jpg 1600w" sizes="(max-width: 767px) 100vw, 36vw"`
     : '';
-  const cards = projects
+  /* The first `showcase.count` projects (CMS: Home page). */
+  const shown = projects.slice(0, Math.max(1, Math.min(showcase.count || projects.length, projects.length)));
+  const cards = shown
     .map((p, i) => `          <a class="show-card${p.screenshot ? ' is-still' : ''}" href="/work/${p.slug}/" data-link data-cursor="View"${p.video ? ` data-video="${esc(p.video)}"` : ''} style="--accent: ${p.accent}">
             <span class="show-card-inner">
               <span class="show-card-media"><img class="show-card-img" src="/media/${p.slug}/featured.jpg"${srcset(p.slug)} alt="${esc(p.name)}" loading="lazy" decoding="async" /></span>
@@ -222,7 +241,7 @@ const showcaseSection = () => {
               <svg class="showcase-all-arrow" viewBox="0 0 48 48" aria-hidden="true"><path d="M10 38 38 10M16 10h22v22" /></svg>
             </a>
           </div>
-          <span class="showcase-count" aria-hidden="true"><span class="showcase-count-now">01</span> / ${pad(projects.length)}</span>
+          <span class="showcase-count" aria-hidden="true"><span class="showcase-count-now">01</span> / ${pad(shown.length)}</span>
         </div>
         <div class="showcase-track">
 ${cards}
@@ -642,6 +661,50 @@ ${details}
   });
 };
 
+/* ---------------------------------------------------------- maintenance */
+
+/* The page on its own: none of the site's app or 3D, just its own small
+   script (src/maintenance.js — the stars and its stylesheet), so it's up
+   at once. Not for search engines. */
+const maintenancePage = () => {
+  const m = maintenance;
+  const title = `${studio.name} — ${m.kicker}`;
+  const description = m.message || m.title;
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>${esc(title)}</title>
+<meta name="description" content="${esc(description)}" />
+<meta name="robots" content="noindex" />
+<meta name="theme-color" content="#05060F" />
+<meta property="og:title" content="${esc(title)}" />
+<meta property="og:description" content="${esc(description)}" />
+<meta property="og:site_name" content="${esc(studio.name)}" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<style>html { background: #05060F; color-scheme: dark; }</style>
+</head>
+<body class="maint">
+<canvas class="maint-stars" aria-hidden="true"></canvas>
+<main class="maint-main">
+  <span class="logo maint-logo" role="img" aria-label="${esc(studio.wordmark)}">${logoSvg({ id: 'maint-logo' })}</span>
+  <div class="maint-orbit" aria-hidden="true">
+    <span class="maint-orbit-ring"></span>
+    <span class="maint-orbit-arm"><i class="maint-orbit-a"></i><i class="maint-orbit-b"></i></span>
+  </div>
+  <p class="maint-kicker">${esc(m.kicker)}</p>
+  <h1 class="maint-title">${esc(m.title)}</h1>
+  ${m.message ? `<p class="maint-text">${esc(m.message)}</p>` : ''}
+  ${m.back ? `<p class="maint-back">${esc(m.back)}</p>` : ''}
+  <p class="maint-reach">${esc(m.reach)} <a href="mailto:${esc(studio.email)}">${esc(studio.email)}</a></p>
+</main>
+<script type="module" src="/src/maintenance.js"></script>
+</body>
+</html>
+`;
+};
+
 /* ----------------------------------------------------------------- emit */
 
 const write = (relDir, html) => {
@@ -651,12 +714,35 @@ const write = (relDir, html) => {
   console.log('  ✓', join(relDir || '.', 'index.html'));
 };
 
-console.log('Generating pages…');
-write('', mainPage());
-write('work', projectsPage());
-write('info', infoPage());
-write('contact', contactPage());
-projects.forEach((p) => write(join('work', p.slug), workPage(p)));
+console.log(BUILD && maintenance.on ? 'Generating pages… (maintenance is on: the maintenance page at every address)' : 'Generating pages…');
+if (BUILD && maintenance.on) {
+  const page = maintenancePage();
+  ['', 'work', 'info', 'contact', ...projects.map((p) => join('work', p.slug))].forEach((dir) => write(dir, page));
+} else {
+  write('', mainPage());
+  write('work', projectsPage());
+  write('info', infoPage());
+  write('contact', contactPage());
+  projects.forEach((p) => write(join('work', p.slug), workPage(p)));
+}
+
+/* The preview at /maintenance/: on this computer only — never built into
+   the published site (where it'd be a page anyone could stumble on). */
+if (BUILD) rmSync(join(root, 'maintenance'), { recursive: true, force: true });
+else write('maintenance', maintenancePage());
+
+/* A project's page from before it was deleted or hidden (in the CMS) would
+   still be built and served: clear those out. (Generated, never edited —
+   each holds only its index.html.) */
+const keep = new Set(projects.map((p) => p.slug));
+for (const entry of readdirSync(join(root, 'work'), { withFileTypes: true })) {
+  if (!entry.isDirectory() || keep.has(entry.name)) continue;
+  const dir = join(root, 'work', entry.name);
+  if (readdirSync(dir).every((f) => f === 'index.html')) {
+    rmSync(dir, { recursive: true, force: true });
+    console.log('  ✗', join('work', entry.name), '(no longer a project)');
+  }
+}
 
 /* favicon */
 mkdirSync(join(root, 'public'), { recursive: true });
