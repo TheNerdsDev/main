@@ -149,8 +149,8 @@ export const contact = {
       { name: 'email', label: 'Email', type: 'email', autocomplete: 'email', required: true, max: 200 },
       { name: 'phone', label: 'Phone number', type: 'tel', autocomplete: 'tel', required: true, max: 30 },
       { name: 'company', label: 'Company name', type: 'text', autocomplete: 'organization', max: 120 },
-      { name: 'about', label: 'Brief about you', type: 'textarea', rows: 3, max: 2000 },
-      { name: 'idea', label: 'What do you have in mind', type: 'textarea', rows: 5, max: 4000 }
+      { name: 'about', label: 'Brief about you', type: 'textarea', rows: 2, max: 2000 },
+      { name: 'idea', label: 'What do you have in mind', type: 'textarea', rows: 3, max: 4000 }
     ],
     optional: 'Optional',
     button: 'Send Your Idea',

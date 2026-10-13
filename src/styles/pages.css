@@ -715,7 +715,8 @@ html .media-wrapper.is-empty {
 /* =================================================================
    CONTACT
    ================================================================= */
-#contact .page-content { padding: 18rem 0 6rem; }
+/* Starts just under the header, so the whole form is in view on arrival. */
+#contact .page-content { padding: 10.5rem 0 6rem; }
 #contact .title { grid-column: 1; }
 #contact .title .line + .line { margin-top: 0.6rem; }
 
@@ -759,8 +760,8 @@ html .media-wrapper.is-empty {
   grid-column: 2; grid-row: 1 / -1;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 2.4rem 2rem;
-  padding: 4.4rem 4rem 4rem;
+  gap: 2rem 2rem;
+  padding: 3.6rem 4rem 3.4rem;
   border-radius: 2.8rem;
   /* Kept light, so the sky shows through: a thin tint, a soft blur. */
   background:
@@ -842,7 +843,7 @@ html .media-wrapper.is-empty {
   line-height: 140%;
   transition: border-color 0.4s var(--ease-out), box-shadow 0.4s var(--ease-out), background-color 0.4s var(--ease-out);
 }
-#contact textarea.field-input { resize: vertical; min-height: 9rem; }
+#contact textarea.field-input { resize: vertical; min-height: 7rem; }
 #contact .field-input:hover { border-color: rgba(255, 255, 255, 0.24); }
 #contact .field-input:focus {
   outline: none;
