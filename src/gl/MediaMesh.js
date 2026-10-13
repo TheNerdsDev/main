@@ -7,6 +7,10 @@ import Component from '../core/Component.js';
 import vertexShader from './shaders/media.vert';
 import fragmentShader from './shaders/media.frag';
 
+/* A work page card under the pointer grows by this much (and comes forward,
+   over its neighbours) — on top of the picture's own hover zoom. */
+const HOVER_GROW = 0.06;
+
 /** One WebGL plane locked to one DOM element. */
 export default class MediaMesh extends Component {
   constructor({
@@ -32,6 +36,8 @@ export default class MediaMesh extends Component {
        position, scale, tilt, fade and blur directly, so its DOM box is
        never re-read while scrolling. */
     this.stack = stack;
+    /* Its hover growth, 0..1 (stack cards only). */
+    this.grow = { value: 0 };
 
     /* Offset each card's drift so the group never moves in lockstep. */
     this.phase = index * 1.7;
@@ -123,12 +129,14 @@ export default class MediaMesh extends Component {
   /* ----------------------------------------------------------- hover */
 
   setHover(on) {
-    gsap.to(this.uniforms.uHover, {
+    const tween = {
       value: on ? 1 : 0,
       duration: on ? 1.4 : 0.9,
       ease: on ? 'expo.out' : 'power3.out',
       overwrite: 'auto'
-    });
+    };
+    gsap.to(this.uniforms.uHover, tween);
+    if (this.stack !== null) gsap.to(this.grow, tween);
   }
 
   /* ------------------------------------------------------- transform */
@@ -155,20 +163,24 @@ export default class MediaMesh extends Component {
     this.mesh.rotation.set(this.floatRotX, this.floatRotY, this.floatRotZ);
   }
 
-  /** Stack cards: centre and size come straight from the shared state. */
+  /** Stack cards: centre, size and colour come straight from the shared state. */
   updateStackTransform(s) {
-    const width = s.w * s.scale;
-    const height = s.h * s.scale;
+    const grow = this.grow.value;
+    const k = s.scale * (1 + HOVER_GROW * grow);
+    const width = s.w * k;
+    const height = s.h * k;
 
     this.mesh.scale.set(width, height, 1);
     this.uniforms.uPlaneSizes.value.set(width, height);
 
     this.mesh.position.set(s.cx - store.width / 2, store.height / 2 - s.cy, this.depth);
     this.mesh.rotation.set(s.rotX, s.rotY, s.rotZ);
-    this.mesh.renderOrder = s.order;
+    /* Grown, it draws over its neighbours (still under the previews, 60). */
+    this.mesh.renderOrder = s.order + (grow > 0.001 ? 9 : 0);
 
     this.uniforms.uOpacity.value = s.opacity;
     this.uniforms.uBlur.value = s.blur;
+    this.uniforms.uColour.value = s.colour;
   }
 
   /* ------------------------------------------------------ transitions */
@@ -238,6 +250,7 @@ export default class MediaMesh extends Component {
     this.parent.remove(this.mesh);
     this.material.dispose();
     gsap.killTweensOf(this.uniforms.uHover);
+    gsap.killTweensOf(this.grow);
     gsap.killTweensOf(this.uniforms.uLoad);
     gsap.killTweensOf(this.uniforms.uEnter);
   }

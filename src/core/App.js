@@ -66,9 +66,17 @@ export default class App {
     const urls = assets.collectFromDOM(document);
     /* This page's code, fetched while the loader loads its pictures. */
     const pageCode = loadPage(this.pageEl.dataset.page);
+    /* …and the subtext's font: the page measures its lines when it's built,
+       so they must break where the real font breaks them. (Never waited on
+       for more than 2s — a font that won't come leaves the fallback.) */
+    const subtextFont = Promise.race([
+      Promise.all(['400', '700'].map((w) => document.fonts?.load(`${w} 1em "Atkinson Hyperlegible"`))),
+      new Promise((r) => setTimeout(r, 2000))
+    ]).catch(() => {});
 
     await this.loader.preload([...new Set(urls)]);
     await pageCode;
+    await subtextFont;
 
     /* Build the page now, while the loader's rocket is still on its way:
        this is the heaviest stretch of work (a long block of the main
@@ -96,10 +104,10 @@ export default class App {
     this.router = new Router(this);
     this.router.prefetchAll(['/', '/work/', '/info/', ...projects.map((p) => `/work/${p.slug}/`)]);
 
-    /* Warm the work index's thumbnails in idle moments, one at a time, so
-       the first trip there is still instant — without the loader waiting
-       on them. */
-    const thumbs = projects.map((p) => `/media/${p.slug}/featured.jpg`);
+    /* Warm the About page's photo and the work index's thumbnails in idle
+       moments, one at a time, so the first trip to either is still instant
+       (decoded and on the GPU already) — without the loader waiting on them. */
+    const thumbs = ['/media/studio/portrait.jpg', ...projects.map((p) => `/media/${p.slug}/featured.jpg`)];
     const later = (fn) => ('requestIdleCallback' in window ? requestIdleCallback(fn, { timeout: 3000 }) : setTimeout(fn, 400));
     const next = () => {
       const url = thumbs.shift();

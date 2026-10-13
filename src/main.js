@@ -2,6 +2,9 @@ import '@fontsource/anton/400.css';
 import '@fontsource/inter/400.css';
 import '@fontsource/inter/500.css';
 import '@fontsource/inter/600.css';
+/* The subtext under each page's heading (.subtext): Latin only, regular and bold. */
+import '@fontsource/atkinson-hyperlegible/latin-400.css';
+import '@fontsource/atkinson-hyperlegible/latin-700.css';
 import './styles/main.css';
 
 import store from './core/Store.js';

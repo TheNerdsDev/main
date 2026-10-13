@@ -56,6 +56,13 @@ const STACK = {
   }
 };
 
+/* Colour: the card in focus shows in its own colours, the rest in black
+   and white. Full colour within COLOUR[0] cards of the focus line, none
+   from COLOUR[1] on, eased between — so a card warms up as it arrives and
+   greys out as it leaves, in step with the scroll. (Hover still brings any
+   card's colour back: media.frag.) */
+const COLOUR = [0.15, 0.65];
+
 /* |rel| with the point at zero rounded off (a cubic that meets |rel|
    with matching slope at SOFT), so scale, fade and blur ease through the
    focus instead of turning around on a sharp corner. */
@@ -93,7 +100,7 @@ export default class Projects extends Page {
     this.states = this.cards.map(() => ({
       cx: 0, cy: 0, w: 0, h: 0,
       scale: 1, rotX: 0, rotY: 0, rotZ: 0,
-      opacity: 1, blur: 0, order: 50
+      opacity: 1, blur: 0, order: 50, colour: 0
     }));
     store.stack = this.states;
 
@@ -270,6 +277,8 @@ export default class Projects extends Page {
     s.scale = 1 - c.scaleStep * Math.min(ds, 4);
     s.opacity = ramp(c.opacity, ds);
     s.blur = ramp(c.blur, ds);
+    const t = clamp((d - COLOUR[0]) / (COLOUR[1] - COLOUR[0]), 0, 1);
+    s.colour = 1 - t * t * (3 - 2 * t);
     s.rotX = c.rotX * r * DEG;
     s.rotY = (c.rotY + c.rotYStep * r) * DEG;
     s.rotZ = -c.rotZ * r * DEG;

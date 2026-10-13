@@ -188,9 +188,11 @@ export const finale = {
 
 /* Work index at `/work/` — the card stack. */
 export const workIndex = {
-  title: ["Work we're", 'proud of'],
+  /* Each line must fit on one row (it's revealed behind its own mask) —
+     beside the card stack that's about ten letters. */
+  title: ['Heavy on', 'ideas.', 'Light on', 'boring.'],
   intro:
-    "Websites, software and tools we've designed and built from the ground up. Open any project to see how it came together."
+    'We turn wild ideas into websites, clever software, and digital experiences worth showing off. Take a peek at what happens when nerds get creative.'
 };
 
 export const info = {

@@ -140,7 +140,7 @@ const finaleSection = () => {
       <canvas class="planet-canvas" aria-hidden="true"></canvas>
       <div class="finale-body">
         <h2 class="finale-title" id="finale-title">${finale.title.map((l) => `<span class="line"><span class="line-inner">${esc(l)}</span></span>`).join(' ')}</h2>
-        <p class="finale-text">${[].concat(finale.text).map((l) => `<span class="finale-line">${esc(l)}</span>`).join(' ')}</p>
+        <p class="finale-text subtext">${[].concat(finale.text).map((l) => `<span class="finale-line">${esc(l)}</span>`).join(' ')}</p>
         <div class="finale-cta">
           <a class="about-button finale-button" href="/contact/" data-link aria-label="${esc(finale.button)}">
             <span class="about-button-text" aria-hidden="true">${chars}</span>
@@ -306,7 +306,7 @@ ${header('main')}
         <h1 class="title" data-split>
         ${splitTitle(main.title)}
         </h1>
-        <p class="text hero-intro" data-split-lines>${esc(main.intro).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')}</p>
+        <p class="text hero-intro subtext" data-split-lines>${esc(main.intro).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')}</p>
         <a class="scroll-cue" href="#about">
           <span class="scroll-cue-track" aria-hidden="true"><span class="scroll-cue-spark"></span></span>
           <svg class="scroll-cue-head" viewBox="0 0 16 10" aria-hidden="true"><path d="M1 1.5 8 8.5l7-7" /></svg>
@@ -391,7 +391,7 @@ ${header('projects')}
       <h1 class="title" data-split>
         ${splitTitle(workIndex.title)}
       </h1>
-      <p class="text" data-split-lines>${esc(workIndex.intro)}</p>
+      <p class="text subtext" data-split-lines>${esc(workIndex.intro)}</p>
     </div>
 
     <section class="work" aria-label="Selected work">
@@ -464,7 +464,7 @@ ${header('projects', true)}
       ${certs[1] ? cert(certs[1], 'right') : ''}
     </div>
 
-    <p class="description" data-split-lines>${esc(p.description)}</p>
+    <p class="description subtext" data-split-lines>${esc(p.description)}</p>
 
     <dl class="metas">
       <div class="meta"><dt class="label">Year</dt><dd class="text">${esc(p.year)}</dd></div>
@@ -555,10 +555,10 @@ ${header('info')}
         <h1 class="title" data-split>
         ${splitTitle(info.title)}
         </h1>
-        <p class="lead" data-split-lines>${teamNames(info.lead)}</p>
+        <p class="lead subtext" data-split-lines>${teamNames(info.lead)}</p>
       </div>
       <div class="info-portrait">
-        ${mediaBlock('/media/studio/portrait.jpg', 'The studio')}
+        ${mediaBlock('/media/studio/portrait.jpg', 'Prem Kajiwala and Meet Raval, The Nerds')}
       </div>
     </div>
 
@@ -630,7 +630,7 @@ ${header('contact')}
         ${splitTitle(contact.title)}
       </h1>
 
-      <p class="lead" data-split-lines>${lead}</p>
+      <p class="lead subtext" data-split-lines>${lead}</p>
 
       <form class="contact-form" data-contact-form data-mailto="${esc(studio.email)}" data-messages="${esc(JSON.stringify({ failed: form.failed, ...form.errors }))}" novalidate>
 ${form.fields.map(field).join('\n')}

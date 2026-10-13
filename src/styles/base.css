@@ -124,6 +124,11 @@ h1 {
   text-transform: uppercase;
 }
 .text { font-size: 1.7rem; line-height: 140%; }
+/* The subtext under each page's heading: its own voice next to Anton, and
+   made for reading (Atkinson Hyperlegible; loaded in main.js, and waited
+   for before the page splits it into lines — core/App.js). */
+.subtext { font-family: 'Atkinson Hyperlegible', 'Inter', system-ui, sans-serif; font-weight: 400; }
+.subtext strong { font-weight: 700; }
 .overline, .project-meta, .nav, .logo, .back, .copied, .project-title {
   font-size: 1.5rem;
   line-height: 120%;
