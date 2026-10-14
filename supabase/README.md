@@ -2,14 +2,20 @@
 
 The form on `/contact/` posts to a Supabase Edge Function, which saves each
 enquiry to a database table and emails it to you through Resend. The email's
-reply-to is the client, so answering is just hitting Reply.
+reply-to is the client, so answering is just hitting Reply. Sending from
+our own domain (thenerds.dev), the client also gets a short thank-you
+(`THANKS_NOTE` in the function); their reply to it comes to
+getintouch@thenerds.dev.
 
 ```
 form (src/core/ContactForm.js)
   → function `contact` (supabase/functions/contact/index.ts)
       → table `enquiries` (supabase/migrations/…_enquiries.sql)
-      → email to you via Resend
+      → email to you via Resend        ("Their Name via The Nerds")
+      → thank-you to them via Resend   (only from our own domain)
 ```
+
+The thank-you's wording is `THANKS_NOTE` in the function.
 
 Both services have free tiers that comfortably cover a portfolio's enquiries.
 
@@ -32,16 +38,23 @@ read or write it. Only the function can.
 
 ### 3. Resend (the email)
 
-1. Sign up at <https://resend.com> **with thenerds2k25@gmail.com** (enquiries
-   go to the address the account is under), then create an **API key**
-   (Sending access).
-2. Until you verify a domain, Resend sends **only to the address you signed up
-   with**, from `onboarding@resend.dev`. That's all the enquiry emails need,
-   so `CONTACT_TO` is thenerds2k25@gmail.com.
-3. Once you have a domain (later): Resend → Domains → add it → add the DNS
-   records it shows → set `CONTACT_FROM` (e.g. `The Nerds <hello@yourdomain>`).
-   Then it can send to anyone, which is what a thank-you email to the client
-   will need.
+1. Sign up at <https://resend.com> (the account is under
+   thenerds2k25@gmail.com), then create an **API key** (Sending access).
+2. Until a domain is verified, Resend sends **only to the address the account
+   is under**, from `onboarding@resend.dev`, and there's no thank-you.
+3. **Verify thenerds.dev:** Resend → **Domains** → **Add domain** →
+   `thenerds.dev`. It lists a few DNS records (an MX and a TXT on
+   `send.thenerds.dev`, a DKIM TXT on `resend._domainkey`). Add each one,
+   exactly as shown, in the DNS settings where the domain was bought, then
+   press **Verify** in Resend (it can take from minutes to a few hours).
+   These sit on their own names (`send`, `resend._domainkey`), so they
+   don't touch the mailbox's own records.
+4. **getintouch@thenerds.dev has to receive mail** (a mailbox, or forwarding
+   to Gmail, from your domain or email host): enquiries are sent there, and
+   clients reply there.
+5. Once verified, point the function at the domain (step 4 below):
+   `CONTACT_FROM="The Nerds <getintouch@thenerds.dev>"` and
+   `CONTACT_TO=getintouch@thenerds.dev`.
 
 ### 4. Deploy the function
 
@@ -60,8 +73,17 @@ Set its settings. Use your own key and address, and the sites allowed to post
 to it: your local dev servers now, your real domain once it's live:
 
 ```bash
-npx supabase secrets set RESEND_API_KEY=re_xxxxxxxx CONTACT_TO=thenerds2k25@gmail.com ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5180,http://192.168.29.9:5173 RATE_SALT=any-long-random-text
+npx supabase secrets set RESEND_API_KEY=re_xxxxxxxx RATE_SALT=any-long-random-text
 ```
+
+and, once thenerds.dev is verified in Resend:
+
+```bash
+npx supabase secrets set "CONTACT_FROM=The Nerds <getintouch@thenerds.dev>" CONTACT_TO=getintouch@thenerds.dev ALLOWED_ORIGINS=https://thenerds.dev,https://www.thenerds.dev,http://localhost:5173,http://localhost:5180
+```
+
+(`CONTACT_TO` can list several addresses, comma-separated. To stop the
+thank-you without changing anything else: `CONTACT_THANKS=off`.)
 
 Then deploy it. `--no-verify-jwt` lets the site call it without a key, and
 the function guards itself instead (origin list, bot trap, rate limit):

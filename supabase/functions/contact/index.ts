@@ -4,18 +4,24 @@
  * Checks an enquiry, saves it to public.enquiries, and emails it to us
  * through Resend with the sender as the reply-to — so answering it is just
  * hitting Reply. It's saved either way; if the email fails, the row's
- * `emailed` stays false.
+ * `emailed` stays false. Once it sends from our own domain, the client
+ * also gets a short thank-you; replying to that reaches us.
  *
  * Deployed public (--no-verify-jwt: the site has no key to send), and
  * guarded instead by: an origin list, a bot trap field, a minimum fill
  * time, a per-sender rate limit, and the same checks as the form.
  *
  * Settings (supabase secrets): RESEND_API_KEY, CONTACT_TO (comma-separated),
- * CONTACT_FROM, ALLOWED_ORIGINS (comma-separated), RATE_SALT.
+ * CONTACT_FROM, CONTACT_REPLY_TO, ALLOWED_ORIGINS (comma-separated),
+ * RATE_SALT; CONTACT_THANKS=off to stop the thank-you.
  * SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided by Supabase.
  * Setup, step by step: supabase/README.md.
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
+
+/* Supabase's runtime: keeps the function alive for work finished after it
+   has answered. */
+declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void } | undefined;
 
 const env = (key: string, fallback = '') => Deno.env.get(key) ?? fallback;
 const list = (value: string) => value.split(',').map((s) => s.trim()).filter(Boolean);
@@ -23,8 +29,16 @@ const list = (value: string) => value.split(',').map((s) => s.trim()).filter(Boo
 const ORIGINS = list(env('ALLOWED_ORIGINS'));
 const TO = list(env('CONTACT_TO'));
 const FROM = env('CONTACT_FROM', 'The Nerds <onboarding@resend.dev>');
+const FROM_ADDRESS = (FROM.match(/<([^>]+)>/)?.[1] ?? FROM).trim();
+/* Where a client's reply to the thank-you goes. */
+const REPLY_TO = env('CONTACT_REPLY_TO') || TO[0] || FROM_ADDRESS;
+/* Resend's shared test sender can only write to the account's own address:
+   the thank-you needs our own, verified domain. */
+const THANKS = env('CONTACT_THANKS', 'on') !== 'off' && !FROM_ADDRESS.endsWith('@resend.dev');
 const RESEND_KEY = env('RESEND_API_KEY');
 const SALT = env('RATE_SALT', 'the-nerds');
+
+const SITE = { name: 'The Nerds' };
 
 /* The form's fields, and the same rules the page checks
    (src/content/site.js → contact.form.fields). */
@@ -32,10 +46,10 @@ type Rule = { label: string; max: number; required?: boolean; kind?: 'email' | '
 const FIELDS: Record<string, Rule> = {
   name: { label: 'Name', max: 120, required: true },
   email: { label: 'Email', max: 200, required: true, kind: 'email' },
-  phone: { label: 'Phone', max: 30, required: true, kind: 'phone' },
+  phone: { label: 'Phone', max: 30, kind: 'phone' },
   company: { label: 'Company', max: 120 },
   about: { label: 'About them', max: 2000 },
-  idea: { label: 'What they have in mind', max: 4000 }
+  idea: { label: 'What they have in mind', max: 4000, required: true }
 };
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const PHONE = /^[+\d\s().-]+$/;
@@ -82,6 +96,45 @@ function message(data: Record<string, string | null>) {
 <p style="color:#666;font-size:13px">Reply to this email to answer them directly.</p></div>`;
   return { text, html };
 }
+
+/** The thank-you to the client: just our message, under our name. */
+const THANKS_NOTE = [
+  'Thanks for getting in touch with The Nerds! We’ve received your message, and our team will be happy to get back to you within 24 hours.',
+  'We’re glad you reached out and look forward to connecting with you!'
+];
+
+function thanks(data: Record<string, string | null>) {
+  const first = (data.name ?? '').split(/\s+/)[0] || 'there';
+  const subject = `Thanks for reaching out, ${first}!`;
+  const text = THANKS_NOTE.join('\n\n');
+  const html = `<!doctype html><html><body style="margin:0;padding:0;background:#f2f1ec">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f2f1ec"><tr><td align="center" style="padding:32px 16px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:14px;overflow:hidden">
+<tr><td style="background:#05060f;padding:26px 32px">
+<div style="font-family:Impact,'Arial Narrow Bold','Arial Narrow',Arial,sans-serif;font-size:26px;letter-spacing:2px;color:#f4f3ee;text-transform:uppercase">${esc(SITE.name)}</div>
+</td></tr>
+<tr><td style="padding:32px 32px 16px;font-family:Georgia,'Times New Roman',serif;font-size:16px;line-height:1.6;color:#1a1a1a">
+${THANKS_NOTE.map((p) => `<p style="margin:0 0 16px">${esc(p)}</p>`).join('\n')}
+</td></tr>
+</table>
+</td></tr></table>
+</body></html>`;
+  return { subject, text, html };
+}
+
+/** One email through Resend: true if it was accepted. */
+async function send(email: Record<string, unknown>, what: string) {
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${RESEND_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(email)
+  });
+  if (!res.ok) console.error(`[contact] ${what} failed`, res.status, await res.text());
+  return res.ok;
+}
+
+/* For a display name in a From line: no quotes, brackets or line breaks. */
+const displayName = (s: string) => s.replace(/["<>\r\n,;]/g, '').trim().slice(0, 60);
 
 Deno.serve(async (req) => {
   const origin = req.headers.get('origin') ?? '';
@@ -142,25 +195,34 @@ Deno.serve(async (req) => {
     return reply(500, { error: 'save' }, headers);
   }
 
-  if (RESEND_KEY && TO.length) {
-    const { text, html } = message(data);
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${RESEND_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from: FROM,
-        to: TO,
-        reply_to: data.email,
-        subject: `New enquiry from ${data.name}`,
-        text,
-        html
-      })
-    });
-    if (res.ok) await db.from('enquiries').update({ emailed: true }).eq('id', row.id);
-    else console.error('[contact] email failed', res.status, await res.text());
-  } else {
+  if (!RESEND_KEY || !TO.length) {
     console.warn('[contact] RESEND_API_KEY or CONTACT_TO not set: saved, not emailed');
+    return reply(200, { ok: true }, headers);
   }
 
+  /* Saved, so it's safe: answer now, and send the emails after — the
+     visitor doesn't wait on them. */
+  const emails = (async () => {
+    const { text, html } = message(data);
+    /* To us — from "Their Name via The Nerds", so the inbox shows who it is. */
+    const who = displayName(data.name ?? '');
+    const toUs = send({
+      from: THANKS && who ? `${who} via ${SITE.name} <${FROM_ADDRESS}>` : FROM,
+      to: TO,
+      reply_to: data.email,
+      subject: `New enquiry from ${data.name}`,
+      text,
+      html
+    }, 'email to us');
+    /* To them: the thank-you. */
+    const toThem = THANKS
+      ? send({ from: FROM, to: [data.email], reply_to: REPLY_TO, ...thanks(data) }, 'thank-you')
+      : Promise.resolve(false);
+    const [usOk] = await Promise.all([toUs, toThem]);
+    if (usOk) await db.from('enquiries').update({ emailed: true }).eq('id', row.id);
+  })().catch((err) => console.error('[contact] emails failed', err));
+
+  if (typeof EdgeRuntime !== 'undefined') EdgeRuntime.waitUntil(emails);
+  else await emails;
   return reply(200, { ok: true }, headers);
 });

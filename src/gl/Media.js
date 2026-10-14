@@ -11,13 +11,11 @@ const POINTER = { rotY: 0.035, rotX: 0.02, posX: -10, posZ: -6 };
 export default class Media {
   constructor(world) {
     this.world = world;
-    /* One shared, subdivided unit plane — enough segments to bend smoothly. */
-    this.geometry = new PlaneGeometry(1, 1, 32, 24);
+    /* One shared unit plane (flat: nothing bends it). */
+    this.geometry = new PlaneGeometry(1, 1);
     this.meshes = [];
     this.cards = [];
     this.previews = [];
-    this.speed = 0;
-    this.targetSpeed = 0;
 
     /* Cards live in their own group so the pointer can swing the whole set. */
     this.group = new Group();
@@ -116,10 +114,6 @@ export default class Media {
   }
 
   loop() {
-    /* Normalise and smooth Lenis velocity into a -1..1 band. */
-    this.targetSpeed = Math.max(-1, Math.min(1, store.velocity * 0.013));
-    this.speed += (this.targetSpeed - this.speed) * 0.09;
-
     /* The pointer swings the whole stack a few degrees — the motion that
        makes the cards read as objects in a space rather than a flat list. */
     if (!store.isTouch) {
@@ -131,7 +125,18 @@ export default class Media {
       g.position.z += (store.mouse.y * POINTER.posZ - g.position.z) * k;
     }
 
-    this.meshes.forEach((m) => m.loop(this.speed));
+    this.meshes.forEach((m) => m.loop());
+
+    /* Tell the composite where the photos of us are, so the cursor's
+       trail leaves them be (MediaMesh `still`); the rest are parked off
+       screen. */
+    const rects = this.world.compositeMaterial.uniforms.uStill.value;
+    let n = 0;
+    for (const m of this.meshes) {
+      if (n === rects.length) break;
+      if (m.still && m.isVisible) m.screenRect(rects[n++]);
+    }
+    for (; n < rects.length; n++) rects[n].set(-9, -9, -9, -9);
   }
 
   destroyMeshes() {

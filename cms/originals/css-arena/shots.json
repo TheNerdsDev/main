@@ -1,0 +1,23 @@
+[
+  {
+    "id": "ff6ccf57",
+    "original": "shot-ff6ccf57.png",
+    "mode": "fit",
+    "slot": 1,
+    "wide": true
+  },
+  {
+    "id": "af98e2e2",
+    "original": "shot-af98e2e2.png",
+    "mode": "fit",
+    "slot": 2,
+    "wide": false
+  },
+  {
+    "id": "7e5f9841",
+    "original": "shot-7e5f9841.png",
+    "mode": "fit",
+    "slot": 3,
+    "wide": false
+  }
+]

@@ -15,4 +15,9 @@ supabase/.branches/
 /info/
 /contact/
 /work/
+/maintenance/
 /.texture-cache/
+
+# The CMS: deleted and replaced files (recover from here), and uploads in progress
+/.cms-trash/
+/.cms-tmp/

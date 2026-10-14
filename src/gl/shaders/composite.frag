@@ -11,23 +11,33 @@ uniform float uInkAmount;
 uniform float uFade;        // page-transition dip
 uniform vec3  uAccent;
 uniform vec3  uBg;
+uniform vec4  uStill[2];    // photos of us on screen (x0, y0, x1, y1); off screen when unused
 
 varying vec2 vUv;
 
+// How much of the cursor's trail shows here: none over a photo of us,
+// easing back in over a short margin round it.
+float inkHere() {
+  float aspect = uRes.x / uRes.y;
+  float still = 0.0;
+  for (int i = 0; i < 2; i++) {
+    vec4 r = uStill[i];
+    vec2 d = max(max(r.xy - vUv, vUv - r.zw), 0.0);
+    d.x *= aspect;
+    still = max(still, 1.0 - smoothstep(0.0, 0.045, length(d)));
+  }
+  return 1.0 - still;
+}
+
 void main() {
+  /* The frame as it is: nothing bends it. */
+  vec3 col = texture2D(tScene, vUv).rgb;
+
+  // The cursor's trail as a soft white smoke (gl/InkTrail.js): it only
+  // lifts the light where it passes — kept off the photos of us.
   vec4 ink = texture2D(tInk, vUv);
   float density = clamp(ink.r, 0.0, 1.0);
-  vec2 flow = ink.gb;
-
-  // Refract the frame through the ink.
-  vec2 offset = flow * 0.0135 * uInkAmount;
-  vec2 uv = vUv + offset;
-
-  vec3 col = texture2D(tScene, uv).rgb;
-
-  // Colourless trail: the ink only bends light and lifts luminance,
-  // so the effect reads as displaced glass rather than a tinted glow.
-  float bloom = smoothstep(0.02, 0.85, density);
+  float bloom = smoothstep(0.02, 0.85, density) * inkHere();
   col += vec3(bloom) * 0.055 * uInkAmount;
   col = mix(col, col * 1.10, bloom * 0.6);
 

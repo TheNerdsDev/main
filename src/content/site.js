@@ -3,6 +3,10 @@
  * Edit this file to rebrand — pages regenerate on `npm run pages`.
  */
 
+/* What the CMS edits (`npm run cms`): the projects, the About page's two
+   boxes, and how many projects the home page shows. */
+import cms from './cms.js';
+
 export const studio = {
   name: 'The Nerds',
   wordmark: 'The Nerds',
@@ -21,6 +25,19 @@ export const studio = {
   ]
 };
 
+/* The maintenance page (CMS → Maintenance). While `on`, the built site is
+   this one page at every address; on this computer the real pages stay,
+   with a reminder, and the page itself is at /maintenance/. */
+export const maintenance = {
+  on: false,
+  title: 'We’ll be right back',
+  message: '',
+  back: '',
+  ...cms.maintenance,
+  kicker: 'Under maintenance',
+  reach: 'Need us in the meantime?'
+};
+
 /* Landing page at `/`. */
 export const main = {
   /* Each line must fit on one row — it is revealed behind its own mask. */
@@ -28,6 +45,8 @@ export const main = {
   /* **word** renders bold. */
   intro: 'Blending **creativity** and **technology** to build experiences that feel genuinely different',
   scrollLabel: 'Scroll Down',
+  /* Pinned to one of the space rocks until a visitor throws one (fx/Duo.js). */
+  rockHint: { click: 'Click a rock', tap: 'Tap a rock', line: 'and throw it at the other nerd' },
   about: {
     text:
       "Hi, we're Meet and Prem, two curious developers who love turning simple ideas into something creative. If you can dream it up, we'll happily nerd out building it.",
@@ -128,14 +147,13 @@ export const contact = {
     fields: [
       { name: 'name', label: 'Full name', type: 'text', autocomplete: 'name', required: true, max: 120 },
       { name: 'email', label: 'Email', type: 'email', autocomplete: 'email', required: true, max: 200 },
-      { name: 'phone', label: 'Phone number', type: 'tel', autocomplete: 'tel', required: true, max: 30 },
+      { name: 'phone', label: 'Phone number', type: 'tel', autocomplete: 'tel', max: 30 },
       { name: 'company', label: 'Company name', type: 'text', autocomplete: 'organization', max: 120 },
-      { name: 'about', label: 'Brief about you', type: 'textarea', rows: 3, max: 2000 },
-      { name: 'idea', label: 'What do you have in mind', type: 'textarea', rows: 5, max: 4000 }
+      { name: 'about', label: 'Brief about you', type: 'textarea', rows: 2, max: 2000 },
+      { name: 'idea', label: 'What do you have in mind', type: 'textarea', rows: 3, required: true, max: 4000 }
     ],
     optional: 'Optional',
     button: 'Send Your Idea',
-    sending: 'Sending…',
     sent: {
       title: 'Got it — thank you!',
       text: "Your message is with us. We'll get back to you within 24 hours."
@@ -155,7 +173,9 @@ export const contact = {
 /* Home-page showcase: the projects, given a section of their own. */
 export const showcase = {
   title: ['Things we', 'built lately'],
-  more: 'All work'
+  more: 'All work',
+  /* How many projects its reel shows — the first ones (CMS: Home page). */
+  count: cms.home.showcase
 };
 
 /* The closing section of the landing page, under the planet shower. */
@@ -168,137 +188,37 @@ export const finale = {
 
 /* Work index at `/work/` — the card stack. */
 export const workIndex = {
-  title: ["Work we're", 'proud of'],
+  /* Each line must fit on one row (it's revealed behind its own mask) —
+     beside the card stack that's about ten letters. */
+  title: ['Heavy on', 'ideas.', 'Light on', 'boring.'],
   intro:
-    "Websites, software and tools we've designed and built from the ground up. Open any project to see how it came together."
+    'We turn wild ideas into websites, clever software, and digital experiences worth showing off. Take a peek at what happens when nerds get creative.'
 };
 
 export const info = {
   /* Each line must fit on one row — it is revealed behind its own mask. */
   title: ['A little', 'about us'],
   lead:
-    'We’re The Nerds, a small team from Surat, India, who love building cool stuff for the web. From websites to custom software and automation, we help businesses bring their ideas to life. No middlemen, no unnecessary fuss — just us, working with you to make something great.',
-  /* The two boxes in their own section under the heading and photo. */
-  services: {
-    title: 'Services',
-    items: ['Consultation', 'UI/UX Design', 'Digital Strategy', 'AI Solutions']
-  },
-  specialties: {
-    title: 'Specialized in',
-    items: [
-      'Web Development',
-      'Social Media Management',
-      'Search Engine Optimization (SEO)',
-      'Business Automation',
-      'Motion Graphics & Video',
-      'Full-Stack Development'
-    ]
-  }
+    'We’re The Nerds, two devs from Surat, India, who love cooking up cool stuff for the web. From slick websites to custom software and crazy useful automations, we build things that just work. No corporate BS, no middlemen, just two nerds turning your ideas into something awesome.',
+  /* The two boxes in their own section under the heading and photo
+     (CMS: About page). The Offer: the services clients hire us for. The
+     Work: what comes out of it — hovering a kind (tapping, on a phone)
+     opens its panel beside the box. */
+  offer: cms.about.offer,
+  work: cms.about.work
 };
 
-export const projects = [
-  {
-    slug: 'css-arena',
-    name: 'CSS Arena',
-    year: '2026',
-    role: 'Design & Development',
-    accent: '#9259EE',
-    /* The thumbnail is a framed screenshot: show it whole and still. */
-    screenshot: true,
-    /* The project page leads with the video below, playing on a loop. */
-    pageVideo: true,
-    excerpt: 'Live CSS battle platform',
-    description:
-      'A CSS battle platform built for the Vivacity 2K26 tech fest. Contestants recreate a target design in HTML and CSS against the clock, and every attempt is scored pixel by pixel, across more than 60 machines on an offline LAN.',
-    deliverables: ['Code editor', 'Pixel-accurate scoring', 'Live timer', 'Offline LAN setup'],
-    /* Its GitHub repository: "Code — GitHub ↗" on the project's page
-       (left out while empty). */
-    github: 'https://github.com/meetRaval09/css-arena',
-    /* Our certificates of appreciation from the event, pinned either side
-       of the video (the first on the left); click one to see it whole. */
-    certificates: [
-      { name: 'Meet Raval', src: '/media/css-arena/certificate-meet.webp' },
-      { name: 'Prem Kajiwala', src: '/media/css-arena/certificate-prem.webp' }
-    ],
-    /* Detail shots 01–03: the 100% match (wide), the round countdown and
-       the admin console. Shown even while other projects' are empty. */
-    shots: 3,
-    photos: true,
-    /* Plays inside the ink when the card is hovered: a walkthrough, from
-       login to the standings. */
-    video: '/media/css-arena/preview.mp4'
-  },
-  {
-    slug: 'taskpilot',
-    name: 'TaskPilot',
-    year: '2026',
-    role: 'Design & Development',
-    accent: '#E63946',
-    /* The thumbnail is a framed logo poster: show it whole and still. */
-    screenshot: true,
-    /* The project page leads with the video below, playing on a loop. */
-    pageVideo: true,
-    excerpt: 'Local-first task scheduler',
-    description:
-      'A local-first task scheduler for planning the day, tracking what got done and staying focused. It brings a dashboard with your day at a glance, a month calendar, analytics on streaks and trends, desktop reminders, and themes from dark to sandstone.',
-    deliverables: ['Dashboard', 'Calendar', 'Analytics', 'Desktop reminders'],
-    github: 'https://github.com/premkajiwala-hub/Task-Pilot',
-    /* Detail shots 01–03: the dashboard (wide), the calendar and analytics. */
-    shots: 3,
-    photos: true,
-    /* Plays inside the ink when the card is hovered: a walkthrough, from
-       the logo through planning a task to analytics. */
-    video: '/media/taskpilot/preview.mp4'
-  },
-  {
-    slug: 'mesa-kitchen',
-    name: 'Mesa Kitchen',
-    year: '2025',
-    role: 'Front-end Development',
-    accent: '#B8343C',
-    excerpt: 'Restaurant & reservations',
-    description:
-      'A restaurant site built to make people hungry. Full-bleed food photography treated with a custom WebGL grade, and a reservation system wired straight into the floor plan.',
-    deliverables: ['Front-end build', 'WebGL image grade', 'Reservations', 'CMS'],
-    github: '',
-    shots: 3,
-    /* Plays inside the ink when the card is hovered. Placeholder clip for now. */
-    video: '/media/sample/preview.mp4'
-  },
-  {
-    slug: 'atlas-fitness',
-    name: 'Atlas Fitness',
-    year: '2025',
-    role: 'Design & Development',
-    accent: '#1F8F6A',
-    excerpt: 'Class booking platform',
-    description:
-      'A booking platform for a studio running forty classes a week. Members see a schedule that loads instantly; staff see a dashboard that replaced three spreadsheets.',
-    deliverables: ['Product design', 'Booking platform', 'Staff dashboard', 'Automation'],
-    github: '',
-    shots: 3,
-    /* Plays inside the ink when the card is hovered. Placeholder clip for now. */
-    video: '/media/sample/preview.mp4'
-  },
-  {
-    slug: 'verde-grocer',
-    name: 'Verde Grocer',
-    year: '2025',
-    role: 'Development & Systems',
-    accent: '#6B8F1F',
-    excerpt: 'Local grocery storefront',
-    description:
-      'An online storefront for a grocer with eight hundred products and no time to manage a website. We built the store, and the automation that keeps stock, pricing and delivery slots in sync on their own.',
-    deliverables: ['Storefront', 'Inventory sync', 'Delivery slots', 'Infrastructure'],
-    github: '',
-    shots: 3,
-    /* Plays inside the ink when the card is hovered. Placeholder clip for now. */
-    video: '/media/sample/preview.mp4'
-  }
-];
+/* The projects shown on the site, in order (CMS: Projects; one switched
+   off there — `hidden` — is left out everywhere). What each field does is
+   described at the top of cms.js. */
+export const projects = cms.projects.filter((p) => !p.hidden);
 
 export const getProject = (slug) => projects.find((p) => p.slug === slug);
 export const getNext = (slug) => {
   const i = projects.findIndex((p) => p.slug === slug);
   return projects[(i + 1) % projects.length];
+};
+export const getPrev = (slug) => {
+  const i = projects.findIndex((p) => p.slug === slug);
+  return projects[(i - 1 + projects.length) % projects.length];
 };

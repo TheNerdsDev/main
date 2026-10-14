@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>The Nerds — CMS</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%2305060f'/><text x='16' y='22' font-size='16' text-anchor='middle' fill='%23f4f3ee' font-family='Arial' font-weight='700'>N</text></svg>" />
+  </head>
+  <body>
+    <div id="app" class="app">
+      <aside class="side">
+        <div class="brand"><span class="brand-mark">N</span><span><b>The Nerds</b><small>Content</small></span></div>
+        <nav class="nav" aria-label="Sections">
+          <a href="#/" data-nav="overview">Overview</a>
+          <a href="#/projects" data-nav="projects">Projects</a>
+          <a href="#/about" data-nav="about">About page</a>
+          <a href="#/home" data-nav="home">Home page</a>
+          <a href="#/maintenance" data-nav="maintenance">Maintenance <span class="nav-flag" id="maint-flag" hidden>On</span></a>
+          <a href="#/publish" data-nav="publish">Publish <span class="nav-count" id="publish-count" hidden></span></a>
+        </nav>
+        <div class="side-foot" id="side-foot"></div>
+      </aside>
+      <main class="main">
+        <header class="top">
+          <div class="top-title" id="top-title"></div>
+          <div class="top-actions">
+            <span class="dirty" id="dirty" hidden>Unsaved changes</span>
+            <a class="btn btn-ghost" id="open-site" href="http://localhost:5173/" target="_blank" rel="noopener">Open site ↗</a>
+            <button class="btn btn-primary" id="save" type="button" disabled>Save</button>
+          </div>
+        </header>
+        <div class="view" id="view"><p class="loading">Loading…</p></div>
+      </main>
+    </div>
+    <div class="toasts" id="toasts" aria-live="polite"></div>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

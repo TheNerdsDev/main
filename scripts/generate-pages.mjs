@@ -1,15 +1,32 @@
 /**
  * Generates every route's index.html from src/content/site.js.
  * Run with `npm run pages` (wired into predev / prebuild).
+ *
+ * `--build` (prebuild): pages for the published site. With maintenance on
+ * (CMS → Maintenance), that's the maintenance page at every address and
+ * nothing else. Without it (dev, the CMS): always the real pages — with a
+ * reminder while maintenance is on — and the maintenance page at
+ * /maintenance/ to preview.
  */
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync, readdirSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { studio, main, team, workIndex, info, contact, showcase, finale, projects, getNext } from '../src/content/site.js';
+import { studio, maintenance, main, team, workIndex, info, contact, showcase, finale, projects, getNext, getPrev } from '../src/content/site.js';
 import { logoSvg } from '../src/content/logo.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const BUILD = process.argv.includes('--build');
+
+/* On this computer, while maintenance is on: a corner note on every page,
+   so it's never forgotten — the real pages are still here to work on. */
+const maintenanceNote = !BUILD && maintenance.on
+  ? `
+<a href="/maintenance/" style="position:fixed;left:1.6rem;bottom:1.6rem;z-index:200;display:flex;align-items:center;gap:.8rem;padding:.9rem 1.4rem;border-radius:99px;background:rgba(5,6,15,.88);border:1px solid rgba(244,162,97,.55);color:#f8c393;font:500 1.3rem/1.2 'Inter',system-ui,sans-serif;letter-spacing:.02em;text-decoration:none;backdrop-filter:blur(8px);pointer-events:auto">
+  <span style="width:.8rem;height:.8rem;border-radius:50%;background:#f4a261;box-shadow:0 0 .8rem #f4a261"></span>
+  Maintenance is on — visitors see the maintenance page once published. Preview ↗
+</a>`
+  : '';
 
 /* ---------------------------------------------------------------- shell */
 
@@ -57,7 +74,7 @@ const shell = ({ title, description, pageId, body, bodyClass = '' }) => `<!docty
 <div class="overlay" aria-hidden="true"></div>
 
 ${body}
-
+${maintenanceNote}
 <script type="module" src="/src/main.js"></script>
 </body>
 </html>
@@ -123,7 +140,7 @@ const finaleSection = () => {
       <canvas class="planet-canvas" aria-hidden="true"></canvas>
       <div class="finale-body">
         <h2 class="finale-title" id="finale-title">${finale.title.map((l) => `<span class="line"><span class="line-inner">${esc(l)}</span></span>`).join(' ')}</h2>
-        <p class="finale-text">${[].concat(finale.text).map((l) => `<span class="finale-line">${esc(l)}</span>`).join(' ')}</p>
+        <p class="finale-text subtext">${[].concat(finale.text).map((l) => `<span class="finale-line">${esc(l)}</span>`).join(' ')}</p>
         <div class="finale-cta">
           <a class="about-button finale-button" href="/contact/" data-link aria-label="${esc(finale.button)}">
             <span class="about-button-text" aria-hidden="true">${chars}</span>
@@ -201,7 +218,9 @@ const showcaseSection = () => {
   const srcset = (slug) => existsSync(join(root, 'public', 'media', slug, 'featured-960.webp'))
     ? ` srcset="/media/${slug}/featured-960.webp 960w, /media/${slug}/featured.jpg 1600w" sizes="(max-width: 767px) 100vw, 36vw"`
     : '';
-  const cards = projects
+  /* The first `showcase.count` projects (CMS: Home page). */
+  const shown = projects.slice(0, Math.max(1, Math.min(showcase.count || projects.length, projects.length)));
+  const cards = shown
     .map((p, i) => `          <a class="show-card${p.screenshot ? ' is-still' : ''}" href="/work/${p.slug}/" data-link data-cursor="View"${p.video ? ` data-video="${esc(p.video)}"` : ''} style="--accent: ${p.accent}">
             <span class="show-card-inner">
               <span class="show-card-media"><img class="show-card-img" src="/media/${p.slug}/featured.jpg"${srcset(p.slug)} alt="${esc(p.name)}" loading="lazy" decoding="async" /></span>
@@ -222,7 +241,7 @@ const showcaseSection = () => {
               <svg class="showcase-all-arrow" viewBox="0 0 48 48" aria-hidden="true"><path d="M10 38 38 10M16 10h22v22" /></svg>
             </a>
           </div>
-          <span class="showcase-count" aria-hidden="true"><span class="showcase-count-now">01</span> / ${pad(projects.length)}</span>
+          <span class="showcase-count" aria-hidden="true"><span class="showcase-count-now">01</span> / ${pad(shown.length)}</span>
         </div>
         <div class="showcase-track">
 ${cards}
@@ -287,7 +306,7 @@ ${header('main')}
         <h1 class="title" data-split>
         ${splitTitle(main.title)}
         </h1>
-        <p class="text hero-intro" data-split-lines>${esc(main.intro).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')}</p>
+        <p class="text hero-intro subtext" data-split-lines>${esc(main.intro).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')}</p>
         <a class="scroll-cue" href="#about">
           <span class="scroll-cue-track" aria-hidden="true"><span class="scroll-cue-spark"></span></span>
           <svg class="scroll-cue-head" viewBox="0 0 16 10" aria-hidden="true"><path d="M1 1.5 8 8.5l7-7" /></svg>
@@ -372,7 +391,7 @@ ${header('projects')}
       <h1 class="title" data-split>
         ${splitTitle(workIndex.title)}
       </h1>
-      <p class="text" data-split-lines>${esc(workIndex.intro)}</p>
+      <p class="text subtext" data-split-lines>${esc(workIndex.intro)}</p>
     </div>
 
     <section class="work" aria-label="Selected work">
@@ -399,6 +418,7 @@ ${previews}
 
 const workPage = (p) => {
   const next = getNext(p.slug);
+  const prev = getPrev(p.slug);
   /* The WebP copy when there is one (scripts/media-variants.py) — the same
      picture, lighter. */
   const shot = (i) => {
@@ -408,10 +428,6 @@ const workPage = (p) => {
   const shots = Array.from({ length: p.shots }, (_, i) =>
     `        ${workMedia(p, shot(i), `${p.name} — detail ${i + 1}`)}`
   ).join('\n');
-
-  const deliverables = p.deliverables
-    .map((d) => `<li class="text">${esc(d)}</li>`)
-    .join('');
 
   /* Certificates pinned either side of the video (Work.js swings them and
      opens one whole on a click; without script, the link opens the image). */
@@ -448,25 +464,28 @@ ${header('projects', true)}
       ${certs[1] ? cert(certs[1], 'right') : ''}
     </div>
 
-    <p class="description" data-split-lines>${esc(p.description)}</p>
+    <p class="description subtext" data-split-lines>${esc(p.description)}</p>
 
     <dl class="metas">
       <div class="meta"><dt class="label">Year</dt><dd class="text">${esc(p.year)}</dd></div>
-      <div class="meta"><dt class="label">Role</dt><dd class="text">${esc(p.role)}</dd></div>
-      <div class="meta"><dt class="label">Scope</dt><dd><ul class="meta-list">${deliverables}</ul></dd></div>
-      ${p.github ? `<div class="meta"><dt class="label">Code</dt><dd><a class="text link" href="${esc(p.github)}" target="_blank" rel="noopener noreferrer"><span class="line-inner">GitHub &nearr;</span></a></dd></div>` : ''}
+      ${p.github ? `<div class="meta"><dt class="label">Code</dt><dd><a class="text link meta-link" href="${esc(p.github)}" target="_blank" rel="noopener noreferrer"><span class="line-inner">GitHub<span class="meta-arrow" aria-hidden="true">&nearr;</span></span></a></dd></div>` : ''}
     </dl>
 
     <div class="content">
 ${shots}
     </div>
 
-    <div class="work-bottom">
-      <a class="next-project link" href="/work/${next.slug}/" data-link>
-        <span class="label">Next project</span>
+    <!-- The project before and the one after (the list wraps round). -->
+    <nav class="work-bottom" aria-label="More projects">
+      <a class="project-step project-step--prev link" href="/work/${prev.slug}/" data-link>
+        <span class="label"><span aria-hidden="true">&larr; </span>Previous project</span>
+        <span class="text"><span class="line-inner">${esc(prev.name)}</span></span>
+      </a>
+      <a class="project-step project-step--next link" href="/work/${next.slug}/" data-link>
+        <span class="label">Next project<span aria-hidden="true"> &rarr;</span></span>
         <span class="text"><span class="line-inner">${esc(next.name)}</span></span>
       </a>
-    </div>
+    </nav>
 
   </div>
 </div>`
@@ -486,13 +505,40 @@ const OUTLINES = [
   { x: 10.5, y: 10.5, w: 317, h: 401, r: 11 }
 ];
 const perimeter = ({ w, h, r }) => (2 * (w + h - 4 * r) + 2 * Math.PI * r).toFixed(1);
-const infoCard = (key, { title, items }, i) => `        <section class="info-card" aria-labelledby="info-${key}" style="--i: ${i}">
+const infoCard = (key, title, list, i) => `        <section class="info-card info-card--${key}" aria-labelledby="info-${key}" style="--i: ${i}">
           <svg class="info-card-frame" viewBox="0 0 338 422" aria-hidden="true">${OUTLINES.map((o) => `<rect class="info-card-edge" x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" rx="${o.r}" style="--len: ${perimeter(o)}" />`).join('')}</svg>
           <div class="info-card-inner">
             <h2 class="info-card-title" id="info-${key}"><span class="info-card-rise">${esc(title)}</span></h2>
-            <ul class="info-card-list">${items.map((x, j) => `<li style="--j: ${j}"><span class="info-card-rise">${esc(x)}</span></li>`).join('')}</ul>
+            ${list}
           </div>
         </section>`;
+
+/* The Offer: the services, one per line. */
+const offerCard = ({ title, items }) => infoCard('offer', title,
+  `<ul class="info-card-list">${items.map((x, j) => `<li style="--j: ${j}"><span class="info-card-rise">${esc(x)}</span></li>`).join('')}</ul>`, 0);
+
+/* The Work: its kinds, numbered, each a button that opens its panel —
+   beside the box, level with the row, on a wide screen with a mouse;
+   under it otherwise (pages.css, Info.js). The panels share one place:
+   only the open one shows. */
+const workCard = ({ title, kinds }) => {
+  const no = (k) => String(k + 1).padStart(2, '0');
+  const rows = kinds.map((kind, k) => `<li style="--j: ${k}"><button class="info-work-kind" type="button" data-kind="${k}" aria-expanded="false" aria-controls="info-work-${k}"><span class="info-card-rise"><span class="info-work-no">${no(k)}</span><span class="info-work-name">${esc(kind.name)}</span><span class="info-work-arrow" aria-hidden="true">→</span></span></button></li>`).join('');
+  const panels = kinds.map((kind, k) => `
+              <div class="info-work-detail" id="info-work-${k}" role="region" aria-label="${esc(kind.name)}">
+                <p class="info-work-head" style="--k: 0"><span class="info-work-no">${no(k)}</span> ${esc(kind.name)}</p>
+                <p class="info-work-text" style="--k: 1">${esc(kind.text)}</p>
+                <ul class="info-work-items">${kind.items.map((x, j) => `<li style="--k: ${j + 2}">${esc(x)}</li>`).join('')}</ul>
+              </div>`).join('');
+  return `        <div class="info-work">
+${infoCard('work', title, `<ol class="info-card-list info-work-list">${rows}</ol>`, 1)}
+          <span class="info-work-line" aria-hidden="true"></span>
+          <div class="info-work-panel">
+            <div class="info-work-clip"><div class="info-work-box"><div class="info-work-details">${panels}
+            </div></div></div>
+          </div>
+        </div>`;
+};
 
 const infoPage = () => shell({
   title: `${studio.name} — About`,
@@ -509,19 +555,19 @@ ${header('info')}
         <h1 class="title" data-split>
         ${splitTitle(info.title)}
         </h1>
-        <p class="lead" data-split-lines>${teamNames(info.lead)}</p>
+        <p class="lead subtext" data-split-lines>${teamNames(info.lead)}</p>
       </div>
       <div class="info-portrait">
-        ${mediaBlock('/media/studio/portrait.jpg', 'The studio')}
+        ${mediaBlock('/media/studio/portrait.jpg', 'Prem Kajiwala and Meet Raval, The Nerds', 'data-still')}
       </div>
     </div>
 
-    <!-- Below, in a section of their own: what we offer and what we're
-         best at, two boxes stepping down the page. -->
+    <!-- Below, in a section of their own: what we offer and what we make,
+         two boxes stepping down the page. -->
     <section class="info-services" aria-label="What we do">
       <div class="info-cards">
-${infoCard('services', info.services, 0)}
-${infoCard('specialties', info.specialties, 1)}
+${offerCard(info.offer)}
+${workCard(info.work)}
       </div>
     </section>
 
@@ -552,9 +598,10 @@ const contactPage = () => {
     .join('');
 
   /* The enquiry form (core/ContactForm.js sends it). Its errors and the
-     sending/sent states are written by the script; the labels are here. */
+     sent state are written by the script; the labels are here. */
   const { form } = contact;
-  const field = (f) => {
+  /* Each question numbered, its answer written on a line (pages.css). */
+  const field = (f, i) => {
     const id = `cf-${f.name}`;
     const attrs = `class="field-input" id="${id}" name="${f.name}" maxlength="${f.max}" aria-describedby="${id}-error"${f.required ? ' required' : ''}`;
     const control = f.type === 'textarea'
@@ -562,8 +609,11 @@ const contactPage = () => {
       : `<input ${attrs} type="${f.type}" autocomplete="${f.autocomplete || 'off'}"${f.type === 'tel' ? ' inputmode="tel"' : ''} />`;
     const optional = f.required ? '' : ` <span class="field-optional">(${esc(form.optional)})</span>`;
     return `          <div class="field${f.type === 'textarea' ? ' field-wide' : ''}" data-field="${f.name}">
-            <label class="field-label" for="${id}">${esc(f.label)}${optional}</label>
-            ${control}
+            <label class="field-label" for="${id}"><span class="field-index" aria-hidden="true">${String(i + 1).padStart(2, '0')}</span><span>${esc(f.label)}${optional}</span></label>
+            <div class="field-control">
+              ${control}
+              <span class="field-line" aria-hidden="true"></span>
+            </div>
             <p class="field-error" id="${id}-error"></p>
           </div>`;
   };
@@ -584,9 +634,9 @@ ${header('contact')}
         ${splitTitle(contact.title)}
       </h1>
 
-      <p class="lead" data-split-lines>${lead}</p>
+      <p class="lead subtext" data-split-lines>${lead}</p>
 
-      <form class="contact-form" data-contact-form data-mailto="${esc(studio.email)}" data-messages="${esc(JSON.stringify({ sending: form.sending, failed: form.failed, ...form.errors }))}" novalidate>
+      <form class="contact-form" data-contact-form data-mailto="${esc(studio.email)}" data-messages="${esc(JSON.stringify({ failed: form.failed, ...form.errors }))}" novalidate>
 ${form.fields.map(field).join('\n')}
           <!-- A trap for bots: hidden from people, filled in by scripts. -->
           <div class="field-trap" aria-hidden="true">
@@ -615,6 +665,50 @@ ${details}
   });
 };
 
+/* ---------------------------------------------------------- maintenance */
+
+/* The page on its own: none of the site's app or 3D, just its own small
+   script (src/maintenance.js — the stars and its stylesheet), so it's up
+   at once. Not for search engines. */
+const maintenancePage = () => {
+  const m = maintenance;
+  const title = `${studio.name} — ${m.kicker}`;
+  const description = m.message || m.title;
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>${esc(title)}</title>
+<meta name="description" content="${esc(description)}" />
+<meta name="robots" content="noindex" />
+<meta name="theme-color" content="#05060F" />
+<meta property="og:title" content="${esc(title)}" />
+<meta property="og:description" content="${esc(description)}" />
+<meta property="og:site_name" content="${esc(studio.name)}" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<style>html { background: #05060F; color-scheme: dark; }</style>
+</head>
+<body class="maint">
+<canvas class="maint-stars" aria-hidden="true"></canvas>
+<main class="maint-main">
+  <span class="logo maint-logo" role="img" aria-label="${esc(studio.wordmark)}">${logoSvg({ id: 'maint-logo' })}</span>
+  <div class="maint-orbit" aria-hidden="true">
+    <span class="maint-orbit-ring"></span>
+    <span class="maint-orbit-arm"><i class="maint-orbit-a"></i><i class="maint-orbit-b"></i></span>
+  </div>
+  <p class="maint-kicker">${esc(m.kicker)}</p>
+  <h1 class="maint-title">${esc(m.title)}</h1>
+  ${m.message ? `<p class="maint-text">${esc(m.message)}</p>` : ''}
+  ${m.back ? `<p class="maint-back">${esc(m.back)}</p>` : ''}
+  <p class="maint-reach">${esc(m.reach)} <a href="mailto:${esc(studio.email)}">${esc(studio.email)}</a></p>
+</main>
+<script type="module" src="/src/maintenance.js"></script>
+</body>
+</html>
+`;
+};
+
 /* ----------------------------------------------------------------- emit */
 
 const write = (relDir, html) => {
@@ -624,12 +718,35 @@ const write = (relDir, html) => {
   console.log('  ✓', join(relDir || '.', 'index.html'));
 };
 
-console.log('Generating pages…');
-write('', mainPage());
-write('work', projectsPage());
-write('info', infoPage());
-write('contact', contactPage());
-projects.forEach((p) => write(join('work', p.slug), workPage(p)));
+console.log(BUILD && maintenance.on ? 'Generating pages… (maintenance is on: the maintenance page at every address)' : 'Generating pages…');
+if (BUILD && maintenance.on) {
+  const page = maintenancePage();
+  ['', 'work', 'info', 'contact', ...projects.map((p) => join('work', p.slug))].forEach((dir) => write(dir, page));
+} else {
+  write('', mainPage());
+  write('work', projectsPage());
+  write('info', infoPage());
+  write('contact', contactPage());
+  projects.forEach((p) => write(join('work', p.slug), workPage(p)));
+}
+
+/* The preview at /maintenance/: on this computer only — never built into
+   the published site (where it'd be a page anyone could stumble on). */
+if (BUILD) rmSync(join(root, 'maintenance'), { recursive: true, force: true });
+else write('maintenance', maintenancePage());
+
+/* A project's page from before it was deleted or hidden (in the CMS) would
+   still be built and served: clear those out. (Generated, never edited —
+   each holds only its index.html.) */
+const keep = new Set(projects.map((p) => p.slug));
+for (const entry of readdirSync(join(root, 'work'), { withFileTypes: true })) {
+  if (!entry.isDirectory() || keep.has(entry.name)) continue;
+  const dir = join(root, 'work', entry.name);
+  if (readdirSync(dir).every((f) => f === 'index.html')) {
+    rmSync(dir, { recursive: true, force: true });
+    console.log('  ✗', join('work', entry.name), '(no longer a project)');
+  }
+}
 
 /* favicon */
 mkdirSync(join(root, 'public'), { recursive: true });

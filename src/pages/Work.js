@@ -41,14 +41,14 @@ export default class Work extends Page {
     if (this.accent) this.world?.setAccent(this.accent);
 
     /* Hidden from the moment it's built, like the rest of the page: the
-       video and the next-project link rise in, the certificates drop onto
+       video and the previous/next project links rise in, the certificates drop onto
        their pins (onEnter). Hidden only by the entrance, they'd show for a
        frame first. */
     const q = (s) => [...this.el.querySelectorAll(s)];
     this.film = this.el.querySelector('.work-film');
     this.certEls = q('.cert');
-    this.next = this.el.querySelector('.next-project');
-    gsap.set([this.film, this.next].filter(Boolean), { opacity: 0, y: 32 });
+    this.steps = q('.project-step');
+    gsap.set([this.film, ...this.steps].filter(Boolean), { opacity: 0, y: 32 });
     if (this.certEls.length) gsap.set(this.certEls, { opacity: 0, y: -24 });
 
     this.bindCerts();
@@ -246,7 +246,7 @@ export default class Work extends Page {
   }
 
   onEnter(tl) {
-    if (this.next) tl.to(this.next, { opacity: 1, y: 0, duration: 0.9, ease: 'power3.out' }, 0.5);
+    if (this.steps.length) tl.to(this.steps, { opacity: 1, y: 0, duration: 0.9, ease: 'power3.out', stagger: 0.08 }, 0.5);
 
     /* The project's video, if it leads with one: rises in and plays. */
     if (this.film) {
@@ -259,10 +259,10 @@ export default class Work extends Page {
     }
   }
 
-  /* The video, the certificates and the next-project link go with the rest
+  /* The video, the certificates and the project links go with the rest
      of the page, rather than staying on until it's swapped out. */
   onLeave(tl) {
-    const parts = [this.film, ...this.certEls, this.next].filter(Boolean);
+    const parts = [this.film, ...this.certEls, ...this.steps].filter(Boolean);
     if (parts.length) tl.to(parts, { opacity: 0, y: -10, duration: 0.4, ease: 'power2.in' }, 0);
   }
 

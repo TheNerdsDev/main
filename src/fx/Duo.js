@@ -1,5 +1,5 @@
 import gsap from 'gsap';
-import { team } from '../content/site.js';
+import { team, main } from '../content/site.js';
 import SpaceRocks from './SpaceRocks.js';
 import { RockThrow, RockImpact } from './Rock.js';
 import { Zap } from './Zap.js';
@@ -34,6 +34,13 @@ const ORBITS = [
 
 /* The welcome copy, left of the sketches: the rocks keep to its right. */
 const TEXT = '.hero .title .line-inner, .hero-intro, .scroll-cue';
+
+/* The rock hint: comes up once the hero has been still this long (s), and
+   the rock carrying it slows to this pace so it can be read and caught.
+   After the first throw it never comes back (remembered in the browser). */
+const HINT_AFTER = 2.5;
+const HINT_PACE = 0.35;
+const HINT_KEY = 'nerds:threw';
 
 /** Keep `v` within lo..hi, rounding off as it nears either end instead of stopping dead. */
 const soften = (v, lo, hi, band) => {
@@ -141,6 +148,7 @@ export default class Duo {
     this.k = 0;
     this.gone = false;
 
+    this.makeHint();
     this.bind();
     this.idle();
     this.measure();
@@ -166,7 +174,10 @@ export default class Duo {
       this.handlers.push(() => node.removeEventListener(type, fn));
     };
 
-    this.members.forEach((m) => on(m.hitBtn, 'click', () => this.throw(m)));
+    this.members.forEach((m) => on(m.hitBtn, 'click', () => {
+      this.learned();
+      this.throw(m);
+    }));
     this.members.forEach((m) => this.bindTap(m, on));
 
     this.actions.forEach((a) => {
@@ -272,6 +283,166 @@ export default class Duo {
     on(m.hitBtn, 'pointerleave', () => m.root.classList.remove('is-tapping'));
   }
 
+  /* -------------------------------------------------------------- hint */
+
+  /**
+   * Nothing says the rocks can be thrown — so until a visitor has thrown
+   * one, a rock carries a hint: the dashed target ring the cursor shows
+   * over a rock, a slow ping, and "Click a rock / and throw it at the
+   * other nerd" beside it. It comes up once the hero has been still a
+   * moment, on the free rock nearest the middle of the two, and rides
+   * along with it (that rock slows down, to be read and caught). It steps
+   * aside while the pointer is on that rock — the cursor says "Throw"
+   * itself — and goes for good after the first throw.
+   */
+  makeHint() {
+    this.hintCalm = 0;
+    let done = false;
+    try { done = localStorage.getItem(HINT_KEY) === '1'; } catch { /* no storage: show it */ }
+    if (done || !this.actionsEl || !this.actions.length) return;
+    const touch = !window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    const el = document.createElement('div');
+    el.className = 'rock-hint';
+    el.setAttribute('aria-hidden', 'true');
+    el.innerHTML = '<span class="rock-hint-ring"><span class="rock-hint-ping"></span></span>'
+      + '<span class="rock-hint-label"><span class="rock-hint-cta"></span><span class="rock-hint-line"></span></span>';
+    el.querySelector('.rock-hint-cta').textContent = touch ? main.rockHint.tap : main.rockHint.click;
+    el.querySelector('.rock-hint-line').textContent = main.rockHint.line;
+    this.actionsEl.appendChild(el);
+    this.hint = {
+      el,
+      ring: el.querySelector('.rock-hint-ring'),
+      label: el.querySelector('.rock-hint-label'),
+      act: null,
+      stale: false,
+      shown: false,
+      side: null,
+      spot: null
+    };
+  }
+
+  /** Something was thrown: the hint has done its job, for good. */
+  learned() {
+    const h = this.hint;
+    if (!h) return;
+    this.hint = null;
+    try { localStorage.setItem(HINT_KEY, '1'); } catch { /* it comes back next visit */ }
+    h.el.classList.remove('is-on');
+    this.hintGone = gsap.delayedCall(0.8, () => h.el.remove());
+  }
+
+  /**
+   * Where the label could go round a rock at (x, y) — under, over, right,
+   * left — each with how much of it would land on a sketch, another rock,
+   * the welcome copy, the header or off the screen (px², lower is better).
+   */
+  hintSpots(x, y, room, self) {
+    const h = this.hint;
+    const { w, lh, r } = h;
+    /* Clear of the ping too, which swells to 1.6 times the ring. */
+    const gap = r * 0.3 + 6;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const spots = [
+      [-w / 2, r + gap],
+      [-w / 2, -(r + gap + lh)],
+      [r + gap + 4, -lh / 2],
+      [-(r + gap + 4 + w), -lh / 2]
+    ];
+    const over = (ax, ay, bx0, by0, bx1, by1) =>
+      Math.max(0, Math.min(ax + w, bx1) - Math.max(ax, bx0)) * Math.max(0, Math.min(ay + lh, by1) - Math.max(ay, by0));
+    return spots.map(([dx, dy]) => {
+      const ax = x + dx;
+      const ay = y + dy;
+      let bad = w * lh - over(ax, ay, 12, Math.max(this.ceiling, room.roof + 8), vw - 12, vh - 12);
+      for (const f of room.faces) bad += over(ax, ay, f.left - 6, f.top - 6, f.right + 6, f.bottom + 6);
+      if (room.wall > -Infinity) bad += over(ax, ay, -Infinity, -Infinity, room.wall + 12, Infinity);
+      for (const o of this.actions) {
+        if (o === self || o.away) continue;
+        const or = (this.orb || 60) * 0.42 * o.orbit.size * 1.1;
+        bad += over(ax, ay, o.x - or, o.y - or, o.x + or, o.y + or);
+      }
+      return { dx, dy, bad };
+    });
+  }
+
+  /** The free rock whose label has the most room, then the one nearest the middle. */
+  hintRock(room) {
+    const [p, q] = room.faces;
+    const mx = p && q ? (p.left + p.right + q.left + q.right) / 4 : window.innerWidth / 2;
+    const my = p && q ? (p.top + p.bottom + q.top + q.bottom) / 4 : window.innerHeight / 2;
+    let best = null;
+    let score = Infinity;
+    for (const act of this.actions) {
+      if (act.away) continue;
+      this.hint.act = act;
+      this.sizeHint();
+      const clear = Math.min(...this.hintSpots(act.x, act.y, room, act).map((s) => s.bad));
+      const s = clear + Math.hypot(act.x - mx, act.y - my);
+      if (s < score) {
+        score = s;
+        best = act;
+      }
+    }
+    return best;
+  }
+
+  /** The ring sized to its rock, and the label measured (on pick and resize). */
+  sizeHint() {
+    const h = this.hint;
+    if (!h?.act) return;
+    h.r = (this.orb || 60) * 0.42 * h.act.orbit.size * 1.1 + 12;
+    h.ring.style.width = h.ring.style.height = `${(h.r * 2).toFixed(1)}px`;
+    h.w = h.label.offsetWidth;
+    h.lh = h.label.offsetHeight;
+  }
+
+  /**
+   * Every frame (from loop): up or not, and where. `room` is what the label
+   * keeps clear of — the sketches' boxes and the welcome copy's right edge,
+   * as the loop has just measured them.
+   */
+  steerHint(dt, room) {
+    const h = this.hint;
+    if (!h) return;
+    const html = document.documentElement;
+    const still = this.f === 0 && html.classList.contains('loaded') && !html.classList.contains('is-transitioning');
+    this.hintCalm = still ? this.hintCalm + dt : 0;
+    /* Away and back again: pick afresh, wherever the rocks are by then. */
+    if (!still) h.stale = true;
+    const due = this.hintCalm > HINT_AFTER;
+    if (due && (h.stale || !h.act)) {
+      h.act = this.hintRock(room);
+      h.stale = false;
+      h.spot = null;
+      this.sizeHint();
+    }
+    const a = h.act;
+    const on = due && !!a && !a.away && !a.hovered;
+    if (on !== h.shown) {
+      h.shown = on;
+      h.el.classList.toggle('is-on', on);
+    }
+    if (!a) return;
+
+    /* The label on whichever side of the rock is clear, moving round only
+       when another side is clearly better, and gliding there. */
+    const spots = this.hintSpots(a.x, a.y, room, a);
+    let pick = h.side ?? 0;
+    const best = spots.reduce((i, s, k) => (s.bad < spots[i].bad ? k : i), 0);
+    if (h.spot === null || spots[best].bad < spots[pick].bad - h.w * h.lh * 0.15) pick = best;
+    h.side = pick;
+    const to = spots[pick];
+    if (h.spot === null) h.spot = { x: to.dx, y: to.dy };
+    const k = Math.min(1, dt * 7);
+    h.spot.x += (to.dx - h.spot.x) * k;
+    h.spot.y += (to.dy - h.spot.y) * k;
+    /* Still on the screen sideways, whatever side it's on. */
+    const lx = clamp(a.x + h.spot.x, 12, window.innerWidth - h.w - 12) - a.x;
+    h.el.style.transform = `translate3d(${a.x.toFixed(1)}px, ${a.y.toFixed(1)}px, 0)`;
+    h.label.style.transform = `translate3d(${lx.toFixed(1)}px, ${h.spot.y.toFixed(1)}px, 0)`;
+  }
+
   /**
    * The rocks' trip alongside the viewer, set by the page every frame.
    *   f     0 = orbiting the sketches; 1 = travelling with the viewer,
@@ -327,6 +498,7 @@ export default class Duo {
    */
   fling(a) {
     if (a.away) return;
+    this.learned();
     const c = this.rockCentre(a);
     const [p, q] = this.members;
     const near = (m) => {
@@ -560,6 +732,7 @@ export default class Duo {
       m.size = m.root.offsetWidth;
     });
     this.orb = this.actions[0]?.btn.offsetWidth || 56;
+    this.sizeHint();
   }
 
   loop = () => {
@@ -636,7 +809,7 @@ export default class Duo {
     const faces = avoid > 0
       ? this.members.map((m) => {
         const r = m.body.getBoundingClientRect();
-        return { x: r.left + r.width / 2, y: r.top + r.height * FIGURE.y, rx: r.width * FIGURE.rx, ry: r.height * FIGURE.ry };
+        return { box: r, x: r.left + r.width / 2, y: r.top + r.height * FIGURE.y, rx: r.width * FIGURE.rx, ry: r.height * FIGURE.ry };
       })
       : [];
     /* The welcome copy. Beside the sketches (wide screens) it's a wall the
@@ -687,7 +860,8 @@ export default class Duo {
     for (const act of this.actions) {
       const { r, size, phase } = act.orbit;
       const { cx, cy, ct, st, rx, ry } = blend(homes ? homes[act.i % 2] : shared);
-      act.pace += ((act.hovered ? 0 : 1) - act.pace) * Math.min(1, dt * 6);
+      const pace = act.hovered ? 0 : act === this.hint?.act && this.hint.shown ? HINT_PACE : 1;
+      act.pace += (pace - act.pace) * Math.min(1, dt * 6);
 
       /* Distance from the centre, as a fraction of the orbit: shrinks to
          touching as they meet, breathing a little all the while. */
@@ -810,6 +984,8 @@ export default class Duo {
       act.btn.style.zIndex = String(Math.round(10 + depth * 5));
       act.btn.style.transform = `translate3d(${(x - o / 2).toFixed(1)}px, ${(y - o / 2).toFixed(1)}px, 0) scale(${s.toFixed(3)})`;
     }
+
+    this.steerHint(dt, { faces: faces.map((fc) => fc.box), wall, roof });
   };
 
   resize() {
@@ -822,6 +998,8 @@ export default class Duo {
     gsap.ticker.remove(this.loop);
     this.handlers.forEach((off) => off());
     this.actions.forEach((a) => a.back?.kill());
+    this.hintGone?.kill();
+    this.hint?.el.remove();
     this.rocks.destroy();
     this.members.forEach((m) => {
       m.humCall?.kill();
