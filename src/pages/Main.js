@@ -176,6 +176,15 @@ export default class Main extends Page {
     this.finaleFx = this.finale ? new Finale(this.finale) : null;
 
     this.measure();
+    /* The reel's slide is as long as its cards make it (measure). Should
+       they change size with the window left alone (the styles changed
+       under an open page, a late layout), it's read again — or the slide
+       would stop short, the last cards out of reach. (Transforms don't
+       count: the slide, the rise-in and the hover scale never set it off.) */
+    if (this.showTrack && 'ResizeObserver' in window) {
+      this.reelSizer = new ResizeObserver(() => this.measure());
+      this.reelSizer.observe(this.showTrack);
+    }
   }
 
   get lenis() { return this.app?.scroll?.lenis; }
@@ -1004,6 +1013,7 @@ export default class Main extends Page {
       this.showTrack.removeEventListener('focusout', this.onReelFocus);
     }
     gsap.killTweensOf(this.showScale);
+    this.reelSizer?.disconnect();
     this.unmagnet?.();
     gsap.killTweensOf([this.cue, this.journey, ...this.heroLines()]);
     this.pullTl?.kill();
