@@ -12,6 +12,7 @@ uniform float uStrength;
 uniform float uDecay;
 uniform float uDiffuse;
 uniform float uActive;
+uniform float uRise;      // upward drift, texels a frame
 
 varying vec2 vUv;
 
@@ -29,8 +30,9 @@ void main() {
 
   vec4 prev = texture2D(tPrev, vUv);
 
-  // Advect along the stored flow, so the ink drifts the way it was thrown.
-  vec2 advected = vUv - prev.gb * texel * 1.6;
+  // Advect along the stored flow, so the ink drifts the way it was thrown
+  // — and rises a little, like smoke (composite.frag draws it as smoke).
+  vec2 advected = vUv - prev.gb * texel * 1.6 - vec2(0.0, uRise) * texel;
   vec4 moved = texture2D(tPrev, advected);
 
   // Diffuse with the four neighbours.

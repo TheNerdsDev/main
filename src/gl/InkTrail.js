@@ -36,11 +36,15 @@ export default class InkTrail {
         uMouse:     { value: new Vector2(0.5, 0.5) },
         uPrevMouse: { value: new Vector2(0.5, 0.5) },
         uAspect:    { value: store.aspect },
-        uRadius:    { value: 0.115 },
-        uStrength:  { value: 0.62 },
-        uDecay:     { value: 0.974 },
-        uDiffuse:   { value: 0.20 },
-        uActive:    { value: 0 }
+        /* Wide, slow to fade, softly spreading and rising: the composite
+           draws it as smoke (composite.frag), which should hang in the sky
+           a few seconds. */
+        uRadius:    { value: 0.12 },
+        uStrength:  { value: 0.48 },
+        uDecay:     { value: 0.99 },
+        uDiffuse:   { value: 0.26 },
+        uActive:    { value: 0 },
+        uRise:      { value: 0.45 }
       }
     });
 
@@ -80,6 +84,9 @@ export default class InkTrail {
   }
 
   setPointer(x, y) {
+    /* (A position worked out before the window had a size is no position:
+       taken in, it would stop the trail for good.) */
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
     this.target.set(x, y);
     if (!this.seeded) {
       this.mouse.copy(this.target);
@@ -109,11 +116,11 @@ export default class InkTrail {
     const moving = Math.min(travelled * 90, 1);
     this.active += ((this.active > 0 ? moving : 0) - this.active) * 0.25;
 
-    /* Once the last stroke has faded to nothing (it loses 2.6% a frame, so
-       even the densest is gone within ~300 frames) the pass changes nothing
+    /* Once the last stroke has faded to nothing (it loses 1% a frame, so
+       even the densest is gone within ~740 frames) the pass changes nothing
        — skip it until the pointer moves again. */
     this.still = this.active < 0.001 ? (this.still || 0) + 1 : 0;
-    if (this.still > 320) return;
+    if (this.still > 760) return;
 
     const u = this.material.uniforms;
     u.tPrev.value = this.read.texture;
