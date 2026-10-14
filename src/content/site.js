@@ -147,10 +147,10 @@ export const contact = {
     fields: [
       { name: 'name', label: 'Full name', type: 'text', autocomplete: 'name', required: true, max: 120 },
       { name: 'email', label: 'Email', type: 'email', autocomplete: 'email', required: true, max: 200 },
-      { name: 'phone', label: 'Phone number', type: 'tel', autocomplete: 'tel', required: true, max: 30 },
+      { name: 'phone', label: 'Phone number', type: 'tel', autocomplete: 'tel', max: 30 },
       { name: 'company', label: 'Company name', type: 'text', autocomplete: 'organization', max: 120 },
       { name: 'about', label: 'Brief about you', type: 'textarea', rows: 2, max: 2000 },
-      { name: 'idea', label: 'What do you have in mind', type: 'textarea', rows: 3, max: 4000 }
+      { name: 'idea', label: 'What do you have in mind', type: 'textarea', rows: 3, required: true, max: 4000 }
     ],
     optional: 'Optional',
     button: 'Send Your Idea',
@@ -199,7 +199,7 @@ export const info = {
   /* Each line must fit on one row — it is revealed behind its own mask. */
   title: ['A little', 'about us'],
   lead:
-    'We’re The Nerds, a small team from Surat, India, who love building cool stuff for the web. From websites to custom software and automation, we help businesses bring their ideas to life. No middlemen, no unnecessary fuss — just us, working with you to make something great.',
+    'We’re The Nerds, two devs from Surat, India, who love cooking up cool stuff for the web. From slick websites to custom software and crazy useful automations, we build things that just work. No corporate BS, no middlemen, just two nerds turning your ideas into something awesome.',
   /* The two boxes in their own section under the heading and photo
      (CMS: About page). The Offer: the services clients hire us for. The
      Work: what comes out of it — hovering a kind (tapping, on a phone)

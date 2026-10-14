@@ -1,7 +1,7 @@
 import {
   WebGLRenderer, Scene, PerspectiveCamera, OrthographicCamera,
   WebGLRenderTarget, PlaneGeometry, Mesh, ShaderMaterial,
-  Vector2, Color, HalfFloatType, RGBAFormat,
+  Vector2, Vector4, Color, HalfFloatType, RGBAFormat,
   LinearFilter, NoColorSpace, SRGBColorSpace
 } from 'three';
 import gsap from 'gsap';
@@ -119,7 +119,9 @@ export default class World {
         uInkAmount: { value: store.isTouch ? 0.35 : 1 },
         uFade:      { value: 1 },
         uAccent:    { value: PALETTE.accent.clone() },
-        uBg:        { value: PALETTE.bg.clone() }
+        uBg:        { value: PALETTE.bg.clone() },
+        /* Photos of us on screen, kept clear of the ink (Media.loop). */
+        uStill:     { value: [new Vector4(-9, -9, -9, -9), new Vector4(-9, -9, -9, -9)] }
       }
     });
     this.quad = new Mesh(new PlaneGeometry(2, 2), this.compositeMaterial);

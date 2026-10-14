@@ -313,6 +313,13 @@ html .media-wrapper.is-empty {
   text-align: center;
 }
 #work .metas .meta { width: auto; margin: 0; }
+/* The labels on a project's page: the site's grey, a few steps lighter so
+   they read against the dark. */
+#work .label { color: rgba(var(--c-ink-rgb), 0.58); }
+/* The code link centres on its word: the arrow hangs after it, outside
+   the centring (and the hover underline stays under the word). */
+#work .meta-link { overflow: visible; }
+#work .meta-arrow { position: absolute; left: 100%; top: 0; padding-left: 0.28em; }
 #work .meta-list li { color: var(--c-dim); }
 #work .meta-list li + li { margin-top: 0.4rem; }
 
@@ -744,131 +751,109 @@ html .media-wrapper.is-empty {
 #contact .form-sent-title,
 #contact .label { color: var(--c-heading); }
 
-/* The enquiry form: a pane of glass floating over the starfield. Back to
-   front: the stars behind it, blurred and a little richer (backdrop
-   filter); a cool tint that shifts across the pane — blue at the top
-   left, a breath of violet at the top right, the site's green low on the
-   right — over the night sky's own colour; a soft reflection across the
-   upper corner (::after); a hairline edge that catches the light along
-   the top and left and fades round the sides (::before); and under it a
-   shadow in three layers — where it nearly touches, falling away, and
-   far below with a little of the blue in it — so it floats. The fields
-   are set into it: darker wells with an inner shadow. Short fields two
-   to a row, the long ones full width. */
+/* The enquiry form: no box round it, and none round its fields — each
+   question numbered, its answer written straight onto a line, like a
+   form filled in by hand. A line draws in under the field you're in, its
+   number lights up; a filled-in field keeps its line. After a submit, a
+   field that needs fixing is marked in red, and keeps it while it's being
+   put right; at the next submit it turns green once it's fine
+   (core/ContactForm.js). Short questions two to a row, the long ones full
+   width. */
 #contact .contact-form {
-  position: relative;
-  isolation: isolate;
   grid-column: 2; grid-row: 1 / -1;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 2rem 2rem;
-  padding: 3.6rem 4rem 3.4rem;
-  border-radius: 2.8rem;
-  /* Kept light, so the sky shows through: a thin tint, a soft blur. */
-  background:
-    radial-gradient(120% 80% at 0% 0%, rgba(120, 170, 255, 0.13), transparent 55%),
-    radial-gradient(70% 60% at 90% 8%, rgba(146, 89, 238, 0.08), transparent 60%),
-    radial-gradient(90% 70% at 100% 100%, rgba(10, 205, 136, 0.09), transparent 60%),
-    linear-gradient(160deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.01) 50%, rgba(255, 255, 255, 0.025)),
-    rgba(var(--c-bg-rgb), 0.14);
-  -webkit-backdrop-filter: blur(9px) saturate(140%);
-  backdrop-filter: blur(9px) saturate(140%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.32),
-    inset 1px 0 0 rgba(255, 255, 255, 0.07),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.04),
-    inset 0 0 3.2rem rgba(140, 180, 255, 0.06),
-    0 0.2rem 0.4rem rgba(0, 0, 0, 0.25),
-    0 2rem 4rem -1.2rem rgba(0, 0, 0, 0.5),
-    0 5rem 10rem -3rem rgba(20, 60, 140, 0.35);
+  gap: 3.4rem 4rem;
+  padding-top: 0.6rem;
 }
-/* The edge: bright where the light falls (top left), fading round the
-   sides, a faint green glint again at the bottom right. */
-#contact .contact-form::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  padding: 1px;
-  border-radius: inherit;
-  background: linear-gradient(150deg,
-    rgba(255, 255, 255, 0.55),
-    rgba(255, 255, 255, 0.14) 28%,
-    rgba(255, 255, 255, 0.05) 55%,
-    rgba(10, 205, 136, 0.28) 86%,
-    rgba(255, 255, 255, 0.3));
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
-  pointer-events: none;
-}
-/* The reflection: a soft sheen across the upper left, the way a window
-   holds the light, and a brighter glare along the top. */
-#contact .contact-form::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  background:
-    linear-gradient(118deg, rgba(255, 255, 255, 0.13) 0%, rgba(255, 255, 255, 0.045) 22%, transparent 34%),
-    radial-gradient(55% 18% at 32% 0%, rgba(255, 255, 255, 0.1), transparent 70%);
-  pointer-events: none;
-}
-#contact .field { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
-/* The site's label look (not .label itself: those fade in one by one as
-   the page enters, and the form arrives as a whole), brighter to read. */
-#contact .field-label {
-  font-family: var(--font-subtext);
-  font-size: 1.4rem;
-  line-height: 110%;
-  letter-spacing: 0.04em;
-  color: rgba(var(--c-ink-rgb), 0.78);
-  text-transform: uppercase;
-}
+#contact .field { display: flex; flex-direction: column; gap: 0.4rem; min-width: 0; }
 #contact .field-wide,
 #contact .contact-form-foot,
 #contact .form-sent { grid-column: 1 / -1; }
-#contact .field-optional { text-transform: none; letter-spacing: 0; color: rgba(var(--c-ink-rgb), 0.5); }
-/* A field: a well set into the glass — darker, shaded along its top
-   edge, a thin light along the bottom where the pane's surface turns. */
+/* The site's label look (not .label itself: those fade in one by one as
+   the page enters, and the form arrives as a whole), with its number. */
+#contact .field-label {
+  display: flex;
+  align-items: baseline;
+  gap: 1.2rem;
+  font-family: var(--font-subtext);
+  font-size: 1.35rem;
+  line-height: 120%;
+  letter-spacing: 0.04em;
+  color: rgba(var(--c-ink-rgb), 0.72);
+  text-transform: uppercase;
+  transition: color 0.4s var(--ease-out);
+}
+#contact .field-index {
+  font-family: 'Syne Mono', ui-monospace, monospace;
+  font-size: 1.15rem;
+  letter-spacing: 0.08em;
+  color: rgba(var(--c-ink-rgb), 0.4);
+  transition: color 0.4s var(--ease-out);
+}
+#contact .field-optional { text-transform: none; letter-spacing: 0; color: rgba(var(--c-ink-rgb), 0.48); }
+
+/* The answer, on its line: a hairline always there, and over it a line
+   that draws in from the left. */
+#contact .field-control { position: relative; }
 #contact .field-input {
+  display: block;
   width: 100%;
-  padding: 1.4rem 1.6rem;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 1.4rem;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.08));
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3), inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+  padding: 0.9rem 0 1rem;
+  border: 0;
+  border-bottom: 1px solid rgba(var(--c-ink-rgb), 0.22);
+  border-radius: 0;
+  background: none;
   color: var(--c-ink);
   font: inherit;
-  font-size: 1.7rem;
+  font-size: 2rem;
   line-height: 140%;
-  transition: border-color 0.4s var(--ease-out), box-shadow 0.4s var(--ease-out), background-color 0.4s var(--ease-out);
+  caret-color: #0ACD88;
+  transition: border-color 0.4s var(--ease-out);
 }
-#contact textarea.field-input { resize: vertical; min-height: 7rem; }
-#contact .field-input:hover { border-color: rgba(255, 255, 255, 0.24); }
-#contact .field-input:focus {
-  outline: none;
-  border-color: #0ACD88;
-  background-color: rgba(10, 205, 136, 0.04);
-  box-shadow:
-    inset 0 1px 2px rgba(0, 0, 0, 0.35),
-    0 0 0 1px #0ACD88,
-    0 0 1.6rem rgba(10, 205, 136, 0.25);
+#contact .field-input:hover { border-bottom-color: rgba(var(--c-ink-rgb), 0.42); }
+#contact .field-input:focus { outline: none; }
+#contact textarea.field-input { resize: vertical; min-height: 4.8rem; }
+/* Long answers grow with what's written, line by line (where the browser
+   can size a field to its text). */
+@supports (field-sizing: content) {
+  #contact textarea.field-input { field-sizing: content; resize: none; min-height: 4.8rem; max-height: 28rem; }
 }
+#contact .field-line {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 1px;
+  background: rgba(var(--c-ink-rgb), 0.7);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  transition: transform 0.7s var(--ease-out), background-color 0.4s var(--ease-out);
+  pointer-events: none;
+}
+#contact .field.is-filled .field-line { transform: scaleX(1); }
+#contact .field-input:focus + .field-line { transform: scaleX(1); background: #0ACD88; }
+#contact .field:focus-within .field-label { color: var(--c-ink); }
+#contact .field:focus-within .field-index,
+#contact .field.is-filled .field-index { color: #0ACD88; }
+
+/* After a submit: red to fix (kept while it's put right), green once fine. */
+#contact .field.is-invalid .field-line { transform: scaleX(1); background: #FF6B6B; }
+#contact .field.is-invalid .field-index,
+#contact .field.is-invalid .field-label { color: #FF8A8A; }
+#contact .field.is-valid .field-line { transform: scaleX(1); background: #0ACD88; }
+#contact .field.is-valid .field-index { color: #0ACD88; }
+
 /* The browser's autofill paints its own fill; keep it on the night sky. */
 #contact .field-input:-webkit-autofill {
   -webkit-text-fill-color: var(--c-ink);
   -webkit-box-shadow: 0 0 0 100rem var(--c-bg) inset;
   caret-color: var(--c-ink);
 }
-#contact .field.is-invalid .field-input { border-color: #FF6B6B; }
-#contact .field-error { min-height: 1.4em; margin-top: -0.4rem; font-size: 1.3rem; color: #FF6B6B; }
+#contact .field-error { min-height: 1.4em; margin-top: 0.4rem; font-size: 1.3rem; color: #FF8A8A; }
 #contact .field-error:empty { min-height: 0; margin: 0; }
 /* Off-screen, not display: none — some bots skip fields they can tell are hidden. */
 #contact .field-trap { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 
-#contact .contact-form-foot { display: flex; align-items: center; flex-wrap: wrap; gap: 1.6rem 2.4rem; margin-top: 0.8rem; }
+#contact .contact-form-foot { display: flex; align-items: center; flex-wrap: wrap; gap: 1.6rem 2.4rem; margin-top: 1.2rem; }
 #contact .form-status { font-size: 1.5rem; color: var(--c-dim); }
 #contact .form-status.is-error { color: #FF6B6B; }
 #contact .form-status a { color: var(--c-ink); text-decoration: underline; text-underline-offset: 0.2em; }
@@ -950,7 +935,7 @@ html .media-wrapper.is-empty {
   #contact .lead { font-size: 1.55rem; }
   #contact .contact-details { grid-template-columns: 1fr; }
   #contact .contact-detail-tall { grid-row: auto; }
-  #contact .contact-form { grid-template-columns: 1fr; padding: 3.2rem 2.4rem; border-radius: 2.2rem; }
+  #contact .contact-form { grid-template-columns: 1fr; gap: 3rem; }
   #contact .field-input { font-size: max(16px, 1.6rem); }   /* 16px+, or phones zoom into the field */
   #contact .shout-button { width: 100%; }
 }

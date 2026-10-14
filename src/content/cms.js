@@ -32,7 +32,7 @@ export default {
     "back": ""
   },
   "home": {
-    "showcase": 5
+    "showcase": 4
   },
   "about": {
     "offer": {
@@ -159,21 +159,24 @@ export default {
     },
     {
       "slug": "mesa-kitchen",
-      "name": "Mesa Kitchen",
-      "year": "2025",
+      "name": "Mewar Sync",
+      "year": "2026",
       "role": "Front-end Development",
       "accent": "#B8343C",
       "excerpt": "Restaurant & reservations",
-      "description": "A restaurant site built to make people hungry. Full-bleed food photography treated with a custom WebGL grade, and a reservation system wired straight into the floor plan.",
+      "description": "Mewar Sync is an AI-powered platform empowering traditional artisans through voice-based accounting, smart inventory management, financial tracking, and digital tools while preserving India's rich cultural heritage.",
       "deliverables": [
         "Front-end build",
         "WebGL image grade",
         "Reservations",
         "CMS"
       ],
-      "github": "",
+      "github": "https://github.com/premkajiwala-hub/Mewar_Sync.git",
       "shots": 3,
-      "video": "/media/sample/preview.mp4"
+      "video": "/media/mesa-kitchen/preview.mp4",
+      "photos": true,
+      "screenshot": false,
+      "pageVideo": true
     },
     {
       "slug": "atlas-fitness",
@@ -188,24 +191,6 @@ export default {
         "Booking platform",
         "Staff dashboard",
         "Automation"
-      ],
-      "github": "",
-      "shots": 3,
-      "video": "/media/sample/preview.mp4"
-    },
-    {
-      "slug": "verde-grocer",
-      "name": "Verde Grocer",
-      "year": "2025",
-      "role": "Development & Systems",
-      "accent": "#6B8F1F",
-      "excerpt": "Local grocery storefront",
-      "description": "An online storefront for a grocer with eight hundred products and no time to manage a website. We built the store, and the automation that keeps stock, pricing and delivery slots in sync on their own.",
-      "deliverables": [
-        "Storefront",
-        "Inventory sync",
-        "Delivery slots",
-        "Infrastructure"
       ],
       "github": "",
       "shots": 3,

@@ -34,8 +34,13 @@ export default class ContactForm {
     this.opened = Date.now();
 
     form.addEventListener('submit', this.onSubmit);
-    /* An error clears as soon as the field is touched again. */
-    form.addEventListener('input', (e) => this.setError(e.target.closest('.field'), null));
+    /* A field with something in it keeps its line drawn (pages.css). Its
+       red or green stays as the last submit left it — even while it's
+       being put right — until the next submit says otherwise. */
+    form.addEventListener('input', (e) => {
+      const field = e.target.closest('.field');
+      field?.classList.toggle('is-filled', !!e.target.value.trim());
+    });
   }
 
   /** What's wrong, as { field: code }; empty when it's good to go. */
@@ -54,17 +59,20 @@ export default class ContactForm {
     return errors;
   }
 
-  setError(field, code) {
+  /** A submit's verdict on one field: red with what's wrong, or green
+      when it's filled in and fine (an empty optional one stays plain). */
+  setState(field, code) {
     if (!field) return;
     const input = field.querySelector('.field-input');
     field.classList.toggle('is-invalid', !!code);
+    field.classList.toggle('is-valid', !code && !!input?.value.trim());
     input?.setAttribute('aria-invalid', code ? 'true' : 'false');
     const out = field.querySelector('.field-error');
     if (out) out.textContent = code ? this.text[code] || this.text.required : '';
   }
 
   showErrors(errors) {
-    this.form.querySelectorAll('.field').forEach((f) => this.setError(f, errors[f.dataset.field]));
+    this.form.querySelectorAll('.field').forEach((f) => this.setState(f, errors[f.dataset.field]));
     const first = this.form.querySelector('.field.is-invalid .field-input');
     first?.focus();
   }

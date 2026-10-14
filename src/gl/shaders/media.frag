@@ -47,19 +47,11 @@ void main() {
     vUv.y * ratio.y + (1.0 - ratio.y) * 0.5
   );
 
-  // ---- ink refraction ------------------------------------------
-  vec2 screenUv = gl_FragCoord.xy / uRes;
-  vec4 ink = texture2D(tInk, screenUv);
-  float inkDensity = clamp(ink.r, 0.0, 1.0);
-  vec2 inkVel = ink.gb;
-
-  uv += inkVel * 0.028 * uInkAmount;
-
   // ---- hover zoom ----------------------------------------------
   float zoom = 1.0 - uHover * 0.075;
   uv = (uv - 0.5) * zoom + 0.5;
 
-  // ---- sample (refraction only, no chromatic split) -------------
+  // ---- sample -------------------------------------------------
   // One plane pixel in texture space, after the cover-fit crop and zoom.
   vec2 texel = ratio * zoom / uPlaneSizes;
   vec3 col = uBlur > 0.25 ? sampleBlurred(uv, texel) : texture2D(tMap, uv).rgb;
@@ -80,12 +72,12 @@ void main() {
   vec3 mono = vec3(l);
   vec3 photo = mix(12.92 * col, 1.055 * pow(col, vec3(1.0 / 2.4)) - 0.055, step(0.0031308, col));
 
-  // Hover brings back the full original — the ink deliberately leaves the
-  // grade alone.
+  // Hover brings back the full original.
   float colourMix = clamp(uColour + uHover, 0.0, 1.0);
   vec3 finalCol = mix(mono, photo, colourMix);
 
-  // ---- colourless ink highlight --------------------------------
+  // ---- the cursor's white trail, as a soft lift (it doesn't bend it) --
+  float inkDensity = clamp(texture2D(tInk, gl_FragCoord.xy / uRes).r, 0.0, 1.0);
   finalCol += vec3(inkDensity) * 0.07 * uInkAmount;
 
   // ---- film grain, sized in device pixels ----------------------

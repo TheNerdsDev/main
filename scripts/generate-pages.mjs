@@ -468,7 +468,7 @@ ${header('projects', true)}
 
     <dl class="metas">
       <div class="meta"><dt class="label">Year</dt><dd class="text">${esc(p.year)}</dd></div>
-      ${p.github ? `<div class="meta"><dt class="label">Code</dt><dd><a class="text link" href="${esc(p.github)}" target="_blank" rel="noopener noreferrer"><span class="line-inner">GitHub &nearr;</span></a></dd></div>` : ''}
+      ${p.github ? `<div class="meta"><dt class="label">Code</dt><dd><a class="text link meta-link" href="${esc(p.github)}" target="_blank" rel="noopener noreferrer"><span class="line-inner">GitHub<span class="meta-arrow" aria-hidden="true">&nearr;</span></span></a></dd></div>` : ''}
     </dl>
 
     <div class="content">
@@ -558,7 +558,7 @@ ${header('info')}
         <p class="lead subtext" data-split-lines>${teamNames(info.lead)}</p>
       </div>
       <div class="info-portrait">
-        ${mediaBlock('/media/studio/portrait.jpg', 'Prem Kajiwala and Meet Raval, The Nerds')}
+        ${mediaBlock('/media/studio/portrait.jpg', 'Prem Kajiwala and Meet Raval, The Nerds', 'data-still')}
       </div>
     </div>
 
@@ -600,7 +600,8 @@ const contactPage = () => {
   /* The enquiry form (core/ContactForm.js sends it). Its errors and the
      sent state are written by the script; the labels are here. */
   const { form } = contact;
-  const field = (f) => {
+  /* Each question numbered, its answer written on a line (pages.css). */
+  const field = (f, i) => {
     const id = `cf-${f.name}`;
     const attrs = `class="field-input" id="${id}" name="${f.name}" maxlength="${f.max}" aria-describedby="${id}-error"${f.required ? ' required' : ''}`;
     const control = f.type === 'textarea'
@@ -608,8 +609,11 @@ const contactPage = () => {
       : `<input ${attrs} type="${f.type}" autocomplete="${f.autocomplete || 'off'}"${f.type === 'tel' ? ' inputmode="tel"' : ''} />`;
     const optional = f.required ? '' : ` <span class="field-optional">(${esc(form.optional)})</span>`;
     return `          <div class="field${f.type === 'textarea' ? ' field-wide' : ''}" data-field="${f.name}">
-            <label class="field-label" for="${id}">${esc(f.label)}${optional}</label>
-            ${control}
+            <label class="field-label" for="${id}"><span class="field-index" aria-hidden="true">${String(i + 1).padStart(2, '0')}</span><span>${esc(f.label)}${optional}</span></label>
+            <div class="field-control">
+              ${control}
+              <span class="field-line" aria-hidden="true"></span>
+            </div>
             <p class="field-error" id="${id}-error"></p>
           </div>`;
   };

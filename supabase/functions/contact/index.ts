@@ -46,10 +46,10 @@ type Rule = { label: string; max: number; required?: boolean; kind?: 'email' | '
 const FIELDS: Record<string, Rule> = {
   name: { label: 'Name', max: 120, required: true },
   email: { label: 'Email', max: 200, required: true, kind: 'email' },
-  phone: { label: 'Phone', max: 30, required: true, kind: 'phone' },
+  phone: { label: 'Phone', max: 30, kind: 'phone' },
   company: { label: 'Company', max: 120 },
   about: { label: 'About them', max: 2000 },
-  idea: { label: 'What they have in mind', max: 4000 }
+  idea: { label: 'What they have in mind', max: 4000, required: true }
 };
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const PHONE = /^[+\d\s().-]+$/;
