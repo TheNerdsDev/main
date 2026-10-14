@@ -42,6 +42,15 @@ const HINT_AFTER = 2.5;
 const HINT_PACE = 0.35;
 const HINT_KEY = 'nerds:threw';
 
+/* The rocks keep their places round the loop (see loop()): each wobbles
+   ahead and behind its place by up to `wobble` of a loop, on its own
+   rhythm, and one that fell behind (paused under the pointer, slowed for
+   the hint) catches up at most `catchUp` faster than the rest. */
+const SPREAD = { wobble: 0.02, catchUp: 0.45 };
+const TAU = Math.PI * 2;
+/* Points along a loop when measuring it (angleAt). */
+const LOOP_STEPS = 36;
+
 /** Keep `v` within lo..hi, rounding off as it nears either end instead of stopping dead. */
 const soften = (v, lo, hi, band) => {
   if (v > hi - band) return hi - band + band * Math.tanh((v - hi + band) / band);
@@ -140,11 +149,14 @@ export default class Duo {
 
     this.actions = [...el.querySelectorAll('.duo-action')].map((btn, i) => {
       const orbit = ORBITS[i % ORBITS.length];
-      return { btn, i, orbit, hovered: false, pace: 1, angle: orbit.start, x: 0, y: 0, at: -Infinity };
+      return { btn, i, orbit, hovered: false, pace: 1, lag: 0, angle: orbit.start, x: 0, y: 0 };
     });
     this.rocks = new SpaceRocks(this.actions.map((a) => a.btn));
     this.actionsEl = el.querySelector('.duo-actions');
     this.f = 0;
+    /* How far round the loop the group is, in loops (loop()). */
+    this.clock = 0;
+    this.loopLens = new Float64Array(LOOP_STEPS + 1);
     this.k = 0;
     this.gone = false;
 
@@ -712,6 +724,28 @@ export default class Duo {
     else setTimeout(go, 600);
   }
 
+  /**
+   * The angle at which a rock is `share` of the way round its loop,
+   * measured along the path as it is this frame — so it moves at an even
+   * pace on screen however the path bends round the figures.
+   */
+  angleAt(place, share) {
+    const lens = this.loopLens;
+    const step = TAU / LOOP_STEPS;
+    let prev = place(0);
+    lens[0] = 0;
+    for (let k = 1; k <= LOOP_STEPS; k++) {
+      const p = place(k * step);
+      lens[k] = lens[k - 1] + Math.hypot(p.x - prev.x, p.y - prev.y);
+      prev = p;
+    }
+    const want = share * lens[LOOP_STEPS];
+    let k = 1;
+    while (k < LOOP_STEPS && lens[k] < want) k++;
+    const seg = lens[k] - lens[k - 1];
+    return (k - 1 + (seg > 0 ? (want - lens[k - 1]) / seg : 0)) * step;
+  }
+
   /* -------------------------------------------------------------- loop */
 
   measure() {
@@ -857,11 +891,29 @@ export default class Duo {
        wide berth where there's room, a close shave on a phone. */
     const berth = stacked ? 1.3 : 2;
 
+    /* The group's place round the loop, in loops. Every rock keeps its own
+       place relative to it — their starting spread (ORBITS, uneven on
+       purpose), give or take a little wobble of its own — so however long
+       the page is open they never drift together or into a line. (Each used
+       to pace itself; differences in their paths and rhythms added up.)
+       Closing in on the journey, the loop runs faster, like anything
+       caught spiralling in. */
+    const lead = blend(homes ? homes[0] : shared);
+    const leadContact = (o * 0.34) / Math.max(1, Math.min(lead.rx, lead.ry));
+    const pull = Math.min(Math.pow(leadContact + (1 - leadContact) * (1 - e), -1.5), 9);
+    const rate = (SPEED / TAU) * pull * dt;
+    this.clock = (this.clock + rate) % 1;
+
     for (const act of this.actions) {
       const { r, size, phase } = act.orbit;
       const { cx, cy, ct, st, rx, ry } = blend(homes ? homes[act.i % 2] : shared);
+      /* Stopped under the pointer, slowed for the hint: what it falls
+         behind, it makes up afterwards, a little faster than the rest. */
       const pace = act.hovered ? 0 : act === this.hint?.act && this.hint.shown ? HINT_PACE : 1;
       act.pace += (pace - act.pace) * Math.min(1, dt * 6);
+      act.lag += rate * (1 - act.pace);
+      act.lag -= Math.round(act.lag);   // the short way round
+      if (act.pace > 0.98) act.lag -= clamp(act.lag, -rate * SPREAD.catchUp, rate * SPREAD.catchUp);
 
       /* Distance from the centre, as a fraction of the orbit: shrinks to
          touching as they meet, breathing a little all the while. */
@@ -945,35 +997,16 @@ export default class Duo {
         return { x, y };
       };
 
-      /* Clockwise, always (the angle rises on a y-down screen). Each one
-         surges and lags on its own rhythm, and a tighter orbit runs faster —
-         like anything caught spiralling in.
-         It's paced on screen, not by the angle: rounding a figure stretches
-         the path, and there the path also sways under the rock (the loop
-         breathes, the figures bob) — so the rock raced past one side of a
-         figure and all but stopped on another. Instead it floats on at its
-         own speed all the way round, the sway made up for at home. */
+      /* Clockwise, always (the loop runs that way on a y-down screen), at
+         its place in the group — give or take its own wobble — and at an
+         even pace on screen, all the way round. */
       if (!this.gone) {
-        const surge = 1 + 0.3 * Math.sin(t * 0.37 + phase);
-        const pull = Math.min(Math.pow(shrink, -1.5), 9);
-        const speed = SPEED * act.pace * surge * pull * ((rx + ry) / 2) * rr;
-        const h = 0.02;
-        const p0 = place(act.angle - h);
-        const p1 = place(act.angle + h);
-        const tx = p1.x - p0.x;
-        const ty = p1.y - p0.y;
-        const len = Math.max(Math.hypot(tx, ty), 1e-6);
-        const along = Math.max(len / (2 * h), 1);
-        let sway = 0;
-        if (t - act.at < 0.1 && dt > 0) {
-          const here = place(act.angle);
-          sway = (((here.x - act.x) * tx + (here.y - act.y) * ty) / len / dt) * avoid * (1 - e);
-        }
-        act.angle += (clamp(speed - sway, speed * 0.25, speed * 3) / along) * dt;
+        const wobble = SPREAD.wobble * Math.sin(t * 0.37 + phase);
+        const share = this.clock + act.orbit.start / TAU + wobble - act.lag;
+        act.angle = this.angleAt(place, share - Math.floor(share));
       }
 
       const { x, y } = place(act.angle);
-      act.at = t;
 
       /* Tilted ring: the near side (lower) a touch larger than the far side;
          closing in, they also come up towards the viewer. */
