@@ -162,7 +162,7 @@ export default {
       "name": "Mewar Sync",
       "year": "2026",
       "role": "Front-end Development",
-      "accent": "#B8343C",
+      "accent": "#D4A24C",
       "excerpt": "Restaurant & reservations",
       "description": "Mewar Sync is an AI-powered platform empowering traditional artisans through voice-based accounting, smart inventory management, financial tracking, and digital tools while preserving India's rich cultural heritage.",
       "deliverables": [

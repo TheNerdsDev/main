@@ -81,7 +81,8 @@ export default class Router {
       this.pending = { path, push };
       return;
     }
-    if (path === this.current) return;
+    /* (Nowhere to go: the phone menu, left open for the change, closes.) */
+    if (path === this.current) { this.app.setMenu?.(false); return; }
 
     /* Claimed before the fetch: a click while the next page's HTML is on its
        way would otherwise start a second change alongside this one, the two

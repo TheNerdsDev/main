@@ -864,8 +864,7 @@ export default class Duo {
     /* Tablets and phones (heading on top, sketches below): the two sketches
        fill the width corner to corner, and one loop round both runs off the
        sides of the screen — the rocks ended up pinned to its edges. There,
-       each sketch gets a loop of its own instead (two rocks each), sized to
-       it and kept on screen. */
+       each pair of rocks gets a loop of its own instead, kept on screen. */
     const stacked = roof > -Infinity;
     let homes = null;
     if (stacked) {
@@ -874,8 +873,29 @@ export default class Duo {
       const right = box.right - pad;
       const top = Math.max(box.top, this.ceiling, roof) + pad;
       const bottom = box.bottom - pad;
-      homes = this.members.map((m) => {
-        const r = m.body.getBoundingClientRect();
+      /* Here the sketches sit corner to corner (main-page.css), filling the
+         width: a loop round either one squeezed through the gap where they
+         meet — over the faces, and tangling with the other pair. So each
+         pair circles in one of the two open corners instead: beside the
+         upper sketch and over the lower one, and under the upper one beside
+         the lower. Each loop is kept inside its corner, a rock's width from
+         the faces, with room for the orbits' own swell (up to 1.12 × 1.07). */
+      const rects = this.members.map((m) => m.body.getBoundingClientRect());
+      const upper = rects[0].top <= rects[1].top ? rects[0] : rects[1];
+      const lower = upper === rects[0] ? rects[1] : rects[0];
+      const upperRight = upper.left + upper.width / 2 > lower.left + lower.width / 2;
+      const corners = upperRight
+        ? [{ l: left, r: upper.left - pad, t: top, b: lower.top - pad }, { l: lower.right + pad, r: right, t: upper.bottom + pad, b: bottom }]
+        : [{ l: upper.right + pad, r: right, t: top, b: lower.top - pad }, { l: left, r: lower.left - pad, t: upper.bottom + pad, b: bottom }];
+      homes = rects.map((r, i) => {
+        const c = corners[i];
+        const w = c.r - c.l;
+        const h = c.b - c.t;
+        if (w > pad && h > pad) {
+          return { x: c.l + w / 2, y: c.t + h / 2, tilt: 0, rx: (w / 2) * 0.83, ry: (h / 2) * 0.83 };
+        }
+        /* A corner too small to circle in (an unusual screen): round the
+           sketch, as before. */
         const lrx = Math.min(r.width * 0.5 + pad * 0.5, (right - left) / 2);
         const lry = Math.min(r.height * 0.5 + pad * 0.5, (bottom - top) / 2);
         return {

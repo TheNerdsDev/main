@@ -97,17 +97,41 @@ const roll = (text) =>
 const navItem = (href, label, on, inside) =>
   `<a class="nav-link roll-link${on ? ' is-current' : ''}${on && inside ? ' is-inside' : ''}" href="${href}" data-link aria-label="${esc(label)}"${on ? ' aria-current="page"' : ''}>${roll(label)}</a>`;
 
+/* The phone menu's moons (base.css .nav-moons): tossed up from the bottom
+   and falling back, over and over — each its own size (rem), height (of
+   the screen), rhythm, drift and spin, and one of four faces
+   (public/media/menu). Decoration only. */
+const MENU_MOONS = [
+  { img: 1, x: 7, s: 3.4, h: 46, d: 3.4, delay: -0.6, dx: 10, spin: 120 },
+  { img: 3, x: 24, s: 2.6, h: 30, d: 2.6, delay: -1.9, dx: -8, spin: -150 },
+  { img: 2, x: 42, s: 4, h: 54, d: 3.9, delay: -2.8, dx: 6, spin: 90 },
+  { img: 4, x: 60, s: 2.8, h: 36, d: 2.9, delay: -0.2, dx: -10, spin: -110 },
+  { img: 1, x: 76, s: 3.6, h: 48, d: 3.6, delay: -1.3, dx: -6, spin: 140 },
+  { img: 3, x: 89, s: 2.4, h: 26, d: 2.4, delay: -2.1, dx: 8, spin: -100 }
+];
+const menuMoons = () => `<div class="nav-moons" aria-hidden="true">${MENU_MOONS.map((m) =>
+  `<i style="--x: ${m.x}%; --s: ${m.s}rem; --h: ${m.h}; --d: ${m.d}s; --delay: ${m.delay}s; --dx: ${m.dx}px; --spin: ${m.spin}deg; background-image: url(/media/menu/moon-${m.img}.webp)"></i>`).join('')}</div>`;
+
 const header = (current, inside = false) => `  <header class="site-header">
     <!-- Hover: the letters jump one by one and the rocket flies a lap (fx/LogoRocket.js). -->
     <a class="logo" href="/" data-link aria-label="${esc(studio.wordmark)} — home">${logoSvg({ id: 'site-logo' })}</a>
-    <!-- Phones: the links fold into a panel behind this (core/App.js bindMenu). -->
+    <!-- Phones: the links fold into a panel behind this (core/App.js bindMenu);
+         open, a satellite circles the cross (base.css). -->
     <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Open menu">
       <span class="menu-toggle-line"></span><span class="menu-toggle-line"></span><span class="menu-toggle-line"></span>
+      <span class="menu-toggle-orbit" aria-hidden="true"></span>
     </button>
     <nav class="nav" id="site-nav" aria-label="Primary">
+      ${menuMoons()}
       ${navItem('/work/', 'Work', current === 'projects', inside)}
       ${navItem('/info/', 'About', current === 'info')}
       ${navItem('/contact/', studio.contactLabel || 'Contact', current === 'contact')}
+      <!-- Phones only: at the foot of the open menu, how to reach us. -->
+      <div class="nav-foot">
+        <span class="nav-foot-label">${esc(contact.title[0])}</span>
+        <a class="nav-foot-mail" href="mailto:${esc(studio.email)}">${esc(studio.email)}</a>
+        <span class="nav-foot-social">${studio.social.map((s) => `<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.label)} ↗</a>`).join('')}</span>
+      </div>
     </nav>
   </header>`;
 
@@ -521,9 +545,14 @@ const offerCard = ({ title, items }) => infoCard('offer', title,
    beside the box, level with the row, on a wide screen with a mouse;
    under it otherwise (pages.css, Info.js). The panels share one place:
    only the open one shows. */
+/* Under the box (phones, tablets): a nudge that the rows open, gone once
+   one has been (pages.css .info-work-hint). The buttons say so themselves
+   to a screen reader (aria-expanded), so it's hidden from one. */
+const WORK_HINT = '<p class="info-work-hint" aria-hidden="true"><span class="info-work-hint-ping"></span>'
+  + '<span class="info-work-hint-tap">Tap one to peek inside</span><span class="info-work-hint-click">Click one to peek inside</span></p>';
 const workCard = ({ title, kinds }) => {
   const no = (k) => String(k + 1).padStart(2, '0');
-  const rows = kinds.map((kind, k) => `<li style="--j: ${k}"><button class="info-work-kind" type="button" data-kind="${k}" aria-expanded="false" aria-controls="info-work-${k}"><span class="info-card-rise"><span class="info-work-no">${no(k)}</span><span class="info-work-name">${esc(kind.name)}</span><span class="info-work-arrow" aria-hidden="true">→</span></span></button></li>`).join('');
+  const rows = kinds.map((kind, k) => `<li style="--j: ${k}"><button class="info-work-kind" type="button" data-kind="${k}" aria-expanded="false" aria-controls="info-work-${k}"><span class="info-card-rise"><span class="info-work-no">${no(k)}</span><span class="info-work-name">${esc(kind.name)}</span><span class="info-work-arrow" aria-hidden="true">→</span><span class="info-work-plus" aria-hidden="true"></span></span></button></li>`).join('');
   const panels = kinds.map((kind, k) => `
               <div class="info-work-detail" id="info-work-${k}" role="region" aria-label="${esc(kind.name)}">
                 <p class="info-work-head" style="--k: 0"><span class="info-work-no">${no(k)}</span> ${esc(kind.name)}</p>
@@ -531,7 +560,7 @@ const workCard = ({ title, kinds }) => {
                 <ul class="info-work-items">${kind.items.map((x, j) => `<li style="--k: ${j + 2}">${esc(x)}</li>`).join('')}</ul>
               </div>`).join('');
   return `        <div class="info-work">
-${infoCard('work', title, `<ol class="info-card-list info-work-list">${rows}</ol>`, 1)}
+${infoCard('work', title, `<ol class="info-card-list info-work-list">${rows}</ol>${WORK_HINT}`, 1)}
           <span class="info-work-line" aria-hidden="true"></span>
           <div class="info-work-panel">
             <div class="info-work-clip"><div class="info-work-box"><div class="info-work-details">${panels}
