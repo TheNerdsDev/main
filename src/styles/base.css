@@ -36,7 +36,7 @@ a { color: inherit; text-decoration: none; }
   --ease-in-out: cubic-bezier(0.76, 0, 0.24, 1);
   --dur: 0.8s;
 
-  /* The subtext's face (.subtext) — also the contact form's labels. */
+  /* The subtext's face (.subtext) — also the contact page's form (labels, what is typed, messages) and its details. */
   --font-subtext: 'Atkinson Hyperlegible', 'Inter', system-ui, sans-serif;
 
   /* Tells the inline first-paint styles (scripts/generate-pages.mjs) that

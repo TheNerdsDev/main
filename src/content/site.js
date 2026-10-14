@@ -21,7 +21,7 @@ export const studio = {
   year: '2026',
   social: [
     { label: 'Instagram', url: 'https://instagram.com/' },
-    { label: 'LinkedIn', url: 'https://linkedin.com/' }
+    { label: 'LinkedIn', url: 'https://www.linkedin.com/company/145305179/' }
   ]
 };
 

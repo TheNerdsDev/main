@@ -34,13 +34,27 @@ export default class ContactForm {
     this.opened = Date.now();
 
     form.addEventListener('submit', this.onSubmit);
-    /* A field with something in it keeps its line drawn (pages.css). Its
-       red or green stays as the last submit left it — even while it's
-       being put right — until the next submit says otherwise. */
+    /* A field with something in it is marked filled (pages.css). A red one
+       goes back to normal the moment it's being put right — clicked into,
+       tabbed to, typed in — and the next submit checks it again. (Not when
+       the form itself moves there after a submit: that one stays red until
+       it's touched.) */
     form.addEventListener('input', (e) => {
       const field = e.target.closest('.field');
       field?.classList.toggle('is-filled', !!e.target.value.trim());
+      this.unmark(field);
     });
+    form.addEventListener('focusin', (e) => { if (!this.moving) this.unmark(e.target.closest('.field')); });
+    form.addEventListener('pointerdown', (e) => this.unmark(e.target.closest('.field')));
+  }
+
+  /** A red field back to plain: no colour, no message. */
+  unmark(field) {
+    if (!field?.classList.contains('is-invalid')) return;
+    field.classList.remove('is-invalid');
+    field.querySelector('.field-input')?.setAttribute('aria-invalid', 'false');
+    const out = field.querySelector('.field-error');
+    if (out) out.textContent = '';
   }
 
   /** What's wrong, as { field: code }; empty when it's good to go. */
@@ -74,7 +88,10 @@ export default class ContactForm {
   showErrors(errors) {
     this.form.querySelectorAll('.field').forEach((f) => this.setState(f, errors[f.dataset.field]));
     const first = this.form.querySelector('.field.is-invalid .field-input');
+    /* (Moved there by the form, not by them: it stays red — see unmark.) */
+    this.moving = true;
     first?.focus();
+    this.moving = false;
   }
 
   onSubmit = (e) => {

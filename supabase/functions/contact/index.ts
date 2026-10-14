@@ -62,6 +62,13 @@ const db = createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), {
   auth: { persistSession: false }
 });
 
+/* Our own dev servers, on any port: this computer, or another device on the
+   same home/office network (whose address changes from network to network).
+   Only reachable on that network, so nothing on the internet gets in. */
+const LOCAL = /^http:\/\/(localhost|127(\.\d{1,3}){3}|\[::1\]|10(\.\d{1,3}){3}|192\.168(\.\d{1,3}){2}|172\.(1[6-9]|2\d|3[01])(\.\d{1,3}){2})(:\d{1,5})?$/;
+
+const allowed = (origin: string) => !ORIGINS.length || ORIGINS.includes(origin) || LOCAL.test(origin);
+
 function corsHeaders(origin: string): Record<string, string> {
   const h: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -69,7 +76,7 @@ function corsHeaders(origin: string): Record<string, string> {
     'Access-Control-Allow-Headers': 'content-type',
     Vary: 'Origin'
   };
-  if (!ORIGINS.length || ORIGINS.includes(origin)) h['Access-Control-Allow-Origin'] = origin || '*';
+  if (allowed(origin)) h['Access-Control-Allow-Origin'] = origin || '*';
   return h;
 }
 
@@ -141,7 +148,7 @@ Deno.serve(async (req) => {
   const headers = corsHeaders(origin);
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers });
   if (req.method !== 'POST') return reply(405, { error: 'method' }, headers);
-  if (ORIGINS.length && !ORIGINS.includes(origin)) return reply(403, { error: 'origin' }, headers);
+  if (!allowed(origin)) return reply(403, { error: 'origin' }, headers);
 
   const raw = await req.text();
   if (raw.length > 20_000) return reply(413, { error: 'too large' }, headers);
