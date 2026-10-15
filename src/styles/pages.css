@@ -299,6 +299,15 @@ html .media-wrapper.is-empty {
   font-size: 2.4rem;
   line-height: 136%;
 }
+/* Justified: flush to both edges, the last line left as it falls. (The
+   text is split into lines for its reveal — core/SplitText.js — each its
+   own block, so each line is justified here, and the last one isn't.) */
+#work .description .line-inner {
+  display: block;
+  text-align: justify;
+  text-align-last: justify;
+}
+#work .description .line:last-child .line-inner { text-align-last: left; }
 /* The year and the code link, side by side, centred under the
    description. */
 #work .metas {
@@ -358,6 +367,9 @@ html .media-wrapper.is-empty {
 }
 @media screen and (max-width: 767px) {
   #work .page-content { padding-top: 16rem; }
+  /* A notch smaller on phones: justified, a narrow column opens wide gaps
+     between words (up to 8× a space at 2rem; about 3× at this size). */
+  #work .description { font-size: 1.85rem; }
   #work .content { grid-template-columns: 1fr; }
   #work .content .media-wrapper:first-child { aspect-ratio: var(--ar); }
   #work .hero-media .media-wrapper { aspect-ratio: var(--ar); }

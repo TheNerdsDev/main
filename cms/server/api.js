@@ -94,6 +94,33 @@ async function receive(req, kind) {
 const slugify = (s) => String(s).toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '')
   .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48) || 'project';
 
+/* Where the site is running, for the maintenance preview. Its dev server asks
+   for 5173 but takes the next free port when something else has it (another
+   project's dev server, say), so the preview can't assume one address — and
+   must never show whatever else happens to answer there. Each candidate is
+   asked for /maintenance/ and counts only if it answers with this site's
+   own page. */
+const SITE_PORTS = [5173, 5174, 5175, 5176, 5177, 5178, 5179, 5180, 5181, 5182, 4173, 4180];
+let siteSeen = { at: 0, origin: null };
+
+async function findSite() {
+  if (Date.now() - siteSeen.at < 3000) return siteSeen.origin;
+  const asks = SITE_PORTS.map(async (port) => {
+    const origin = `http://localhost:${port}`;
+    try {
+      const res = await fetch(`${origin}/maintenance/`, { signal: AbortSignal.timeout(1500) });
+      if (!res.ok) return null;
+      const html = await res.text();
+      return html.includes('class="maint"') && html.includes('maint-main') ? origin : null;
+    } catch {
+      return null;
+    }
+  });
+  const origin = (await Promise.all(asks)).find(Boolean) || null;
+  siteSeen = { at: Date.now(), origin };
+  return origin;
+}
+
 /** Everything the dashboard shows. */
 async function state() {
   const content = await readContent();
@@ -109,6 +136,7 @@ async function api(req, res, url) {
   const method = req.method;
 
   if (method === 'GET' && path === '/state') return send(res, 200, await state());
+  if (method === 'GET' && path === '/site') return send(res, 200, { origin: await findSite() });
 
   if (method === 'PUT' && path === '/content') {
     const content = await readJson(req);

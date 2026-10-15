@@ -266,6 +266,7 @@ h1, h2, h3 { margin: 0; font-weight: 600; }
 .maint-preview-head { display: flex; align-items: center; justify-content: space-between; }
 .maint-preview { position: relative; aspect-ratio: 16 / 10; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: #05060f; }
 /* The page at a desktop width, scaled down to fit. */
+.maint-preview-note { position: absolute; inset: 0; margin: 0; display: grid; place-items: center; padding: 24px; text-align: center; font-size: 13px; line-height: 1.5; color: var(--dim); }
 .maint-preview iframe { position: absolute; top: 0; left: 0; width: 1280px; height: 800px; border: 0; transform-origin: 0 0; transform: scale(var(--k, 0.36)); pointer-events: none; }
 
 /* ----------------------------------------------------------- modal */

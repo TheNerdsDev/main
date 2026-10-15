@@ -18,6 +18,7 @@
  * Setup, step by step: supabase/README.md.
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { domainTakesMail, emailOk, indianMobile } from './validate.ts';
 
 /* Supabase's runtime: keeps the function alive for work finished after it
    has answered. */
@@ -51,8 +52,6 @@ const FIELDS: Record<string, Rule> = {
   about: { label: 'About them', max: 2000 },
   idea: { label: 'What they have in mind', max: 4000, required: true }
 };
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-const PHONE = /^[+\d\s().-]+$/;
 
 const MIN_FILL_MS = 3000;   // faster than this is a script, not a person
 const LIMIT = 5;            // enquiries per sender…
@@ -172,12 +171,14 @@ Deno.serve(async (req) => {
     const v = String(input[key] ?? '').trim();
     if (rule.required && !v) errors[key] = 'required';
     else if (v.length > rule.max) errors[key] = 'long';
-    else if (v && rule.kind === 'email' && !EMAIL.test(v)) errors[key] = 'email';
-    else if (v && rule.kind === 'phone') {
-      const digits = v.replace(/\D/g, '').length;
-      if (!PHONE.test(v) || digits < 7 || digits > 15) errors[key] = 'phone';
-    }
+    else if (v && rule.kind === 'email' && !emailOk(v)) errors[key] = 'email';
+    else if (v && rule.kind === 'phone' && !indianMobile(v)) errors[key] = 'phone';
     data[key] = v || null;
+  }
+  /* The address's domain must be one mail can reach (its DNS: nothing is
+     sent, nobody confirms anything). */
+  if (!errors.email && data.email && !(await domainTakesMail(data.email.slice(data.email.lastIndexOf('@') + 1)))) {
+    errors.email = 'emailDomain';
   }
   if (Object.keys(errors).length) return reply(422, { errors }, headers);
 

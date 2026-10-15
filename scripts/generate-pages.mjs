@@ -135,6 +135,12 @@ const header = (current, inside = false) => `  <header class="site-header">
     </nav>
   </header>`;
 
+/* Where a wider-than-its-picture frame keeps the picture (`thumbFocus` in
+   the CMS, 0 = its top … 1 = its bottom; left out: the middle): the Work
+   page's cards are 1.62 : 1, the thumbnails 4 : 3, so each shows a
+   stretch of its thumbnail and this picks which. (gl/MediaMesh.js) */
+const focusAttr = (p) => (Number.isFinite(p.thumbFocus) ? ` data-focus="${Math.min(1, Math.max(0, p.thumbFocus))}"` : '');
+
 const mediaBlock = (src, alt, extra = '') =>
   `<div class="media-wrapper" data-media ${extra}><img class="media" src="${src}" alt="${esc(alt)}" loading="lazy" decoding="async" /></div>`;
 
@@ -143,8 +149,8 @@ const mediaBlock = (src, alt, extra = '') =>
    everywhere. (An empty frame holds the layout; with no data-media, WebGL
    leaves it alone.) */
 const WORK_PHOTOS = false;
-const workMedia = (p, src, alt) =>
-  WORK_PHOTOS || p.photos ? mediaBlock(src, alt) : '<div class="media-wrapper is-empty" aria-hidden="true"></div>';
+const workMedia = (p, src, alt, extra = '') =>
+  WORK_PHOTOS || p.photos ? mediaBlock(src, alt, extra) : '<div class="media-wrapper is-empty" aria-hidden="true"></div>';
 
 const splitTitle = (lines) =>
   lines.map((l) => `<span class="line"><span class="line-inner">${esc(l)}</span></span>`).join('\n        ');
@@ -247,8 +253,11 @@ const showcaseSection = () => {
   /* The stretch of the video a hover plays (fx/WaterReveal.js): past its
      title screen, which the thumbnail already shows. */
   const span = (p) => `${p.videoFrom > 0 ? ` data-video-from="${Number(p.videoFrom)}"` : ''}${p.videoTo > 0 ? ` data-video-to="${Number(p.videoTo)}"` : ''}`;
+  /* Every card is still and whole (is-still): the CMS makes each thumbnail
+     at the card's exact 4:3, so nothing about it is cropped here — no
+     overscan, no sideways drift cutting off its edges. */
   const cards = shown
-    .map((p, i) => `          <a class="show-card${p.screenshot ? ' is-still' : ''}" href="/work/${p.slug}/" data-link data-cursor="View"${p.video ? ` data-video="${esc(p.video)}"${span(p)}` : ''} style="--accent: ${p.accent}">
+    .map((p, i) => `          <a class="show-card is-still" href="/work/${p.slug}/" data-link data-cursor="View"${p.video ? ` data-video="${esc(p.video)}"${span(p)}` : ''} style="--accent: ${p.accent}">
             <span class="show-card-inner">
               <span class="show-card-media"><img class="show-card-img" src="/media/${p.slug}/featured.jpg"${srcset(p.slug)} alt="${esc(p.name)}" loading="lazy" decoding="async" /></span>
               <span class="show-card-meta">
@@ -325,7 +334,7 @@ const mainPage = () => {
       </figure>`;
 
   return shell({
-    title: `${studio.name} — ${studio.tagline}`,
+    title: studio.name,
     description: studio.description,
     pageId: 'main',
     body: `<div class="page" id="main" data-page="main">
@@ -391,7 +400,7 @@ const projectsPage = () => {
     .map(
       (p, i) => `        <li class="project-item">
           <a class="project" href="/work/${p.slug}/" data-link data-project="${i}" aria-label="${esc(p.name)}">
-            ${mediaBlock(`/media/${p.slug}/featured.jpg`, p.name, `data-video="/media/${p.slug}/preview.jpg"`)}
+            ${mediaBlock(`/media/${p.slug}/featured.jpg`, p.name, `data-video="/media/${p.slug}/preview.jpg"${focusAttr(p)}`)}
             <span class="project-meta"><span class="project-name">${esc(p.name)}</span><span class="project-year">${esc(p.year)}</span></span>
           </a>
         </li>`
@@ -409,12 +418,12 @@ const projectsPage = () => {
   const previews = projects
     .map(
       (p, i) =>
-        `          <div class="media-wrapper" data-media data-preview="${i}"><img class="media" src="/media/${p.slug}/featured.jpg" alt="" loading="lazy" decoding="async" /></div>`
+        `          <div class="media-wrapper" data-media data-preview="${i}"${focusAttr(p)}><img class="media" src="/media/${p.slug}/featured.jpg" alt="" loading="lazy" decoding="async" /></div>`
     )
     .join('\n');
 
   return shell({
-    title: `${studio.name} — Work`,
+    title: 'Work',
     description: studio.description,
     pageId: 'projects',
     body: `<div class="page" id="projects" data-page="projects">
@@ -494,7 +503,7 @@ ${header('projects', true)}
       ${certs[0] ? cert(certs[0], 'left') : ''}
       ${p.pageVideo && p.video
         ? `<div class="work-film"><video class="work-film-video" src="${esc(p.video)}" autoplay muted loop playsinline preload="auto" aria-label="${esc(p.name)}, a walkthrough"></video></div>`
-        : workMedia(p, `/media/${p.slug}/featured.jpg`, p.name)}
+        : workMedia(p, `/media/${p.slug}/featured.jpg`, p.name, focusAttr(p).trim())}
       ${certs[1] ? cert(certs[1], 'right') : ''}
     </div>
 
@@ -580,7 +589,7 @@ ${infoCard('work', title, `<ol class="info-card-list info-work-list">${rows}</ol
 };
 
 const infoPage = () => shell({
-  title: `${studio.name} — About`,
+  title: 'About',
   description: info.lead,
   pageId: 'info',
   body: `<div class="page" id="info" data-page="info">
@@ -660,7 +669,7 @@ const contactPage = () => {
     .join('');
 
   return shell({
-    title: `${studio.name} — Contact`,
+    title: studio.contactLabel,
     description: leadPlain,
     pageId: 'contact',
     body: `<div class="page" id="contact" data-page="contact">

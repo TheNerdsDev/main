@@ -41,7 +41,10 @@ const STACK = {
     rotZ: 0.8,
     drift: 6
   },
+  /* Phones: every card in focus — each where the list puts it, full
+     size, sharp, flat and in its own colours; none picked out by the scroll. */
   mobile: {
+    allInFocus: true,
     pitch: 0.94,
     focus: 0.55,
     smoothing: 1,
@@ -214,6 +217,37 @@ export default class Projects extends Page {
     for (let i = 0; i < n; i++) this.applyDom(this.items[i], this.states[i]);
 
     this.nearest = nearest;
+    if (this.pinned) this.slidePreviews(immediate);
+  }
+
+  /**
+   * The thumbnail under the index rail's names is a small strip that moves
+   * with the wheel: one frame for each card the wheel turns, so it slides
+   * exactly as the cards do instead of swapping when a new one gets
+   * nearest. (Pointing at a name or a card slides it to that project, the
+   * short way round the loop, and back when the pointer leaves.)
+   */
+  slidePreviews(immediate) {
+    const n = this.items.length;
+    /* The strip sits exactly where the wheel is (so it never trails it),
+       plus an offset that's zero — until a project is pointed at, when it
+       eases to that project the short way round, and back to zero after. */
+    let want = 0;
+    if (this.hovering && this.activeIndex >= 0) {
+      const at = this.current + (this.previewOff || 0);
+      want = this.activeIndex + n * Math.round((at - this.activeIndex) / n) - this.current;
+    }
+    if (immediate || this.previewOff === undefined) {
+      this.previewOff = want;
+    } else {
+      const k = 1 - Math.pow(1 - 0.16, gsap.ticker.deltaRatio(60));
+      this.previewOff += (want - this.previewOff) * k;
+      if (Math.abs(want - this.previewOff) < 1e-3) this.previewOff = want;
+    }
+    const at = this.current + this.previewOff;
+    const rels = (this.previewRels ||= new Array(n));
+    for (let i = 0; i < n; i++) rels[i] = wrap(i - at, n);
+    this.world?.media.placePreviews(rels);
   }
 
   /**
@@ -261,6 +295,21 @@ export default class Projects extends Page {
    */
   updateCard(s, item, rel, focusY) {
     const c = this.cfg;
+    if (c.allInFocus) {
+      s.w = item.w;
+      s.h = item.h;
+      s.cx = item.cx;
+      s.cy = this.pinned ? item.cy : item.cy - store.scroll;
+      s.scale = 1;
+      s.opacity = 1;
+      s.blur = 0;
+      s.colour = 1;
+      s.rotX = 0;
+      s.rotY = 0;
+      s.rotZ = 0;
+      s.order = 50;
+      return;
+    }
     const d = Math.abs(rel);
     const ds = softAbs(rel);
     const r = clamp(rel, -3, 3);
@@ -337,7 +386,6 @@ export default class Projects extends Page {
     if (index === this.activeIndex) return;
     this.activeIndex = index;
     this.titles.forEach((t, i) => t.classList.toggle('is-active', i === index));
-    this.world?.media.showPreview(index);
   }
 
   /** Whichever card is nearest the focus line stays lit. */
@@ -366,6 +414,8 @@ export default class Projects extends Page {
        opacity would capture the hidden 0 as its end value and keep the
        index invisible. */
     if (index) tl.fromTo(index, { x: 20 }, { x: 0, duration: 1, ease: 'power3.out' }, 0.4);
+    /* The rail has settled: the previews' frame is where it ended up. */
+    tl.call(() => this.world?.media.remeasurePreviews(), null, 1.6);
   }
 
   destroy() {

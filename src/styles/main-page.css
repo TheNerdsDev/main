@@ -267,9 +267,13 @@ html.lenis-stopped { overflow: hidden; }
 
 /* Bare 3D rocks drifting around the sketches — no frame, no glass, no
    title. Each is a button: click it and it gets thrown. */
-/* Fixed to the viewport, so the rocks can leave the sketches and travel
-   down the page with the viewer. */
-#main .duo-actions { position: fixed; inset: 0; z-index: 6; pointer-events: none; }
+/* The rocks' layer moves with the page, from the sketches' corner (fx/Duo.js
+   places the rocks in screen coordinates and shifts the layer back to the
+   screen's corner each frame). On a phone the browser scrolls the page
+   itself, a frame ahead of any script; on a layer fixed to the screen the
+   rocks lagged a frame behind the faces and jumped to catch up. Now the
+   scroll carries them along with the faces. */
+#main .duo-actions { position: absolute; top: 0; left: 0; width: 0; height: 0; z-index: 6; pointer-events: none; }
 #main .duo-action {
   position: absolute;
   top: 0; left: 0;

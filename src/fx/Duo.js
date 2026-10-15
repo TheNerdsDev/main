@@ -760,6 +760,9 @@ export default class Duo {
     this.texts = [...page.querySelectorAll(TEXT)];
     const nav = document.querySelector('.site-header');
     this.ceiling = nav ? nav.getBoundingClientRect().bottom + 10 : 0;
+    /* Where the sketches' box sits on the page (its top with nothing
+       scrolled), for a ceiling that scrolls with the page (loop()). */
+    this.homeTop = this.el.getBoundingClientRect().top + window.scrollY;
     this.members.forEach((m) => {
       m.cx = m.root.offsetLeft + m.root.offsetWidth / 2;
       m.cy = m.root.offsetTop + m.root.offsetHeight / 2;
@@ -807,8 +810,23 @@ export default class Duo {
     const fe = f * f * (3 - 2 * f);
 
     /* Home orbit: a tilted ellipse wrapped around both sketches. It lives in
-       the sketches' box; the rocks' layer is the viewport. */
+       the sketches' box; the rocks are placed on the screen. */
     const box = this.el.getBoundingClientRect();
+    /* The header is the rocks' ceiling at home — but one that scrolls with
+       the page, like the faces: scroll down and the rocks go up with the
+       sketches (under the header, as the faces do) rather than being held
+       below it, squeezed out of their corner and sent the long way round to
+       the other side of a face. With nothing scrolled it's the header's
+       edge, as before. */
+    const ceil = this.ceiling + (box.top - this.homeTop);
+    /* Their layer rides with the page (main-page.css): shift it back to the
+       screen's corner, so a scroll the browser makes before this runs again
+       carries the rocks along with the faces instead of leaving them behind. */
+    if (this.actionsEl && (box.left !== this.layerX || box.top !== this.layerY)) {
+      this.layerX = box.left;
+      this.layerY = box.top;
+      this.actionsEl.style.transform = `translate3d(${(-box.left).toFixed(2)}px, ${(-box.top).toFixed(2)}px, 0)`;
+    }
     const hx = box.left + (a.cx + b.cx) / 2;
     const hy = box.top + (a.cy + b.cy) / 2;
     const hTilt = Math.atan2(b.cy - a.cy, b.cx - a.cx);
@@ -838,8 +856,13 @@ export default class Duo {
     /* Meeting: the orbits tighten slowly, then all at once. */
     const e = Math.pow(this.k, 2.2);
 
-    /* Both heads, so the rocks can swing round them instead of across. */
-    const avoid = 1 - fe;
+    /* Both heads, so the rocks can swing round them instead of across —
+       at home. Setting off, the loop heads for the middle of the screen
+       and sweeps across the faces on its way; still pushing round them
+       then, a rock's spot flipped from one side of a face to the other.
+       So the berth is given up over the first quarter of the trip. */
+    const leave = Math.min(1, fe / 0.25);
+    const avoid = 1 - leave * leave * (3 - 2 * leave);
     const faces = avoid > 0
       ? this.members.map((m) => {
         const r = m.body.getBoundingClientRect();
@@ -852,7 +875,10 @@ export default class Duo {
        pin every rock to the right edge of the screen. */
     let wall = -Infinity;
     let roof = -Infinity;
-    if (avoid > 0) {
+    /* (Through the whole trip, not just while the faces are avoided: the
+       home loops, and the limits the rocks keep to at home, are built on
+       these, and a loop that changed shape halfway out would jump.) */
+    if (fe < 1) {
       for (const el of this.texts) {
         const r = el.getBoundingClientRect();
         if (!r.width) continue;
@@ -871,7 +897,7 @@ export default class Duo {
       const pad = o * 0.42 * 1.12 * 1.1 + 4;   // the biggest rock's radius, and a little air
       const left = box.left + pad;
       const right = box.right - pad;
-      const top = Math.max(box.top, this.ceiling, roof) + pad;
+      const top = Math.max(box.top, ceil, roof) + pad;
       const bottom = box.bottom - pad;
       /* Here the sketches sit corner to corner (main-page.css), filling the
          width: a loop round either one squeezed through the gap where they
@@ -891,19 +917,29 @@ export default class Duo {
         const c = corners[i];
         const w = c.r - c.l;
         const h = c.b - c.t;
-        if (w > pad && h > pad) {
-          return { x: c.l + w / 2, y: c.t + h / 2, tilt: 0, rx: (w / 2) * 0.83, ry: (h / 2) * 0.83 };
-        }
-        /* A corner too small to circle in (an unusual screen): round the
-           sketch, as before. */
+        /* Round the sketch: for a corner too small to circle in. */
         const lrx = Math.min(r.width * 0.5 + pad * 0.5, (right - left) / 2);
         const lry = Math.min(r.height * 0.5 + pad * 0.5, (bottom - top) / 2);
-        return {
+        const round = {
           x: clamp(r.left + r.width / 2, left + lrx, right - lrx),
           y: clamp(r.top + r.height * 0.56, top + lry, bottom - lry),
           tilt: 0,
           rx: lrx,
           ry: lry
+        };
+        /* The corner closes up as the page scrolls the sketches up under the
+           header: the loop eases over from the corner to round the sketch,
+           rather than jumping there the moment the corner gets too small. */
+        const k = clamp((Math.min(w, h) - pad) / (pad * 2), 0, 1);
+        const ease = k * k * (3 - 2 * k);
+        if (ease <= 0) return round;
+        const corner = { x: c.l + w / 2, y: c.t + h / 2, rx: (w / 2) * 0.83, ry: (h / 2) * 0.83 };
+        return {
+          x: round.x + (corner.x - round.x) * ease,
+          y: round.y + (corner.y - round.y) * ease,
+          tilt: 0,
+          rx: round.rx + (corner.rx - round.rx) * ease,
+          ry: round.ry + (corner.ry - round.ry) * ease
         };
       });
     }
@@ -959,7 +995,7 @@ export default class Duo {
           /* At home, stay inside the sketches' box and below the header —
              easing away from the edges rather than sliding along them. */
           const band = o * 0.9;
-          const top = Math.max(box.top + o * 0.6, this.ceiling + rockR * 1.15, roof + 8 + rockR);
+          const top = Math.max(box.top + o * 0.6, ceil + rockR * 1.15, roof + 8 + rockR);
           const left = Math.max(box.left + o * 0.6, wall + 16 + rockR);
           const bx = soften(x, left, box.right - o * 0.6, band);
           const by = soften(y, top, box.bottom - o * 0.6, band);
@@ -978,7 +1014,7 @@ export default class Duo {
            sides — so the rock arcs over the head (or under the feet), a
            closer shave, rather than being flattened against the edge and
            sliding along it. */
-        const lo = Math.max(this.ceiling + rockR, roof + 8 + rockR);
+        const lo = Math.max(ceil + rockR, roof + 8 + rockR);
         const hi = vh - rockR;
         const wl = Math.max(wall + 16 + rockR, rockR);
         const wr = vw - rockR;
@@ -1023,10 +1059,50 @@ export default class Duo {
       if (!this.gone) {
         const wobble = SPREAD.wobble * Math.sin(t * 0.37 + phase);
         const share = this.clock + act.orbit.start / TAU + wobble - act.lag;
-        act.angle = this.angleAt(place, share - Math.floor(share));
+        const target = this.angleAt(place, share - Math.floor(share));
+        /* Never a jump. When the loop changes shape enough that this rock's
+           place on it lands somewhere else — the top corner closing up as a
+           phone scrolls the sketches under the header — the rock travels
+           there along the loop, a little faster than it orbits, instead of
+           appearing there. (Its ordinary orbiting is well inside this.) */
+        if (!act.placed) {
+          act.angle = target;
+          act.placed = true;
+        } else {
+          let d = target - act.angle;
+          d -= TAU * Math.round(d / TAU);
+          const most = rate * TAU * 3 + 0.03 * dt * 60;
+          act.angle += clamp(d, -most, most);
+        }
       }
 
-      const { x, y } = place(act.angle);
+      let { x, y } = place(act.angle);
+      /* Never a jump on screen either. While the loop is still near the
+         sketches it can fold as it slides over a face — the hand-over to the
+         travelling loop on a phone, the sketches scrolling under the header
+         — and a point on it flip to the face's other side. So each rock eases
+         to where it's put, carried along meanwhile by the frame its loop
+         moves in: the page at home, the screen once travelling, in between
+         as far as the hand-over has got. That way the easing smooths a flip
+         but never leaves the rock behind a scroll. Travelling, it goes
+         exactly where it's put. */
+      const ox = box.left * (1 - fe);
+      const oy = box.top * (1 - fe);
+      if (act.sx === undefined || fe >= 1) {
+        act.sx = x;
+        act.sy = y;
+      } else {
+        act.sx += ox - act.ox;
+        act.sy += oy - act.oy;
+        const k0 = 1 - Math.pow(0.7, dt * 60);
+        const k = k0 + (1 - k0) * fe * fe * fe;
+        act.sx += (x - act.sx) * k;
+        act.sy += (y - act.sy) * k;
+        x = act.sx;
+        y = act.sy;
+      }
+      act.ox = ox;
+      act.oy = oy;
 
       /* Tilted ring: the near side (lower) a touch larger than the far side;
          closing in, they also come up towards the viewer. */

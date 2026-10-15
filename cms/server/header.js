@@ -23,7 +23,12 @@ export const HEADER = `/*
  *   videoFrom, videoTo  (optional) on hover the card plays only this
  *                 stretch of it, s — past a title screen the thumbnail
  *                 already shows; no videoTo: to the end
- *   screenshot    its thumbnail is a framed screenshot: shown whole, still
+ *   screenshot    its thumbnail was kept whole on a backdrop (the CMS's
+ *                 "Keep it whole"); every home card shows its thumbnail
+ *                 whole and still either way
+ *   thumbFocus    (optional) which part of its thumbnail the Work page's
+ *                 wider cards keep: 0 = the top … 1 = the bottom (default
+ *                 0.5, the middle) — for one with a title near its top
  *   shots         how many detail shots it has (01.webp, 02.webp, …);
  *                 photos: false shows empty frames instead
  *   certificates  (optional) pinned either side of its page's video

@@ -10,7 +10,9 @@ import '@fontsource/inter/500.css';
 import '@fontsource/inter/600.css';
 import './style.css';
 
-const SITE = 'http://localhost:5173';
+/* The site's address on this computer — found by the server (api/site), since
+   its dev server moves to another port when 5173 is taken. */
+let SITE = 'http://localhost:5173';
 const S = { saved: null, draft: null, media: {}, git: null, ffmpeg: null, v: {}, busy: new Set() };
 
 /* ----------------------------------------------------------- helpers */
@@ -146,6 +148,22 @@ function dropzone({ title, sub, accept, onFile, onFiles, disabled }) {
 async function load() {
   const st = await call('GET', '/api/state');
   apply(st);
+  locateSite();
+}
+
+/** Ask where the site is running; null when it isn't. Redraws what shows it. */
+async function locateSite() {
+  let origin = null;
+  let known = true;
+  /* (A dashboard started before this existed can't look: it keeps to the
+     usual address, as it always did.) */
+  try { origin = (await call('GET', '/api/site')).origin; } catch { known = false; }
+  if (origin) SITE = origin;
+  const up = known ? !!origin : true;
+  const changed = S.siteUp !== up;
+  S.siteUp = up;
+  if (changed || origin) chrome();
+  return origin;
 }
 
 /** Take in fresh state from the server (unsaved edits are replaced). */
@@ -221,7 +239,9 @@ function chrome() {
   $('#side-foot').append(
     h('div', {}, 'Branch ', h('b', {}, S.git?.branch || '…')),
     h('div', {}, 'Videos ', h('b', {}, S.ffmpeg ? 'ready' : 'need ffmpeg')),
-    h('div', {}, 'Site ', h('a', { href: SITE, target: '_blank', rel: 'noopener' }, 'localhost:5173'))
+    h('div', {}, 'Site ', S.siteUp === false
+      ? h('b', {}, 'not running')
+      : h('a', { href: SITE, target: '_blank', rel: 'noopener' }, SITE.replace(/^https?:\/\//, '')))
   );
 }
 
@@ -519,7 +539,7 @@ function projectEditor(p) {
       h('span', { class: 'hint' }, 'Skip a title screen the thumbnail already shows: the card goes straight into the project. It loops just this part. Blank: the whole video.'));
     videoCard.append(
       h('div', { class: 'card-head' },
-        h('div', {}, h('h2', {}, 'Video'), h('p', {}, 'Plays in its card on hover. Converted to the site’s format: 1200 × 900, smooth and light (~1 MB), no sound; longer than 90 seconds is cut.')),
+        h('div', {}, h('h2', {}, 'Video'), h('p', {}, 'Plays in its card on hover. Converted to the site’s format: 1440 × 1080 (1080p), sharp and smooth, no sound; longer than 90 seconds is cut.')),
         has ? h('button', { class: 'btn btn-sm btn-danger', onClick: async () => {
           if (!(await modal({ title: 'Remove the video?', text: 'Its card shows just the thumbnail on hover.', confirm: 'Remove', danger: true }))) return;
           if (!(await saveFirst())) return;
@@ -725,7 +745,12 @@ function maintenanceView() {
     fit?.disconnect();
     const pending = S.git?.changes?.some((c) => c.path === 'src/content/cms.js');
     /* The page at a desktop width (1280), scaled to the box. */
-    const preview = h('div', { class: 'maint-preview' }, h('iframe', { src: `${SITE}/maintenance/?v=${Date.now()}`, title: 'The maintenance page', loading: 'lazy', tabindex: -1 }));
+    /* Only ever this site's own page: where it's running is looked up, and
+       if it isn't running there's a note instead of someone else's app. */
+    const preview = h('div', { class: 'maint-preview' },
+      S.siteUp !== false
+        ? h('iframe', { src: `${SITE}/maintenance/?v=${Date.now()}`, title: 'The maintenance page', loading: 'lazy', tabindex: -1 })
+        : h('p', { class: 'maint-preview-note' }, 'The site isn’t running on this computer, so there’s nothing to preview. Start it with npm run dev.'));
     fit = new ResizeObserver(([e]) => preview.style.setProperty('--k', String(e.contentRect.width / 1280)));
     fit.observe(preview);
     const where = dirty() ? 'Save, then publish, to put this on the live site.'
@@ -775,11 +800,13 @@ function maintenanceView() {
             field('Message', 'message', { max: 400, area: true, placeholder: 'What’s happening, in a line or two.' }),
             field('Back by (optional)', 'back', { max: 80, placeholder: 'e.g. Back on Monday, 10 AM IST', hint: 'Leave it empty if you’d rather not say.' })),
           h('div', { class: 'field' },
-            h('div', { class: 'maint-preview-head' }, h('label', {}, 'Preview'), h('a', { class: 'btn btn-sm', href: `${SITE}/maintenance/`, target: '_blank', rel: 'noopener' }, 'Open ↗')),
+            h('div', { class: 'maint-preview-head' }, h('label', {}, 'Preview'), S.siteUp !== false ? h('a', { class: 'btn btn-sm', href: `${SITE}/maintenance/`, target: '_blank', rel: 'noopener' }, 'Open ↗') : null),
             preview,
             h('span', { class: 'hint' }, dirty() ? 'Shows the saved page — save to see your changes.' : 'The page as saved.')))));
   };
   draw();
+  /* Look again each time this opens (the site may have been started since). */
+  locateSite().then(() => { if (box.isConnected) draw(); });
   return box;
 }
 
