@@ -18,6 +18,9 @@
  *   accent        the colour its page and card glow with
  *   video         plays in its card on hover ("" for none); with pageVideo,
  *                 it also leads its page
+ *   videoFrom, videoTo  (optional) on hover the card plays only this
+ *                 stretch of it, s — past a title screen the thumbnail
+ *                 already shows; no videoTo: to the end
  *   screenshot    its thumbnail is a framed screenshot: shown whole, still
  *   shots         how many detail shots it has (01.webp, 02.webp, …);
  *                 photos: false shows empty frames instead
@@ -134,7 +137,8 @@ export default {
       ],
       "shots": 3,
       "photos": true,
-      "video": "/media/css-arena/preview.mp4"
+      "video": "/media/css-arena/preview.mp4",
+      "videoFrom": 2.5
     },
     {
       "slug": "taskpilot",
@@ -155,7 +159,9 @@ export default {
       "github": "https://github.com/premkajiwala-hub/Task-Pilot",
       "shots": 3,
       "photos": true,
-      "video": "/media/taskpilot/preview.mp4"
+      "video": "/media/taskpilot/preview.mp4",
+      "videoFrom": 3,
+      "videoTo": 19.9
     },
     {
       "slug": "mesa-kitchen",
@@ -174,6 +180,8 @@ export default {
       "github": "https://github.com/premkajiwala-hub/Mewar_Sync.git",
       "shots": 3,
       "video": "/media/mesa-kitchen/preview.mp4",
+      "videoFrom": 3,
+      "videoTo": 19.9,
       "photos": true,
       "screenshot": false,
       "pageVideo": true

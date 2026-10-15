@@ -38,7 +38,12 @@ import { main } from '../content/site.js';
  *
  * One scroll, one step: after each, the scroll is handed back only once
  * the gesture is over (QUIET s without a wheel or touch), so the tail of a
- * flick, or a trackpad's glide, can't carry on into the next.
+ * flick, or a trackpad's glide, can't carry on into the next. A scroll the
+ * other way is never kept waiting, though: whatever's playing turns round
+ * there and then, from where it's got to (steer).
+ *
+ * On a touch screen none of it is guided: the same sequence simply follows
+ * the finger, the scroll never taken away (`free`).
  *
  * Below About, the work gets its own pinned reel: the scroll pulls the
  * projects sideways past you, then lets go to the footer.
@@ -73,6 +78,11 @@ const TEXT_IN = 3.2;
 /* How closely the scrubbed sequences follow the scroll (per 60fps frame).
    Lenis already smooths the scroll; this only takes the edge off. */
 const FOLLOW = 0.16;
+/* How far a finger has to move back the other way (px) to turn a guided
+   move round: a deliberate drag, not the wobble of one. */
+const TURN = 24;
+/* (Free: the rocks' journey follows the scroll as the glide carried it.) */
+const journeyEase = gsap.parseEase('power2.inOut');
 
 /* The About brief's own clock (timeline seconds, scrubbed by the scroll):
    the frames are in, empty, by HAND_BACK; the photos cut in from REVEAL,
@@ -155,10 +165,32 @@ export default class Main extends Page {
     this.entered = false;
     this.held = false;
     this.inputAt = 0;
-    this.onInput = () => { this.inputAt = performance.now(); };
-    for (const type of ['wheel', 'touchmove', 'keydown']) {
+    /* Which way the last guided move went (1 down, -1 up): a scroll the
+       other way turns it round (steer). */
+    this.moveDir = 0;
+    this.onInput = (e) => {
+      this.inputAt = performance.now();
+      this.steer(this.inputDir(e));
+    };
+    for (const type of ['wheel', 'touchstart', 'touchmove', 'keydown']) {
       window.addEventListener(type, this.onInput, { passive: true, capture: true });
     }
+
+    /* Touch screens (phones, tablets): no guided moves at all. Everything
+       they play follows the finger instead — the rocks setting off, the
+       welcome copy leaving, the collision, About — forwards, backwards,
+       held anywhere, and the scroll is never taken away (loop). As a page
+       scrolled by hand should be: nothing to wait for. */
+    this.freeMode = window.matchMedia('(hover: none) and (pointer: coarse)');
+    this.free = this.freeMode.matches;
+    this.onFreeMode = (e) => this.setFree(e.matches);
+    this.freeMode.addEventListener('change', this.onFreeMode);
+    /* (The welcome copy leaving, as the glide takes it — less the blur,
+       too costly to redraw on every frame of a scroll.) */
+    this.heroP = 0;
+    this.heroOut = gsap.timeline({ paused: true })
+      .fromTo(this.heroLines(), { y: 0, opacity: 1 }, { y: -70, opacity: 0, duration: 0.85, ease: 'power2.in', stagger: 0.06, immediateRender: false }, 0);
+    if (this.cue) this.heroOut.fromTo(this.cue, { y: 0, opacity: 1 }, { y: 14, opacity: 0, duration: 0.5, ease: 'power2.in', immediateRender: false }, 0);
 
     /* Hidden until the page enters — they power on in onEnter(). */
     gsap.set(this.el.querySelectorAll('.sketch-svg'), { opacity: 0 });
@@ -168,7 +200,8 @@ export default class Main extends Page {
 
     this.onCue = (e) => {
       e.preventDefault();
-      if (this.state === 'home') this.goAbout();
+      if (this.free) this.lenis?.scrollTo(this.aboutTop, { duration: GLIDE, easing: glideEase });
+      else if (this.state === 'home') this.goAbout();
     };
     this.cue?.addEventListener('click', this.onCue);
     /* The About Us and Contact us buttons lean after the cursor. */
@@ -176,6 +209,7 @@ export default class Main extends Page {
     this.finaleFx = this.finale ? new Finale(this.finale) : null;
 
     this.measure();
+    this.bindSwipe();
     /* The reel's slide is as long as its cards make it (measure). Should
        they change size with the window left alone (the styles changed
        under an open page, a late layout), it's read again — or the slide
@@ -189,6 +223,64 @@ export default class Main extends Page {
 
   get lenis() { return this.app?.scroll?.lenis; }
 
+  /** Which way a wheel, drag or key asks the page to go: 1 down, -1 up, 0 neither (yet). */
+  inputDir(e) {
+    if (e.type === 'wheel') return Math.abs(e.deltaY) < 2 ? 0 : Math.sign(e.deltaY);
+    if (e.type === 'touchstart') {
+      this.touchY = e.touches[0]?.clientY;
+      return 0;
+    }
+    if (e.type === 'touchmove') {
+      const y = e.touches[0]?.clientY;
+      if (y == null || this.touchY == null) return 0;
+      /* From where the finger last turned: a drag back the other way
+         mid-gesture counts, without lifting it first. */
+      const d = this.touchY - y;
+      if (Math.abs(d) < TURN) return 0;
+      this.touchY = y;
+      return Math.sign(d);
+    }
+    if (e.type === 'keydown') {
+      if (e.target?.closest?.('input, textarea, select, [contenteditable]')) return 0;
+      /* (Space on a button or link presses it.) */
+      if (e.key === ' ' && e.target?.closest?.('button, a, [role="button"]')) return 0;
+      if (['ArrowDown', 'PageDown', 'End'].includes(e.key) || (e.key === ' ' && !e.shiftKey)) return 1;
+      if (['ArrowUp', 'PageUp', 'Home'].includes(e.key) || (e.key === ' ' && e.shiftKey)) return -1;
+    }
+    return 0;
+  }
+
+  /**
+   * A scroll against the guided move that's playing (or that has just
+   * arrived and is holding the wheel until the gesture's over): it turns
+   * round, from wherever it has got to, and plays back the way it came
+   * at its own pace. The same way, it carries on as it was. (Not the
+   * logo's pull home: that was asked for.)
+   */
+  steer(dir) {
+    if (this.free || !dir || !this.entered || !this.lenis || dir === this.moveDir) return;
+    const s = this.state;
+    if (!s.startsWith('to') && !this.held) return;
+    if (s === 'toHome' && this.homePhase === 'pull') return;
+    let turn = null;
+    if (dir < 0) {
+      if (s === 'toAbout' || s === 'about') turn = () => this.goHome();
+      else if (s === 'toText' || s === 'text') turn = () => this.goPhotos();
+    } else if (s === 'home') turn = () => this.goAbout();
+    else if (s === 'toPhotos' || s === 'about') turn = () => this.goText();
+    else if (s === 'toHome') {
+      /* Back down: on the glide home, the glide in again; while the rocks
+         were coming back together, flung apart again; on the climb up from
+         below, back where it came from. */
+      if (this.homePhase === 'glide') turn = () => this.goAbout();
+      else if (this.homePhase === 'rewind') turn = () => this.smash();
+      else turn = () => this.goText();
+    }
+    if (!turn) return;
+    this.held = false;
+    turn();
+  }
+
   /* ------------------------------------------------------ the glides */
 
   heroLines() {
@@ -199,7 +291,10 @@ export default class Main extends Page {
   goAbout() {
     if (!this.lenis) return;
     this.state = 'toAbout';
-    this.glideEnd = performance.now() + (GLIDE + 0.6) * 1000;
+    this.moveDir = 1;
+    /* (Turned round on the glide home, it's only part of the way back.) */
+    const glide = GLIDE * clamp((this.aboutTop - store.scroll) / Math.max(1, this.aboutTop), 0.35, 1);
+    this.glideEnd = performance.now() + (glide + 0.6) * 1000;
     this.lenis.stop();
 
     /* The heading and subtext drift up, blur and fade — on their own time. */
@@ -210,12 +305,12 @@ export default class Main extends Page {
     if (this.cue) gsap.to(this.cue, { opacity: 0, y: 14, duration: 0.5, ease: 'power2.in', overwrite: 'auto' });
 
     /* The rocks let go of the sketches and come along with the viewer. */
-    gsap.to(this.journey, { f: 1, duration: GLIDE * 0.95, delay: 0.08, ease: 'power2.inOut', overwrite: 'auto' });
+    gsap.to(this.journey, { f: 1, duration: glide * 0.95, delay: 0.08, ease: 'power2.inOut', overwrite: 'auto' });
 
-    this.lenis.scrollTo(this.aboutTop, { duration: GLIDE, easing: glideEase, force: true });
+    this.lenis.scrollTo(this.aboutTop, { duration: glide, easing: glideEase, force: true });
     /* …and closing in on each other before it lands, so there's no pause
        between arriving and the hit. */
-    this.smash(GLIDE - LEAD);
+    this.smash(Math.max(0, glide - LEAD));
   }
 
   /** The scroll position at progress p (0 → 1) through About… */
@@ -289,6 +384,7 @@ export default class Main extends Page {
    */
   smash(delay = 0) {
     if (!this.lenis) return;
+    this.moveDir = 1;
     const from = Math.max(this.rockP, this.aboutProgress(store.scroll));
     const steps = [];
     /* Straight in (the rocks' own pull already gathers speed into the
@@ -311,9 +407,12 @@ export default class Main extends Page {
    */
   goText() {
     if (!this.lenis) return;
-    /* Jumped past it (End key, the scrollbar): just be there. */
+    this.moveDir = 1;
+    /* Jumped past it (End key, the scrollbar), or turned round on the
+       climb back up from below: just be there. */
     if (store.scroll >= this.aboutAt(1) - 3) {
-      this.state = 'text';
+      this.stopAuto();
+      this.settle('text', store.scroll);
       return;
     }
     const from = this.rockP;
@@ -328,6 +427,7 @@ export default class Main extends Page {
       the same pace, back to the empty frames. */
   goPhotos() {
     if (!this.lenis) return;
+    this.moveDir = -1;
     const from = this.rockP;
     const duration = TEXT_IN * clamp((from - this.photosP) / Math.max(0.001, 1 - this.photosP), 0.2, 1);
     this.autoplay(from, [{ p: this.photosP, duration }], {
@@ -344,7 +444,76 @@ export default class Main extends Page {
 
   /** The logo, from anywhere down the page: all the way back to the welcome. */
   toTop() {
-    if (['about', 'text', 'toAbout', 'toText', 'toPhotos'].includes(this.state)) this.goHome();
+    if (this.free) this.lenis?.scrollTo(0, { duration: GLIDE, easing: glideEase });
+    else if (['about', 'text', 'toAbout', 'toText', 'toPhotos'].includes(this.state)) this.goHome();
+  }
+
+  /**
+   * Into (or out of) the free, finger-led mode — a device's way of
+   * pointing changed (a browser's device emulation, mostly). Whatever was
+   * playing stops; the page is handed back where it is, at rest: free, it
+   * follows the scroll from here; guided, the loop carries on from home
+   * (or straight on to About, if that's where it is).
+   */
+  setFree(on) {
+    if (on === this.free) return;
+    this.free = on;
+    this.stopAuto();
+    gsap.killTweensOf([this.journey, this.cue, ...this.heroLines()].filter(Boolean));
+    gsap.set(this.heroLines(), { y: 0, opacity: 1, filter: 'none' });
+    if (this.cue) gsap.set(this.cue, { y: 0, opacity: 1 });
+    this.heroP = 0;
+    this.journey.f = 0;
+    this.held = false;
+    this.state = 'home';
+    this.lenis?.start();
+    /* (The reel pins, or doesn't, by the same measure.) */
+    this.measure();
+  }
+
+  /**
+   * Touch tablets: the reel is a row swiped by hand (main-page.css). The
+   * count and the line under it follow the swipe; the hint on the next
+   * card goes at the first one; and as the row first comes well into view,
+   * it nudges left and back — a card's worth of "there's more this way".
+   */
+  bindSwipe() {
+    const track = this.showTrack;
+    if (!track) return;
+    this.onTrackScroll = () => {
+      if (this.showPinned) return;
+      const max = track.scrollWidth - track.clientWidth;
+      if (max <= 0) return;
+      const q = clamp(track.scrollLeft / max, 0, 1);
+      this.showBar.style.transform = `scaleX(${q.toFixed(4)})`;
+      const n = this.showCards.length;
+      const now = Math.min(n, Math.round(q * (n - 1)) + 1);
+      if (now !== this.showIn) {
+        this.showIn = now;
+        this.showNow.textContent = String(now).padStart(2, '0');
+      }
+      if (!this.swiped && track.scrollLeft > 24) {
+        this.swiped = true;
+        this.show.classList.add('has-swiped');
+      }
+    };
+    track.addEventListener('scroll', this.onTrackScroll, { passive: true });
+
+    if (!('IntersectionObserver' in window) || store.reducedMotion) return;
+    this.swipeIo = new IntersectionObserver(([e]) => {
+      if (!e.isIntersecting) return;
+      this.swipeIo.disconnect();
+      if (!this.free || this.showPinned || window.innerWidth < 768) return;
+      this.nudgeAt = setTimeout(() => {
+        if (this.swiped) return;
+        /* (A shift of the row, not a scroll: snapping would fight a scroll.) */
+        track.animate(
+          [{ translate: '0 0' }, { translate: '-9rem 0', offset: 0.45 }, { translate: '0 0' }],
+          { duration: 1300, easing: 'cubic-bezier(0.45, 0, 0.25, 1)' }
+        );
+      }, 700);
+    }, { threshold: 0.6 });
+    this.swipeIo.observe(track);
   }
 
   /**
@@ -358,8 +527,12 @@ export default class Main extends Page {
   goHome() {
     if (!this.lenis) return;
     this.stopAuto();
+    this.moveDir = -1;
     if (store.scroll > this.handBack + 3) {
       this.state = 'toHome';
+      /* (Where on the way home: 'climb', 'rewind', 'glide' — or 'pull',
+         the logo's — so a turn back down knows what to undo; see steer.) */
+      this.homePhase = 'climb';
       this.lenis.stop();
       const d = Math.min(1.4, 0.5 + ((store.scroll - this.handBack) / store.height) * 0.25);
       this.glideEnd = performance.now() + (d + 0.6) * 1000;
@@ -370,6 +543,7 @@ export default class Main extends Page {
   }
 
   rewind() {
+    this.moveDir = -1;
     const from = Math.min(this.rockP, this.photosP);
     const steps = [];
     if (from > SCATTERED) {
@@ -381,6 +555,7 @@ export default class Main extends Page {
     /* (Above About already — the Home key — the rocks rewind where they are.) */
     let gliding = false;
     const tl = this.autoplay(from, steps, { state: 'toHome', keepPace: () => !gliding && store.scroll >= this.aboutTop - 1 });
+    this.homePhase = 'rewind';
     const glideAt = Math.max(0, tl.duration() - LEAD);
     tl.call(() => {
       gliding = true;
@@ -392,14 +567,17 @@ export default class Main extends Page {
   /** The glide home itself: the rocks return to their orbit round the
       sketches, and the heading settles back in as the page arrives. */
   glideHome() {
-    gsap.to(this.journey, { f: 0, duration: GLIDE * 0.95, ease: 'power2.inOut', overwrite: 'auto' });
+    this.homePhase = 'glide';
+    /* (Turned round on the way in, it's only part of the way back.) */
+    const glide = GLIDE * clamp(store.scroll / Math.max(1, this.aboutTop), 0.35, 1);
+    gsap.to(this.journey, { f: 0, duration: glide * 0.95, ease: 'power2.inOut', overwrite: 'auto' });
     gsap.to(this.heroLines(), {
       y: 0, opacity: 1, filter: 'blur(0px)',
-      duration: 1, ease: 'power3.out', stagger: 0.07, delay: GLIDE * 0.55, overwrite: 'auto'
+      duration: 1, ease: 'power3.out', stagger: 0.07, delay: glide * 0.55, overwrite: 'auto'
     });
-    if (this.cue) gsap.to(this.cue, { opacity: 1, y: 0, duration: 0.9, ease: 'power2.out', delay: GLIDE * 0.8, overwrite: 'auto' });
+    if (this.cue) gsap.to(this.cue, { opacity: 1, y: 0, duration: 0.9, ease: 'power2.out', delay: glide * 0.8, overwrite: 'auto' });
     this.lenis.scrollTo(0, {
-      duration: GLIDE,
+      duration: glide,
       easing: glideEase,
       force: true,
       onComplete: () => {
@@ -426,6 +604,8 @@ export default class Main extends Page {
     this.pullTl?.kill();
     gsap.killTweensOf([this.journey, this.cue, ...this.heroLines()].filter(Boolean));
     this.state = 'toHome';
+    this.homePhase = 'pull';
+    this.moveDir = -1;
     this.lenis.stop();
     this.glideEnd = performance.now() + (PULL + DROP + 0.6) * 1000;
 
@@ -636,8 +816,9 @@ export default class Main extends Page {
   measure() {
     if (this.show) {
       /* Pinned reel on wider screens: the runway is the sideways distance,
-         plus a short hold on the last card. */
-      this.showPinned = store.html.classList.contains('webgl') && window.innerWidth >= 768;
+         plus a short hold on the last card. (Not on a touch screen: there
+         the cards are swiped across by hand — see bindSwipe.) */
+      this.showPinned = store.html.classList.contains('webgl') && window.innerWidth >= 768 && !this.free;
       this.showTravel = this.showPinned ? Math.max(0, this.showTrack.scrollWidth - window.innerWidth) : 0;
       this.show.style.height = this.showPinned ? `${Math.round(window.innerHeight * 1.25 + this.showTravel)}px` : '';
       if (!this.showPinned) this.showTrack.style.transform = '';
@@ -889,13 +1070,28 @@ export default class Main extends Page {
         this.held = false;
         this.lenis?.start();
       }
-      if (s === 'home' && scroll > 3) {
+      if (this.free) {
+        /* (Free, only the logo's pull is ever guided.) */
+        if (s.startsWith('to') && now > this.glideEnd) this.finishGlide();
+      } else if (s === 'home' && scroll > 3) {
         if (scroll >= this.aboutTop - 3) this.atAbout();
         else this.goAbout();
       } else if ((s === 'about' || s === 'text') && scroll < this.handBack - 3) this.goHome();
       else if (s === 'about' && scroll > this.handBack + 3) this.goText();
       else if (s === 'text' && scroll < text - 3) this.goPhotos();
       else if (s.startsWith('to') && now > this.glideEnd) this.finishGlide();
+    }
+
+    /* Free: down to About, the rocks set off with the scroll and the
+       welcome copy leaves with it — and come back with it, going up. (Not
+       while the logo's pull has the page.) */
+    if (this.free && this.entered && !this.pullTl) {
+      this.journey.f = ease(this.journey.f, journeyEase(clamp(scroll / Math.max(1, this.aboutTop), 0, 1)));
+      const h = clamp(scroll / Math.max(1, this.aboutTop * 0.6), 0, 1);
+      if (h !== this.heroP) {
+        this.heroP = h;
+        this.heroOut.progress(h);
+      }
     }
 
     const end = this.aboutTop + this.aboutH - vh;
@@ -1000,7 +1196,7 @@ export default class Main extends Page {
     super.destroy();
     /* Never leave the scroll locked behind us. */
     if (this.state.startsWith('to') || this.held) this.lenis?.start();
-    for (const type of ['wheel', 'touchmove', 'keydown']) {
+    for (const type of ['wheel', 'touchstart', 'touchmove', 'keydown']) {
       window.removeEventListener(type, this.onInput, { capture: true });
     }
     this.cue?.removeEventListener('click', this.onCue);
@@ -1014,6 +1210,11 @@ export default class Main extends Page {
     }
     gsap.killTweensOf(this.showScale);
     this.reelSizer?.disconnect();
+    this.swipeIo?.disconnect();
+    clearTimeout(this.nudgeAt);
+    this.showTrack?.removeEventListener('scroll', this.onTrackScroll);
+    this.freeMode.removeEventListener('change', this.onFreeMode);
+    this.heroOut.kill();
     this.unmagnet?.();
     gsap.killTweensOf([this.cue, this.journey, ...this.heroLines()]);
     this.pullTl?.kill();

@@ -4,6 +4,7 @@ import {
 import gsap from 'gsap';
 import { makeAsteroid, prebuildAsteroids, rockMaterial } from './asteroid.js';
 import { rand } from './particles.js';
+import store from '../core/Store.js';
 
 /* The shapes: one detailed hero rock, a handful of chunks it breaks into. */
 const HERO = { seed: 7, detail: 5, craters: 13 };
@@ -46,6 +47,9 @@ export default class RockStage {
       this.chunkMat = rockMaterial(true, { bump: 1.1, seed: 9.1 });
     }
     kept = null;
+    /* Out of the picture while nothing's in the air: an empty layer over
+       the whole screen still had to be blended into every frame. */
+    this.canvas.style.visibility = 'hidden';
     document.body.appendChild(this.canvas);
 
     this.scene = new Scene();
@@ -129,7 +133,7 @@ export default class RockStage {
     this.h = window.innerHeight;
     /* Resized only when it has to be: every resize reallocates the
        full-screen (antialiased) drawing buffer. */
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = store.fxDpr;
     if (this.renderer.getPixelRatio() !== dpr || this.canvas.width !== Math.floor(this.w * dpr) || this.canvas.height !== Math.floor(this.h * dpr)) {
       this.renderer.setPixelRatio(dpr);
       this.renderer.setSize(this.w, this.h, false);
@@ -227,6 +231,7 @@ export default class RockStage {
   start() {
     if (this.running) return;
     this.running = true;
+    this.canvas.style.visibility = '';
     gsap.ticker.add(this.tick);
   }
 
@@ -255,6 +260,7 @@ export default class RockStage {
       this.renderer.clear();
       gsap.ticker.remove(this.tick);
       this.running = false;
+      this.canvas.style.visibility = 'hidden';
     }
   };
 

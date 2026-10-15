@@ -491,9 +491,32 @@ function projectEditor(p) {
     const upload = (file) => {
       if (!S.ffmpeg) return toast('Video needs ffmpeg — install it with: winget install Gyan.FFmpeg, then restart the CMS.', 'error');
       if (!/^video\//.test(file.type) && !/\.(mp4|mov|m4v|webm|mkv|avi)$/i.test(file.name)) return toast('That isn’t a video this takes — use MP4, MOV or WebM.', 'error');
-      run(frame, 'Uploading…', (prog) => send(`/api/upload?slug=${slug}&kind=video&mode=${videoMode}`, file, prog)).then((r) => r && drawVideo());
+      run(frame, 'Uploading…', (prog) => send(`/api/upload?slug=${slug}&kind=video&mode=${videoMode}`, file, prog)).then((r) => {
+        if (!r) return;
+        /* A new video: the old one's stretch would cut it in the wrong places. */
+        if (p.videoFrom || p.videoTo) {
+          delete p.videoFrom;
+          delete p.videoTo;
+          changed();
+        }
+        drawVideo();
+      });
     };
     const pageVideo = h('input', { type: 'checkbox', checked: !!p.pageVideo, onChange: (e) => { p.pageVideo = e.target.checked; changed(); } });
+    /* The stretch a hover plays (seconds; blank: the start / the end). */
+    const secs = (key) => h('input', {
+      class: 'input', type: 'number', min: 0, step: 0.1, style: 'max-width:90px', placeholder: key === 'videoTo' ? 'end' : '0',
+      value: p[key] > 0 ? p[key] : '',
+      onInput: (e) => {
+        const v = parseFloat(e.target.value);
+        if (v > 0) p[key] = Math.round(v * 10) / 10;
+        else delete p[key];
+        changed();
+      }
+    });
+    const stretch = h('div', { class: 'field' }, h('span', { class: 'label' }, 'On hover, play'),
+      h('div', { class: 'colour' }, 'from', secs('videoFrom'), 'to', secs('videoTo'), 's'),
+      h('span', { class: 'hint' }, 'Skip a title screen the thumbnail already shows: the card goes straight into the project. It loops just this part. Blank: the whole video.'));
     videoCard.append(
       h('div', { class: 'card-head' },
         h('div', {}, h('h2', {}, 'Video'), h('p', {}, 'Plays in its card on hover. Converted to the site’s format: 1200 × 900, smooth and light (~1 MB), no sound; longer than 90 seconds is cut.')),
@@ -508,6 +531,7 @@ function projectEditor(p) {
           h('div', { class: 'field' }, h('span', { class: 'label' }, 'If it isn’t 4:3'),
             seg([['fit', 'Keep it whole'], ['fill', 'Crop to 4:3']], videoMode, (v) => { videoMode = v; }),
             h('span', { class: 'hint' }, 'Keep it whole: the full frame over a blurred copy of itself. Crop: fills the frame, cutting the sides. Applies to the next upload.')),
+          has ? stretch : null,
           h('label', { class: 'switch' }, pageVideo, 'Also play it at the top of the project’s page'),
           S.ffmpeg ? null : h('div', { class: 'warn-box' }, 'Video uploads need ffmpeg: winget install Gyan.FFmpeg'),
           dropzone({ title: has ? 'Replace the video' : 'Add a video', sub: 'Drop a video here, or click — MP4, MOV or WebM', accept: 'video/*', onFile: upload, disabled: !S.ffmpeg }))));

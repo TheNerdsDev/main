@@ -244,8 +244,11 @@ const showcaseSection = () => {
     : '';
   /* The first `showcase.count` projects (CMS: Home page). */
   const shown = projects.slice(0, Math.max(1, Math.min(showcase.count || projects.length, projects.length)));
+  /* The stretch of the video a hover plays (fx/WaterReveal.js): past its
+     title screen, which the thumbnail already shows. */
+  const span = (p) => `${p.videoFrom > 0 ? ` data-video-from="${Number(p.videoFrom)}"` : ''}${p.videoTo > 0 ? ` data-video-to="${Number(p.videoTo)}"` : ''}`;
   const cards = shown
-    .map((p, i) => `          <a class="show-card${p.screenshot ? ' is-still' : ''}" href="/work/${p.slug}/" data-link data-cursor="View"${p.video ? ` data-video="${esc(p.video)}"` : ''} style="--accent: ${p.accent}">
+    .map((p, i) => `          <a class="show-card${p.screenshot ? ' is-still' : ''}" href="/work/${p.slug}/" data-link data-cursor="View"${p.video ? ` data-video="${esc(p.video)}"${span(p)}` : ''} style="--accent: ${p.accent}">
             <span class="show-card-inner">
               <span class="show-card-media"><img class="show-card-img" src="/media/${p.slug}/featured.jpg"${srcset(p.slug)} alt="${esc(p.name)}" loading="lazy" decoding="async" /></span>
               <span class="show-card-meta">
@@ -267,8 +270,15 @@ const showcaseSection = () => {
           </div>
           <span class="showcase-count" aria-hidden="true"><span class="showcase-count-now">01</span> / ${pad(shown.length)}</span>
         </div>
-        <div class="showcase-track">
+        <div class="showcase-rail">
+          <div class="showcase-track">
 ${cards}
+          </div>
+          <!-- Touch tablets: the cards are swiped, not scrolled past — this says so, until they are (Main.js). -->
+          <div class="showcase-swipe" aria-hidden="true">
+            <svg class="showcase-swipe-hand" viewBox="0 0 24 24"><path d="M22 14a8 8 0 0 1-8 8"/><path d="M18 11v-1a2 2 0 0 0-2-2a2 2 0 0 0-2 2"/><path d="M14 10V9a2 2 0 0 0-2-2a2 2 0 0 0-2 2v1"/><path d="M10 9.5V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v10"/><path d="M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>
+            <span class="showcase-swipe-text">Swipe for more</span>
+          </div>
         </div>
         <div class="showcase-progress" aria-hidden="true"><span class="showcase-progress-bar"></span></div>
       </div>

@@ -258,6 +258,16 @@ h1 {
   backdrop-filter: blur(24px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
+/* Touch screens: the frost is redrawn on every frame the sky moves behind
+   it, and a wide blur is costly for a phone's GPU — a lighter one, with a
+   little more of the background colour so nothing beneath can be read. */
+@media (hover: none) and (pointer: coarse) {
+  .site-header {
+    background: rgba(var(--c-bg-rgb), 0.6);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+  }
+}
 /* The logo (traced from the brand artwork, content/logo.js). The rocket
    that leaves the R is white with a difference blend: white against the
    sky, dark over the letters — like the cut-out it flies out of. */
