@@ -3,8 +3,9 @@
  * the site's own frames):
  *
  *   thumbnail   featured.jpg 1600 × 1200 (the 4:3 cards) + featured-960.webp
- *   video       preview.mp4  1200 × 900, H.264, 25 fps, no sound, starts
- *               playing before it's fully loaded (faststart), ~1 MB
+ *   video       preview.mp4  1440 × 1080 (1080p at the cards' 4:3), H.264,
+ *               30 fps, no sound, starts playing before it's fully loaded
+ *               (faststart), a few MB
  *   shots       01 is wide (2.1 : 1, 1600 × 762), the rest 1.62 : 1
  *               (1200 × 741) — as NN.webp, with NN.jpg beside it
  *
@@ -22,7 +23,7 @@ sharp.cache(false);
 
 export const SIZES = {
   thumb: { w: 1600, h: 1200, small: 960 },
-  video: { w: 1200, h: 900, fps: 25, maxSeconds: 90 },
+  video: { w: 1440, h: 1080, fps: 30, maxSeconds: 90 },
   wide: { w: 1600, h: 762 },
   shot: { w: 1200, h: 741 }
 };
@@ -155,7 +156,7 @@ export function inspectVideo(file) {
 }
 
 /**
- * Re-encode to the site's video: 1200 × 900 H.264, 25 fps, no sound,
+ * Re-encode to the site's video: 1440 × 1080 H.264, 30 fps, no sound,
  * faststart. fit keeps the whole frame over a blurred, darkened copy of
  * itself; fill crops to 4:3. Longer than maxSeconds is cut there.
  * onProgress gets 0..1.
@@ -171,8 +172,8 @@ export function encodeVideo(input, output, mode, seconds, onProgress) {
   const args = [
     '-hide_banner', '-y', '-i', input, '-t', String(length),
     '-filter_complex', filter, '-map', '[v]', '-an',
-    '-c:v', 'libx264', '-preset', 'slow', '-crf', '27', '-profile:v', 'high',
-    '-maxrate', '1200k', '-bufsize', '2400k', '-pix_fmt', 'yuv420p',
+    '-c:v', 'libx264', '-preset', 'slow', '-crf', '21', '-profile:v', 'high',
+    '-maxrate', '5000k', '-bufsize', '10000k', '-pix_fmt', 'yuv420p',
     '-movflags', '+faststart', '-progress', 'pipe:1', '-nostats', output
   ];
   return new Promise((resolve, reject) => {

@@ -30,7 +30,7 @@ straight away. Either way, the site on 5173 shows the change at once.
 | Upload | Becomes |
 | --- | --- |
 | Thumbnail | `featured.jpg` 1600 × 1200 (4:3) + `featured-960.webp` |
-| Video | `preview.mp4` 1200 × 900, H.264, 25 fps, no sound, ~1 MB, plays while loading; cut at 90 s |
+| Video | `preview.mp4` 1440 × 1080 (1080p), H.264, 30 fps, no sound, a few MB, plays while loading; cut at 90 s |
 | Screenshots | `01.webp` wide (2.1 : 1), the rest 1.62 : 1, each with a `.jpg` beside it |
 
 Pictures are either **kept whole** — on a dark backdrop made from their own

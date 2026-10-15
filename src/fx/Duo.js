@@ -42,6 +42,15 @@ const HINT_AFTER = 2.5;
 const HINT_PACE = 0.35;
 const HINT_KEY = 'nerds:threw';
 
+/* The rocks keep their places round the loop (see loop()): each wobbles
+   ahead and behind its place by up to `wobble` of a loop, on its own
+   rhythm, and one that fell behind (paused under the pointer, slowed for
+   the hint) catches up at most `catchUp` faster than the rest. */
+const SPREAD = { wobble: 0.02, catchUp: 0.45 };
+const TAU = Math.PI * 2;
+/* Points along a loop when measuring it (angleAt). */
+const LOOP_STEPS = 36;
+
 /** Keep `v` within lo..hi, rounding off as it nears either end instead of stopping dead. */
 const soften = (v, lo, hi, band) => {
   if (v > hi - band) return hi - band + band * Math.tanh((v - hi + band) / band);
@@ -140,11 +149,14 @@ export default class Duo {
 
     this.actions = [...el.querySelectorAll('.duo-action')].map((btn, i) => {
       const orbit = ORBITS[i % ORBITS.length];
-      return { btn, i, orbit, hovered: false, pace: 1, angle: orbit.start, x: 0, y: 0, at: -Infinity };
+      return { btn, i, orbit, hovered: false, pace: 1, lag: 0, angle: orbit.start, x: 0, y: 0 };
     });
     this.rocks = new SpaceRocks(this.actions.map((a) => a.btn));
     this.actionsEl = el.querySelector('.duo-actions');
     this.f = 0;
+    /* How far round the loop the group is, in loops (loop()). */
+    this.clock = 0;
+    this.loopLens = new Float64Array(LOOP_STEPS + 1);
     this.k = 0;
     this.gone = false;
 
@@ -712,6 +724,28 @@ export default class Duo {
     else setTimeout(go, 600);
   }
 
+  /**
+   * The angle at which a rock is `share` of the way round its loop,
+   * measured along the path as it is this frame — so it moves at an even
+   * pace on screen however the path bends round the figures.
+   */
+  angleAt(place, share) {
+    const lens = this.loopLens;
+    const step = TAU / LOOP_STEPS;
+    let prev = place(0);
+    lens[0] = 0;
+    for (let k = 1; k <= LOOP_STEPS; k++) {
+      const p = place(k * step);
+      lens[k] = lens[k - 1] + Math.hypot(p.x - prev.x, p.y - prev.y);
+      prev = p;
+    }
+    const want = share * lens[LOOP_STEPS];
+    let k = 1;
+    while (k < LOOP_STEPS && lens[k] < want) k++;
+    const seg = lens[k] - lens[k - 1];
+    return (k - 1 + (seg > 0 ? (want - lens[k - 1]) / seg : 0)) * step;
+  }
+
   /* -------------------------------------------------------------- loop */
 
   measure() {
@@ -726,6 +760,9 @@ export default class Duo {
     this.texts = [...page.querySelectorAll(TEXT)];
     const nav = document.querySelector('.site-header');
     this.ceiling = nav ? nav.getBoundingClientRect().bottom + 10 : 0;
+    /* Where the sketches' box sits on the page (its top with nothing
+       scrolled), for a ceiling that scrolls with the page (loop()). */
+    this.homeTop = this.el.getBoundingClientRect().top + window.scrollY;
     this.members.forEach((m) => {
       m.cx = m.root.offsetLeft + m.root.offsetWidth / 2;
       m.cy = m.root.offsetTop + m.root.offsetHeight / 2;
@@ -773,8 +810,23 @@ export default class Duo {
     const fe = f * f * (3 - 2 * f);
 
     /* Home orbit: a tilted ellipse wrapped around both sketches. It lives in
-       the sketches' box; the rocks' layer is the viewport. */
+       the sketches' box; the rocks are placed on the screen. */
     const box = this.el.getBoundingClientRect();
+    /* The header is the rocks' ceiling at home — but one that scrolls with
+       the page, like the faces: scroll down and the rocks go up with the
+       sketches (under the header, as the faces do) rather than being held
+       below it, squeezed out of their corner and sent the long way round to
+       the other side of a face. With nothing scrolled it's the header's
+       edge, as before. */
+    const ceil = this.ceiling + (box.top - this.homeTop);
+    /* Their layer rides with the page (main-page.css): shift it back to the
+       screen's corner, so a scroll the browser makes before this runs again
+       carries the rocks along with the faces instead of leaving them behind. */
+    if (this.actionsEl && (box.left !== this.layerX || box.top !== this.layerY)) {
+      this.layerX = box.left;
+      this.layerY = box.top;
+      this.actionsEl.style.transform = `translate3d(${(-box.left).toFixed(2)}px, ${(-box.top).toFixed(2)}px, 0)`;
+    }
     const hx = box.left + (a.cx + b.cx) / 2;
     const hy = box.top + (a.cy + b.cy) / 2;
     const hTilt = Math.atan2(b.cy - a.cy, b.cx - a.cx);
@@ -804,8 +856,13 @@ export default class Duo {
     /* Meeting: the orbits tighten slowly, then all at once. */
     const e = Math.pow(this.k, 2.2);
 
-    /* Both heads, so the rocks can swing round them instead of across. */
-    const avoid = 1 - fe;
+    /* Both heads, so the rocks can swing round them instead of across —
+       at home. Setting off, the loop heads for the middle of the screen
+       and sweeps across the faces on its way; still pushing round them
+       then, a rock's spot flipped from one side of a face to the other.
+       So the berth is given up over the first quarter of the trip. */
+    const leave = Math.min(1, fe / 0.25);
+    const avoid = 1 - leave * leave * (3 - 2 * leave);
     const faces = avoid > 0
       ? this.members.map((m) => {
         const r = m.body.getBoundingClientRect();
@@ -818,7 +875,10 @@ export default class Duo {
        pin every rock to the right edge of the screen. */
     let wall = -Infinity;
     let roof = -Infinity;
-    if (avoid > 0) {
+    /* (Through the whole trip, not just while the faces are avoided: the
+       home loops, and the limits the rocks keep to at home, are built on
+       these, and a loop that changed shape halfway out would jump.) */
+    if (fe < 1) {
       for (const el of this.texts) {
         const r = el.getBoundingClientRect();
         if (!r.width) continue;
@@ -830,26 +890,56 @@ export default class Duo {
     /* Tablets and phones (heading on top, sketches below): the two sketches
        fill the width corner to corner, and one loop round both runs off the
        sides of the screen — the rocks ended up pinned to its edges. There,
-       each sketch gets a loop of its own instead (two rocks each), sized to
-       it and kept on screen. */
+       each pair of rocks gets a loop of its own instead, kept on screen. */
     const stacked = roof > -Infinity;
     let homes = null;
     if (stacked) {
       const pad = o * 0.42 * 1.12 * 1.1 + 4;   // the biggest rock's radius, and a little air
       const left = box.left + pad;
       const right = box.right - pad;
-      const top = Math.max(box.top, this.ceiling, roof) + pad;
+      const top = Math.max(box.top, ceil, roof) + pad;
       const bottom = box.bottom - pad;
-      homes = this.members.map((m) => {
-        const r = m.body.getBoundingClientRect();
+      /* Here the sketches sit corner to corner (main-page.css), filling the
+         width: a loop round either one squeezed through the gap where they
+         meet — over the faces, and tangling with the other pair. So each
+         pair circles in one of the two open corners instead: beside the
+         upper sketch and over the lower one, and under the upper one beside
+         the lower. Each loop is kept inside its corner, a rock's width from
+         the faces, with room for the orbits' own swell (up to 1.12 × 1.07). */
+      const rects = this.members.map((m) => m.body.getBoundingClientRect());
+      const upper = rects[0].top <= rects[1].top ? rects[0] : rects[1];
+      const lower = upper === rects[0] ? rects[1] : rects[0];
+      const upperRight = upper.left + upper.width / 2 > lower.left + lower.width / 2;
+      const corners = upperRight
+        ? [{ l: left, r: upper.left - pad, t: top, b: lower.top - pad }, { l: lower.right + pad, r: right, t: upper.bottom + pad, b: bottom }]
+        : [{ l: upper.right + pad, r: right, t: top, b: lower.top - pad }, { l: left, r: lower.left - pad, t: upper.bottom + pad, b: bottom }];
+      homes = rects.map((r, i) => {
+        const c = corners[i];
+        const w = c.r - c.l;
+        const h = c.b - c.t;
+        /* Round the sketch: for a corner too small to circle in. */
         const lrx = Math.min(r.width * 0.5 + pad * 0.5, (right - left) / 2);
         const lry = Math.min(r.height * 0.5 + pad * 0.5, (bottom - top) / 2);
-        return {
+        const round = {
           x: clamp(r.left + r.width / 2, left + lrx, right - lrx),
           y: clamp(r.top + r.height * 0.56, top + lry, bottom - lry),
           tilt: 0,
           rx: lrx,
           ry: lry
+        };
+        /* The corner closes up as the page scrolls the sketches up under the
+           header: the loop eases over from the corner to round the sketch,
+           rather than jumping there the moment the corner gets too small. */
+        const k = clamp((Math.min(w, h) - pad) / (pad * 2), 0, 1);
+        const ease = k * k * (3 - 2 * k);
+        if (ease <= 0) return round;
+        const corner = { x: c.l + w / 2, y: c.t + h / 2, rx: (w / 2) * 0.83, ry: (h / 2) * 0.83 };
+        return {
+          x: round.x + (corner.x - round.x) * ease,
+          y: round.y + (corner.y - round.y) * ease,
+          tilt: 0,
+          rx: round.rx + (corner.rx - round.rx) * ease,
+          ry: round.ry + (corner.ry - round.ry) * ease
         };
       });
     }
@@ -857,11 +947,29 @@ export default class Duo {
        wide berth where there's room, a close shave on a phone. */
     const berth = stacked ? 1.3 : 2;
 
+    /* The group's place round the loop, in loops. Every rock keeps its own
+       place relative to it — their starting spread (ORBITS, uneven on
+       purpose), give or take a little wobble of its own — so however long
+       the page is open they never drift together or into a line. (Each used
+       to pace itself; differences in their paths and rhythms added up.)
+       Closing in on the journey, the loop runs faster, like anything
+       caught spiralling in. */
+    const lead = blend(homes ? homes[0] : shared);
+    const leadContact = (o * 0.34) / Math.max(1, Math.min(lead.rx, lead.ry));
+    const pull = Math.min(Math.pow(leadContact + (1 - leadContact) * (1 - e), -1.5), 9);
+    const rate = (SPEED / TAU) * pull * dt;
+    this.clock = (this.clock + rate) % 1;
+
     for (const act of this.actions) {
       const { r, size, phase } = act.orbit;
       const { cx, cy, ct, st, rx, ry } = blend(homes ? homes[act.i % 2] : shared);
+      /* Stopped under the pointer, slowed for the hint: what it falls
+         behind, it makes up afterwards, a little faster than the rest. */
       const pace = act.hovered ? 0 : act === this.hint?.act && this.hint.shown ? HINT_PACE : 1;
       act.pace += (pace - act.pace) * Math.min(1, dt * 6);
+      act.lag += rate * (1 - act.pace);
+      act.lag -= Math.round(act.lag);   // the short way round
+      if (act.pace > 0.98) act.lag -= clamp(act.lag, -rate * SPREAD.catchUp, rate * SPREAD.catchUp);
 
       /* Distance from the centre, as a fraction of the orbit: shrinks to
          touching as they meet, breathing a little all the while. */
@@ -887,7 +995,7 @@ export default class Duo {
           /* At home, stay inside the sketches' box and below the header —
              easing away from the edges rather than sliding along them. */
           const band = o * 0.9;
-          const top = Math.max(box.top + o * 0.6, this.ceiling + rockR * 1.15, roof + 8 + rockR);
+          const top = Math.max(box.top + o * 0.6, ceil + rockR * 1.15, roof + 8 + rockR);
           const left = Math.max(box.left + o * 0.6, wall + 16 + rockR);
           const bx = soften(x, left, box.right - o * 0.6, band);
           const by = soften(y, top, box.bottom - o * 0.6, band);
@@ -906,7 +1014,7 @@ export default class Duo {
            sides — so the rock arcs over the head (or under the feet), a
            closer shave, rather than being flattened against the edge and
            sliding along it. */
-        const lo = Math.max(this.ceiling + rockR, roof + 8 + rockR);
+        const lo = Math.max(ceil + rockR, roof + 8 + rockR);
         const hi = vh - rockR;
         const wl = Math.max(wall + 16 + rockR, rockR);
         const wr = vw - rockR;
@@ -945,35 +1053,56 @@ export default class Duo {
         return { x, y };
       };
 
-      /* Clockwise, always (the angle rises on a y-down screen). Each one
-         surges and lags on its own rhythm, and a tighter orbit runs faster —
-         like anything caught spiralling in.
-         It's paced on screen, not by the angle: rounding a figure stretches
-         the path, and there the path also sways under the rock (the loop
-         breathes, the figures bob) — so the rock raced past one side of a
-         figure and all but stopped on another. Instead it floats on at its
-         own speed all the way round, the sway made up for at home. */
+      /* Clockwise, always (the loop runs that way on a y-down screen), at
+         its place in the group — give or take its own wobble — and at an
+         even pace on screen, all the way round. */
       if (!this.gone) {
-        const surge = 1 + 0.3 * Math.sin(t * 0.37 + phase);
-        const pull = Math.min(Math.pow(shrink, -1.5), 9);
-        const speed = SPEED * act.pace * surge * pull * ((rx + ry) / 2) * rr;
-        const h = 0.02;
-        const p0 = place(act.angle - h);
-        const p1 = place(act.angle + h);
-        const tx = p1.x - p0.x;
-        const ty = p1.y - p0.y;
-        const len = Math.max(Math.hypot(tx, ty), 1e-6);
-        const along = Math.max(len / (2 * h), 1);
-        let sway = 0;
-        if (t - act.at < 0.1 && dt > 0) {
-          const here = place(act.angle);
-          sway = (((here.x - act.x) * tx + (here.y - act.y) * ty) / len / dt) * avoid * (1 - e);
+        const wobble = SPREAD.wobble * Math.sin(t * 0.37 + phase);
+        const share = this.clock + act.orbit.start / TAU + wobble - act.lag;
+        const target = this.angleAt(place, share - Math.floor(share));
+        /* Never a jump. When the loop changes shape enough that this rock's
+           place on it lands somewhere else — the top corner closing up as a
+           phone scrolls the sketches under the header — the rock travels
+           there along the loop, a little faster than it orbits, instead of
+           appearing there. (Its ordinary orbiting is well inside this.) */
+        if (!act.placed) {
+          act.angle = target;
+          act.placed = true;
+        } else {
+          let d = target - act.angle;
+          d -= TAU * Math.round(d / TAU);
+          const most = rate * TAU * 3 + 0.03 * dt * 60;
+          act.angle += clamp(d, -most, most);
         }
-        act.angle += (clamp(speed - sway, speed * 0.25, speed * 3) / along) * dt;
       }
 
-      const { x, y } = place(act.angle);
-      act.at = t;
+      let { x, y } = place(act.angle);
+      /* Never a jump on screen either. While the loop is still near the
+         sketches it can fold as it slides over a face — the hand-over to the
+         travelling loop on a phone, the sketches scrolling under the header
+         — and a point on it flip to the face's other side. So each rock eases
+         to where it's put, carried along meanwhile by the frame its loop
+         moves in: the page at home, the screen once travelling, in between
+         as far as the hand-over has got. That way the easing smooths a flip
+         but never leaves the rock behind a scroll. Travelling, it goes
+         exactly where it's put. */
+      const ox = box.left * (1 - fe);
+      const oy = box.top * (1 - fe);
+      if (act.sx === undefined || fe >= 1) {
+        act.sx = x;
+        act.sy = y;
+      } else {
+        act.sx += ox - act.ox;
+        act.sy += oy - act.oy;
+        const k0 = 1 - Math.pow(0.7, dt * 60);
+        const k = k0 + (1 - k0) * fe * fe * fe;
+        act.sx += (x - act.sx) * k;
+        act.sy += (y - act.sy) * k;
+        x = act.sx;
+        y = act.sy;
+      }
+      act.ox = ox;
+      act.oy = oy;
 
       /* Tilted ring: the near side (lower) a touch larger than the far side;
          closing in, they also come up towards the viewer. */

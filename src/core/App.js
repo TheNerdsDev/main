@@ -128,17 +128,23 @@ export default class App {
        shows raw (text at full opacity, nothing hidden for its entrance)
        while the code is still on the way. */
     const code = loadPage(nextPageEl.dataset.page);
+    /* Followed from the phone menu, the panel is over the page: there's no
+       exit to see, so none is waited for — straight to the next page, and
+       the panel opens onto it (step 3). */
+    const covered = this.header?.classList.contains('is-open');
     /* The exit animations, waited for — but never past 2.5s: an animation
        cut short by another never reports done, and a page change left
        waiting on it would freeze the site. */
-    await Promise.race([
-      Promise.all([
-        outgoing.leave().then(() => {}),
-        this.world.media.leave(),
-        this.world.fadeTo(0.25, 0.55).then(() => {})
-      ]),
-      new Promise((r) => setTimeout(r, 2500))
-    ]);
+    if (!covered) {
+      await Promise.race([
+        Promise.all([
+          outgoing.leave().then(() => {}),
+          this.world.media.leave(),
+          this.world.fadeTo(0.25, 0.55).then(() => {})
+        ]),
+        new Promise((r) => setTimeout(r, 2500))
+      ]);
+    }
     const pageCode = await code;
 
     /* 2 — swap the DOM. (No page until the next is built: the loop mustn't
@@ -163,6 +169,7 @@ export default class App {
 
     await new Promise((r) => requestAnimationFrame(r));
 
+    if (covered) this.setMenu?.(false);
     this.world.fadeTo(1, 0.7);
     this.page.enter();
   }
@@ -238,8 +245,26 @@ export default class App {
     const header = this.header;
     const btn = header?.querySelector('.menu-toggle');
     if (!btn) return;
+    const nav = header.querySelector('.nav');
     this.setMenu = (open) => {
       if (open === header.classList.contains('is-open')) return;
+      /* The panel opens as an iris from the button itself (base.css), just
+         wide enough to reach the farthest corner: any wider and closing
+         would spend its first moments shrinking where nothing shows. */
+      if (open && nav) {
+        const b = btn.getBoundingClientRect();
+        const n = nav.getBoundingClientRect();
+        const x = b.left + b.width / 2 - n.left;
+        const y = b.top + b.height / 2 - n.top;
+        const r = Math.hypot(Math.max(x, n.width - x), Math.max(y, n.height - y));
+        nav.style.setProperty('--iris-x', `${x}px`);
+        nav.style.setProperty('--iris-y', `${y}px`);
+        nav.style.setProperty('--iris-r', `${Math.ceil(r) + 24}px`);
+      }
+      /* Closing, the moons keep flying until the iris has shut over them. */
+      clearTimeout(this.menuClosing);
+      header.classList.toggle('is-closing', !open);
+      if (!open) this.menuClosing = setTimeout(() => header.classList.remove('is-closing'), 600);
       header.classList.toggle('is-open', open);
       btn.setAttribute('aria-expanded', String(open));
       btn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
@@ -254,7 +279,15 @@ export default class App {
     };
     btn.addEventListener('click', () => this.setMenu(!header.classList.contains('is-open')));
     header.addEventListener('click', (e) => {
-      if (e.target.closest('a')) this.setMenu(false);
+      const a = e.target.closest('a');
+      if (!a) return;
+      /* A link to another of our pages: the panel stays over this one while
+         it changes, and opens onto the next (transition). Anything else
+         (mail, a new tab, this same page) closes it now. */
+      const away = a.matches('[data-link]') && a.target !== '_blank' && this.router &&
+        e.button === 0 && !(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) &&
+        new URL(a.href, window.location.origin).pathname !== window.location.pathname;
+      if (!away) this.setMenu(false);
     });
     window.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape' || !header.classList.contains('is-open')) return;

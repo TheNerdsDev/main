@@ -133,9 +133,10 @@ void main() {
   gl_FragColor = (vec4(col, 1.0) * inside + vec4(0.0, 0.0, 0.0, shade)) * corner;
 }`;
 
-/* How long the water takes to cover a card, and to drain back off it (s). */
-const SPREAD = 2.1;
-const DRAIN = 0.75;
+/* How long the water takes to cover a card, and to drain back off it (s):
+   quick — what's under it is the point. */
+const SPREAD = 0.8;
+const DRAIN = 0.45;
 
 /**
  * Hover a project card and water spreads across it from the point where
@@ -143,8 +144,13 @@ const DRAIN = 0.75;
  * thumbnail like a lens — and behind the front the thumbnail washes away
  * into the project's video, which starts playing as the water arrives.
  * Moving the pointer while it spreads draws a tongue of water after it.
- * It takes about two seconds to cross the card; behind the moving edge the
- * video already plays clean, with no ripples.
+ * It crosses the card in under a second; behind the moving edge the video
+ * already plays clean, with no ripples.
+ * The video plays only its stretch `data-video-from` → `data-video-to` (s;
+ * to the end without one), round and round: past the title screen it opens
+ * with — the thumbnail already shows that — straight into the project
+ * itself. The stretch's first frame sits ready from the moment the video
+ * has loaded, so the very first hover has it.
  * Leave and the water drains back to where it started; the video pauses,
  * and once it's drained, rewinds — every hover plays it from the start.
  *
@@ -189,6 +195,9 @@ export default class WaterReveal {
       media: card.querySelector('.show-card-media'),
       img: card.querySelector('.show-card-img'),
       url: card.dataset.video,
+      /* The stretch of it a hover plays (s; no end: to the end). */
+      from: Math.max(0, parseFloat(card.dataset.videoFrom) || 0),
+      to: Math.max(0, parseFloat(card.dataset.videoTo) || 0),
       p: 0, target: 0, clock: 0, full: 0, seed: Math.random() * 40
     }));
     this.wet = this.cards.filter((c) => c.media && c.url);
@@ -333,19 +342,40 @@ export default class WaterReveal {
 
   makeVideo(c) {
     const v = document.createElement('video');
+    const stretch = c.from > 0 || c.to > 0;
     v.muted = true;
-    v.loop = true;
+    /* (A stretch loops by hand, below: back to its start, not the file's.) */
+    v.loop = !stretch;
     v.playsInline = true;
     v.preload = 'auto';
     v.src = c.url;
     v.load();
     c.video = v;
+    /* Back to the start of the stretch, its frame ready to show. */
+    c.rewind = () => {
+      if (Math.abs(v.currentTime - c.from) > 0.01) v.currentTime = c.from;
+      c.fresh = true;
+    };
+    if (stretch) {
+      /* Its first frame decoded and waiting before anyone hovers. */
+      if (c.from > 0) v.addEventListener('loadedmetadata', c.rewind, { once: true });
+      /* Round again at its end (or the file's). */
+      v.addEventListener('ended', () => {
+        c.rewind();
+        if (c.target) v.play().catch(() => {});
+      });
+      /* (Caught on every new frame below, and every frame of the water —
+         this is the net under both.) */
+      if (c.to > 0) v.addEventListener('timeupdate', () => { if (v.currentTime >= c.to) c.rewind(); });
+    }
     /* Upload a frame only when the video has a new one (a 30fps clip on a
-       60–120Hz screen otherwise re-uploads the same frame 2–4 times). */
+       60–120Hz screen otherwise re-uploads the same frame 2–4 times) —
+       and, playing a stretch, turn back at its end to the frame. */
     if ('requestVideoFrameCallback' in v) {
       c.fresh = true;
-      const onFrame = () => {
+      const onFrame = (now, meta) => {
         c.fresh = true;
+        if (c.to > 0 && meta.mediaTime >= c.to) c.rewind();
         if (c.video === v) v.requestVideoFrameCallback(onFrame);
       };
       v.requestVideoFrameCallback(onFrame);
@@ -415,10 +445,9 @@ export default class WaterReveal {
       if (c.p <= 0 && c.target === 0) {
         if (c.video && !c.video.paused) {
           c.video.pause();
-          /* Drained off: the next hover plays it from the beginning (rewound
-             now, so that first frame is ready by then). */
-          c.video.currentTime = 0;
-          if (c.fresh === false) c.fresh = true;
+          /* Drained off: the next hover plays it from the start of its
+             stretch (rewound now, so that frame is ready by then). */
+          c.rewind();
         }
         continue;
       }
@@ -465,8 +494,9 @@ export default class WaterReveal {
       gl.uniform1f(this.u.uSeed, c.seed);
       gl.uniform1f(this.u.uRadius, this.radius * r.s);
 
-      /* The video frame. */
+      /* The video frame — round to the start of its stretch at its end. */
       const v = c.video;
+      if (c.to > 0 && v && v.currentTime >= c.to) c.rewind();
       const ready = v && v.readyState >= 2 && v.videoWidth;
       c.vtex ||= this.texture(0);
       gl.activeTexture(gl.TEXTURE0);

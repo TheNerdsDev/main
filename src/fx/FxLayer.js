@@ -13,6 +13,9 @@ export default class FxLayer {
     this.canvas = document.createElement('canvas');
     this.canvas.className = 'fx-canvas';
     this.canvas.setAttribute('aria-hidden', 'true');
+    /* Out of the picture while idle: an empty layer over the whole screen
+       still had to be blended into every frame. */
+    this.canvas.style.visibility = 'hidden';
     document.body.appendChild(this.canvas);
     this.ctx = this.canvas.getContext('2d');
 
@@ -35,6 +38,7 @@ export default class FxLayer {
     this.effects.push(effect);
     if (!this.running) {
       this.running = true;
+      this.canvas.style.visibility = '';
       gsap.ticker.add(this.tick);
     }
     return effect;
@@ -77,6 +81,7 @@ export default class FxLayer {
       ctx.clearRect(0, 0, this.w, this.h);
       gsap.ticker.remove(this.tick);
       this.running = false;
+      this.canvas.style.visibility = 'hidden';
     }
   }
 

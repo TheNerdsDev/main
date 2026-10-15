@@ -299,6 +299,15 @@ html .media-wrapper.is-empty {
   font-size: 2.4rem;
   line-height: 136%;
 }
+/* Justified: flush to both edges, the last line left as it falls. (The
+   text is split into lines for its reveal — core/SplitText.js — each its
+   own block, so each line is justified here, and the last one isn't.) */
+#work .description .line-inner {
+  display: block;
+  text-align: justify;
+  text-align-last: justify;
+}
+#work .description .line:last-child .line-inner { text-align-last: left; }
 /* The year and the code link, side by side, centred under the
    description. */
 #work .metas {
@@ -358,6 +367,9 @@ html .media-wrapper.is-empty {
 }
 @media screen and (max-width: 767px) {
   #work .page-content { padding-top: 16rem; }
+  /* A notch smaller on phones: justified, a narrow column opens wide gaps
+     between words (up to 8× a space at 2rem; about 3× at this size). */
+  #work .description { font-size: 1.85rem; }
   #work .content { grid-template-columns: 1fr; }
   #work .content .media-wrapper:first-child { aspect-ratio: var(--ar); }
   #work .hero-media .media-wrapper { aspect-ratio: var(--ar); }
@@ -642,7 +654,89 @@ html .media-wrapper.is-empty {
 #info .info-work-clip { min-height: 0; overflow: hidden; }
 #info .info-work.is-open .info-work-panel { grid-template-rows: 1fr; margin-top: 2.4rem; }
 #info .info-work-line { display: none; }
-#info .info-work-kind.is-open .info-work-arrow { transform: rotate(90deg); }
+#info .info-work-arrow { display: none; }
+
+/* …and so nobody takes the rows for a plain list: each carries a plus,
+   turned to a cross (in green) on the open one. As the box arrives, a
+   ripple runs down the pluses — again every few seconds, until a row has
+   been opened (Info.js was-opened). */
+#info .info-work-plus {
+  position: relative;
+  flex: none;
+  align-self: center;
+  width: 3.4cqw;
+  height: 3.4cqw;
+  color: rgba(var(--c-ink-rgb), 0.6);
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.3s ease;
+}
+#info .info-work-plus::before,
+#info .info-work-plus::after {
+  content: '';
+  position: absolute;
+  left: 0; top: 50%;
+  width: 100%;
+  height: 1.5px;
+  margin-top: -0.75px;
+  border-radius: 1px;
+  background: currentColor;
+}
+#info .info-work-plus::after { transform: rotate(90deg); }
+#info .info-work-kind.is-open .info-work-plus { transform: rotate(135deg); color: #0ACD88; }
+#info .info-cards.is-in .info-work:not(.was-opened) .info-work-plus {
+  animation: info-work-nudge 5s ease-in-out calc(1.5s + var(--j) * 0.1s) infinite;
+}
+@keyframes info-work-nudge {
+  0%, 16%, 100% { transform: none; color: rgba(var(--c-ink-rgb), 0.6); }
+  8% { transform: scale(1.45) rotate(90deg); color: #0ACD88; }
+}
+
+/* The hint at the foot of the box: a green dot pinging, and the words.
+   In after the rows; gone once a row has been opened. */
+#info .info-work-hint {
+  position: absolute;
+  left: 15cqw; right: 15cqw; bottom: 12.5cqw;
+  display: flex;
+  align-items: center;
+  gap: 2.8cqw;
+  font-family: 'Syne Mono', monospace;
+  font-size: 2.9cqw;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(var(--c-ink-rgb), 0.62);
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+#info .info-work-hint-ping {
+  position: relative;
+  flex: none;
+  width: 1.4cqw;
+  height: 1.4cqw;
+  border-radius: 50%;
+  background: #0ACD88;
+  box-shadow: 0 0 1.4cqw rgba(10, 205, 136, 0.7);
+}
+#info .info-work-hint-ping::after {
+  content: '';
+  position: absolute;
+  inset: -1.1cqw;
+  border-radius: 50%;
+  border: 1px solid #0ACD88;
+  animation: info-work-ping 2.2s var(--ease-out) infinite;
+}
+@keyframes info-work-ping {
+  0% { scale: 0.4; opacity: 0.9; }
+  70%, 100% { scale: 1.6; opacity: 0; }
+}
+/* (Tap on a touch screen; a narrow window with a mouse, click.) */
+#info .info-work-hint-click { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  #info .info-work-hint-tap { display: none; }
+  #info .info-work-hint-click { display: inline; }
+}
+#info .info-cards.is-armed .info-work-hint { opacity: 0; }
+#info .info-cards.is-in .info-work-hint { opacity: 1; transition: opacity 0.7s ease 1.3s; }
+#info .info-cards .info-work.was-opened .info-work-hint { opacity: 0; transition: opacity 0.4s ease; }
+#info .info-work.was-opened .info-work-hint-ping::after { animation: none; }
 
 /* Beside the box (wide screens with a mouse): it slides out from the box's
    edge, level with the row, a hairline joining the two; moving to another
@@ -670,7 +764,10 @@ html .media-wrapper.is-empty {
     transition: clip-path 0.65s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease, visibility 0s;
   }
   #info .info-work-clip { overflow: visible; }
-  #info .info-work-kind.is-open .info-work-arrow { transform: none; }
+  /* (Here the pointer finds the rows itself: the arrow, not the plus.) */
+  #info .info-work-arrow { display: inline; }
+  #info .info-work-plus,
+  #info .info-work-hint { display: none; }
   #info .info-work-line {
     display: block;
     position: absolute;
@@ -704,6 +801,8 @@ html .media-wrapper.is-empty {
   #info .info-work-line,
   #info .info-work-detail > p,
   #info .info-work-items li { transition: none !important; }
+  #info .info-work-plus,
+  #info .info-work-hint-ping::after { animation: none !important; }
 }
 
 @media screen and (max-width: 1099px) {

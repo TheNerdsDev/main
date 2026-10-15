@@ -1,4 +1,4 @@
-import { Mesh, ShaderMaterial, Vector2, DoubleSide } from 'three';
+import { Mesh, ShaderMaterial, Vector2, Vector4, DoubleSide } from 'three';
 import gsap from 'gsap';
 import store from '../core/Store.js';
 import assets from '../core/Assets.js';
@@ -31,6 +31,16 @@ export default class MediaMesh extends Component {
     this.floats = floats && !store.reducedMotion;
     this.fixed = fixed;
     this.isPreview = isPreview;
+    /* An index-rail preview slides in its frame with the work wheel
+       (Media.placePreviews): `dy` px down from where its box is, `rel` its
+       distance from the frame in frames, and only what's inside the frame
+       is drawn (uClip). */
+    this.dy = 0;
+    this.rel = null;
+    /* Where a frame wider than its picture keeps it: 0 = the picture's top,
+       0.5 (the default) = the middle, 1 = its bottom (data-focus). */
+    const focus = parseFloat(el.dataset.focus);
+    this.focus = Number.isFinite(focus) ? Math.min(1, Math.max(0, focus)) : 0.5;
     this.depth = depth;
     /* A photo of us (`data-still`) doesn't react to the pointer: no hover
        zoom or colour change, and the cursor's trail passes it by (the
@@ -70,7 +80,9 @@ export default class MediaMesh extends Component {
       uBlur:       { value: 0 },
       /* The work page's stack: a brighter black and white, so the cards
          read clearly against the dark (the rest keep the deeper grade). */
-      uLift:       { value: stack === null ? 0 : 0.55 }
+      uLift:       { value: stack === null ? 0 : 0.55 },
+      uClip:       { value: new Vector4(-1e5, -1e5, 1e5, 1e5) },
+      uFocus:      { value: this.focus }
     };
 
     this.material = new ShaderMaterial({
@@ -161,7 +173,12 @@ export default class MediaMesh extends Component {
     this.uniforms.uPlaneSizes.value.set(width, height);
 
     const x = left - store.width / 2 + width / 2 + this.floatX;
-    const y = -screenTop + store.height / 2 - height / 2 + this.floatY;
+    const y = -screenTop + store.height / 2 - height / 2 + this.floatY - this.dy;
+
+    if (this.isPreview) {
+      const d = store.dpr;
+      this.uniforms.uClip.value.set(left * d, (store.height - screenTop - height) * d, (left + width) * d, (store.height - screenTop) * d);
+    }
 
     this.mesh.position.set(x, y, this.depth);
     this.mesh.rotation.set(this.floatRotX, this.floatRotY, this.floatRotZ);
@@ -221,16 +238,6 @@ export default class MediaMesh extends Component {
     });
   }
 
-  /** Previews fade independently of the page-enter stagger. */
-  toggle(show) {
-    gsap.to(this.uniforms.uEnter, {
-      value: show ? 1 : 0,
-      duration: show ? 0.7 : 0.4,
-      ease: show ? 'power3.out' : 'power2.in',
-      overwrite: 'auto'
-    });
-  }
-
   /* ------------------------------------------------------------ loop */
 
   resize() {
@@ -248,6 +255,9 @@ export default class MediaMesh extends Component {
       /* Drifting planes reach past their DOM box — cull generously. */
       this.checkVisible(700);
     }
+    /* A preview a whole frame or more along the strip is out of its frame
+       altogether: not drawn. */
+    if (this.isPreview && this.rel !== null && Math.abs(this.rel) >= 1) this.isVisible = false;
     this.mesh.visible = this.isVisible;
     if (!this.isVisible) return;
 

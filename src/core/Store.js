@@ -27,7 +27,7 @@ class Store {
     this.isMobile = this.width < 768;
     this.isTablet = this.width < 1100 || (this.width < 1366 && this.isTouch);
     this.isDesktop = !this.isTablet;
-    this.dpr = Math.min(window.devicePixelRatio || 1, this.isMobile ? 2 : 1.75);
+    this.setDpr();
 
     /* live values written by Scroll / pointer */
     this.scroll = 0;
@@ -51,7 +51,21 @@ class Store {
     this.isMobile = this.width < 768;
     this.isTablet = this.width < 1100 || (this.width < 1366 && this.isTouch);
     this.isDesktop = !this.isTablet;
-    this.dpr = Math.min(window.devicePixelRatio || 1, this.isMobile ? 2 : 1.75);
+    this.setDpr();
+  }
+
+  /**
+   * How finely the canvases draw. A touch screen (a phone, a tablet) gets
+   * 1.5 device pixels to the CSS pixel: on its small, dense screen that
+   * still reads as sharp, and it's half the pixels of 2× (over a third
+   * fewer than 1.75×) to fill every frame — phone GPUs choke on fill
+   * long before anything else. `dpr` is the world's; `fxDpr` the layers
+   * that come and go over it (the thrown rock, the planets).
+   */
+  setDpr() {
+    const device = window.devicePixelRatio || 1;
+    this.dpr = Math.min(device, this.isTouch ? 1.5 : 1.75);
+    this.fxDpr = Math.min(device, this.isTouch ? 1.5 : 2);
   }
 }
 

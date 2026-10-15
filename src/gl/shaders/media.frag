@@ -16,6 +16,8 @@ uniform float uDpr;
 uniform float uOpacity;     // stack depth fade, 0..1
 uniform float uBlur;        // stack depth-of-field radius, plane px
 uniform float uLift;        // brightens the black & white grade, 0 = none
+uniform vec4  uClip;        // only what's inside this box is drawn (device px, from the bottom left)
+uniform float uFocus;       // where a frame wider than its picture keeps it: 0 = top, 0.5 = middle, 1 = bottom
 
 varying vec2 vUv;
 varying float vDepth;
@@ -37,6 +39,8 @@ vec3 sampleBlurred(vec2 uv, vec2 texel) {
 }
 
 void main() {
+  if (gl_FragCoord.x < uClip.x || gl_FragCoord.y < uClip.y || gl_FragCoord.x > uClip.z || gl_FragCoord.y > uClip.w) discard;
+
   // ---- cover-fit the texture inside the plane -------------------
   vec2 ratio = vec2(
     min((uPlaneSizes.x / uPlaneSizes.y) / (uSizes.x / uSizes.y), 1.0),
@@ -44,12 +48,13 @@ void main() {
   );
   vec2 uv = vec2(
     vUv.x * ratio.x + (1.0 - ratio.x) * 0.5,
-    vUv.y * ratio.y + (1.0 - ratio.y) * 0.5
+    vUv.y * ratio.y + (1.0 - ratio.y) * (1.0 - uFocus)
   );
 
-  // ---- hover zoom ----------------------------------------------
+  // ---- hover zoom: about the middle of what's shown ---------------
   float zoom = 1.0 - uHover * 0.075;
-  uv = (uv - 0.5) * zoom + 0.5;
+  vec2 mid = vec2(0.5, (1.0 - ratio.y) * (1.0 - uFocus) + ratio.y * 0.5);
+  uv = (uv - mid) * zoom + mid;
 
   // ---- sample -------------------------------------------------
   // One plane pixel in texture space, after the cover-fit crop and zoom.

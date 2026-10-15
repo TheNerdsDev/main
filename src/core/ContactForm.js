@@ -1,11 +1,13 @@
 import gsap from 'gsap';
+import { emailOk, indianMobile, domainTakesMail } from './validate.js';
 
 /* Where enquiries go: the Supabase function's URL, from .env
    (VITE_CONTACT_ENDPOINT — see supabase/README.md). */
 const ENDPOINT = import.meta.env.VITE_CONTACT_ENDPOINT;
 
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-const PHONE = /^[+\d\s().-]+$/;
+/* What a phone number may be made of while it's typed: digits, spaces,
+   hyphens and a + — nothing else gets in (core/validate.js has the rules). */
+const NOT_PHONE = /[^\d\s+-]/g;
 
 /**
  * The contact page's enquiry form. Checks it here (the function checks it
@@ -17,7 +19,12 @@ const PHONE = /^[+\d\s().-]+$/;
  * (site.js → generate-pages.mjs).
  *
  * Errors come back from the function as codes per field (required,
- * email, phone, long), the same ones checked here.
+ * email, emailDomain, phone, long), the same ones checked here.
+ *
+ * The email is checked for its shape, and then its domain is looked up
+ * (can mail reach it at all?) — a typo like gmial.con is caught there,
+ * with nothing sent and no code to confirm. The phone must be an Indian
+ * mobile number (core/validate.js).
  */
 export default class ContactForm {
   constructor(form) {
@@ -40,8 +47,19 @@ export default class ContactForm {
        the form itself moves there after a submit: that one stays red until
        it's touched.) */
     form.addEventListener('input', (e) => {
-      const field = e.target.closest('.field');
-      field?.classList.toggle('is-filled', !!e.target.value.trim());
+      const input = e.target;
+      /* No letters in a phone number: they don't go in. */
+      if (input.type === 'tel') {
+        const cleaned = input.value.replace(NOT_PHONE, '');
+        if (cleaned !== input.value) {
+          const at = input.selectionStart ?? input.value.length;
+          const kept = input.value.slice(0, at).replace(NOT_PHONE, '').length;
+          input.value = cleaned;
+          input.setSelectionRange?.(kept, kept);
+        }
+      }
+      const field = input.closest('.field');
+      field?.classList.toggle('is-filled', !!input.value.trim());
       this.unmark(field);
     });
     form.addEventListener('focusin', (e) => { if (!this.moving) this.unmark(e.target.closest('.field')); });
@@ -64,11 +82,8 @@ export default class ContactForm {
       const v = data[input.name] || '';
       if (input.required && !v) errors[input.name] = 'required';
       else if (v.length > input.maxLength) errors[input.name] = 'long';
-      else if (v && input.type === 'email' && !EMAIL.test(v)) errors[input.name] = 'email';
-      else if (v && input.type === 'tel') {
-        const digits = v.replace(/\D/g, '').length;
-        if (!PHONE.test(v) || digits < 7 || digits > 15) errors[input.name] = 'phone';
-      }
+      else if (v && input.type === 'email' && !emailOk(v)) errors[input.name] = 'email';
+      else if (v && input.type === 'tel' && !indianMobile(v)) errors[input.name] = 'phone';
     });
     return errors;
   }
@@ -94,13 +109,25 @@ export default class ContactForm {
     this.moving = false;
   }
 
-  onSubmit = (e) => {
+  onSubmit = async (e) => {
     e.preventDefault();
     if (this.busy) return;
 
     const data = {};
     new FormData(this.form).forEach((v, k) => { data[k] = String(v).trim(); });
     const errors = this.check(data);
+
+    /* The shape is right: does mail reach that domain? (A moment, with the
+       button held; a lookup that can't be made says yes.) */
+    if (!errors.email && data.email) {
+      this.busy = true;
+      this.button.disabled = true;
+      const ok = await domainTakesMail(data.email.slice(data.email.lastIndexOf('@') + 1));
+      this.busy = false;
+      this.button.disabled = false;
+      if (!ok) errors.email = 'emailDomain';
+    }
+
     this.showErrors(errors);   // (also clears any left from a try before)
     if (Object.keys(errors).length) return;
     this.status.classList.remove('is-error');

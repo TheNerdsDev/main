@@ -55,6 +55,8 @@ export default class Info extends Page {
         b.setAttribute('aria-expanded', String(i === k));
       });
       details.forEach((d, i) => d.classList.toggle('is-open', i === k));
+      /* Found out: the hint and the pluses' ripple are done (pages.css). */
+      work.classList.add('was-opened');
       if (was < 0) {
         /* Opening: straight to the row (the slide-out hides the move). */
         panel.style.transition = 'none';

@@ -258,6 +258,16 @@ h1 {
   backdrop-filter: blur(24px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
+/* Touch screens: the frost is redrawn on every frame the sky moves behind
+   it, and a wide blur is costly for a phone's GPU — a lighter one, with a
+   little more of the background colour so nothing beneath can be read. */
+@media (hover: none) and (pointer: coarse) {
+  .site-header {
+    background: rgba(var(--c-bg-rgb), 0.6);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+  }
+}
 /* The logo (traced from the brand artwork, content/logo.js). The rocket
    that leaves the R is white with a difference blend: white against the
    sky, dark over the letters — like the cut-out it flies out of. */
@@ -322,6 +332,8 @@ h1 {
 /* Phones: the three links fold away behind a three-line button, and open
    as a panel under the bar (core/App.js bindMenu). */
 .menu-toggle { display: none; }
+/* (Phones only: the open menu's moons and foot, below.) */
+.nav-moons, .nav-foot { display: none; }
 
 @media screen and (max-width: 767px) {
   .menu-toggle {
@@ -339,48 +351,207 @@ h1 {
     width: 100%; height: 2px;
     border-radius: 2px;
     background: var(--c-ink);
-    transition: transform 0.45s var(--ease-out), opacity 0.3s var(--ease-out);
+    /* A little overshoot: the lines snap into the cross (and back). */
+    transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s var(--ease-out);
   }
+  .menu-toggle { transition: transform 0.25s var(--ease-out); }
+  .menu-toggle:active { transform: scale(0.88); }
   /* Open: the lines fold into a cross. */
   .site-header.is-open .menu-toggle-line:nth-child(1) { transform: translateY(calc(0.6rem + 2px)) rotate(45deg); }
   .site-header.is-open .menu-toggle-line:nth-child(2) { opacity: 0; transform: scaleX(0.2); }
   .site-header.is-open .menu-toggle-line:nth-child(3) { transform: translateY(calc(-0.6rem - 2px)) rotate(-45deg); }
   .menu-toggle:focus-visible { outline: 1px solid #0ACD88; outline-offset: 0.2rem; border-radius: 0.4rem; }
+  /* ...and a satellite circles it, on a faint dashed orbit: the cursor's
+     little star system (core/Cursor.js), here on phones. */
+  .menu-toggle-orbit {
+    position: absolute;
+    inset: 0.3rem;
+    border-radius: 50%;
+    border: 1px dashed rgba(var(--c-ink-rgb), 0.35);
+    opacity: 0;
+    transform: scale(0.4);
+    transition: opacity 0.3s var(--ease-out), transform 0.5s var(--ease-out);
+    pointer-events: none;
+  }
+  .menu-toggle-orbit::after {
+    content: '';
+    position: absolute;
+    top: -0.3rem; left: 50%;
+    width: 0.6rem; height: 0.6rem;
+    margin-left: -0.3rem;
+    border-radius: 50%;
+    background: #0ACD88;
+    box-shadow: 0 0 0.6rem rgba(10, 205, 136, 0.8);
+  }
+  .site-header.is-open .menu-toggle-orbit {
+    opacity: 1;
+    transform: scale(1);
+    animation: menu-orbit 3.2s linear infinite;
+    transition-delay: 0.15s;
+  }
+  @keyframes menu-orbit { to { rotate: 360deg; } }
 
-  /* The panel hangs from the bar and covers the screen beneath it. (Inside
-     the bar's backdrop blur it can't blur the page itself, so it's solid:
-     nothing of the page shows behind the links.) */
+  /* The panel: opened like a porthole onto space (an iris from the button
+     to the whole screen) and shut back into it. A starfield in it, a breath
+     of the two of us (blue, green) in its corners. (Inside the bar's
+     backdrop blur it can't blur the page itself, so it's solid.) */
   .nav {
+    /* Where the iris opens from: the button's centre (App.js bindMenu
+       measures it, and how far its farthest corner is; this is near
+       enough before it does). */
+    --iris-x: calc(100% - 3rem);
+    --iris-y: -3rem;
+    --iris-r: 160vmax;
     position: absolute;
     top: 100%; left: 0; right: 0;
-    height: 100vh;
-    height: 100svh;
+    height: calc(100vh - 100%);
+    height: calc(100svh - 100%);
     flex-direction: column;
     align-items: flex-start;
     justify-content: flex-start;
     gap: 2.6rem;
-    padding: 4.8rem var(--unit);
-    background: var(--c-bg);
-    opacity: 0;
+    padding: 4.8rem var(--unit) calc(3.2rem + env(safe-area-inset-bottom, 0px)) calc(var(--unit) + 3rem);
+    overflow: hidden;
+    counter-reset: navlink;
+    /* (Five sparse layers of odd, unrelated sizes, so no grid shows.) */
+    background:
+      radial-gradient(1.5px 1.5px at 23% 31%, rgba(var(--c-ink-rgb), 0.8), transparent) 0 0 / 173px 211px,
+      radial-gradient(1px 1px at 71% 64%, rgba(var(--c-ink-rgb), 0.45), transparent) 0 0 / 139px 157px,
+      radial-gradient(1.8px 1.8px at 46% 12%, rgba(var(--c-ink-rgb), 0.9), transparent) 0 0 / 293px 331px,
+      radial-gradient(1px 1px at 88% 79%, rgba(var(--c-ink-rgb), 0.35), transparent) 0 0 / 107px 191px,
+      radial-gradient(1.2px 1.2px at 9% 58%, rgba(var(--c-ink-rgb), 0.6), transparent) 0 0 / 241px 127px,
+      radial-gradient(120% 60% at 100% 0%, rgba(47, 140, 255, 0.11), transparent 60%),
+      radial-gradient(90% 55% at 0% 100%, rgba(10, 205, 136, 0.08), transparent 60%),
+      var(--c-bg);
+    clip-path: circle(0 at var(--iris-x) var(--iris-y));
     visibility: hidden;
-    transition: opacity 0.4s var(--ease-out), visibility 0s linear 0.4s;
+    /* Closing: at once, everything shrinking back into the button. */
+    transition: clip-path 0.5s cubic-bezier(0.4, 0, 0.2, 1), visibility 0s linear 0.5s;
   }
-  .site-header.is-open .nav { opacity: 1; visibility: visible; transition-delay: 0s; }
+  .site-header.is-open .nav {
+    clip-path: circle(var(--iris-r) at var(--iris-x) var(--iris-y));
+    visibility: visible;
+    transition: clip-path 0.85s cubic-bezier(0.65, 0, 0.2, 1), visibility 0s;
+  }
+  /* Opening, a jump to warp: streaks of starlight rush out from the
+     button and are gone. */
+  .nav::before {
+    content: '';
+    position: absolute;
+    left: var(--iris-x); top: var(--iris-y);
+    width: 260vmax; height: 260vmax;
+    translate: -50% -50%;
+    background: repeating-conic-gradient(from 0deg, transparent 0deg, rgba(var(--c-ink-rgb), 0.32) 0.35deg, transparent 0.8deg, transparent 6.5deg);
+    -webkit-mask: radial-gradient(circle, transparent 4%, #000 14%, #000 26%, transparent 40%);
+    mask: radial-gradient(circle, transparent 4%, #000 14%, #000 26%, transparent 40%);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .site-header.is-open .nav::before { animation: nav-warp 1.1s cubic-bezier(0.2, 0.6, 0.2, 1) both; }
+  @keyframes nav-warp {
+    0% { opacity: 0; transform: scale(0.15) rotate(0deg); }
+    22% { opacity: 1; }
+    100% { opacity: 0; transform: scale(1.4) rotate(6deg); }
+  }
+
+  /* The links fly in from the depths (small and soft, then sharp) one
+     after another, each numbered; closing, they're gone at once. */
   .nav .nav-link {
+    position: relative;
+    z-index: 1;
+    counter-increment: navlink;
     font-family: 'Anton', 'Arial Narrow', sans-serif;
     font-weight: 400;
     font-size: 5.6rem;
     letter-spacing: 0.012em;
     text-transform: uppercase;
     opacity: 0;
-    translate: 0 2rem;
-    transition: color 0.4s var(--ease-out), opacity 0.5s var(--ease-out), translate 0.6s var(--ease-out);
+    transform: translate3d(0, 2.4rem, 0) scale(0.86);
+    transform-origin: 0 100%;
+    filter: blur(6px);
+    transition: color 0.4s var(--ease-out), opacity 0.2s var(--ease-out), transform 0.2s var(--ease-out), filter 0.2s var(--ease-out);
+  }
+  .nav .nav-link::before {
+    content: counter(navlink, decimal-leading-zero);
+    position: absolute;
+    top: 0.9rem; right: calc(100% + 1rem);
+    font-family: 'Syne Mono', monospace;
+    font-size: 1.1rem;
+    letter-spacing: 0.08em;
+    color: #0ACD88;
   }
   .nav .nav-link .roll { line-height: 1.1; }
-  .site-header.is-open .nav-link { opacity: 1; translate: 0 0; }
-  .site-header.is-open .nav-link:nth-child(2) { transition-delay: 0s, 0.06s, 0.06s; }
-  .site-header.is-open .nav-link:nth-child(3) { transition-delay: 0s, 0.12s, 0.12s; }
+  .site-header.is-open .nav-link {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+    transition: color 0.4s var(--ease-out), opacity 0.6s var(--ease-out) var(--d, 0.25s), transform 0.9s var(--ease-out) var(--d, 0.25s), filter 0.7s var(--ease-out) var(--d, 0.25s);
+  }
+  .site-header.is-open a.nav-link:nth-of-type(1) { --d: 0.25s; }
+  .site-header.is-open a.nav-link:nth-of-type(2) { --d: 0.34s; }
+  .site-header.is-open a.nav-link:nth-of-type(3) { --d: 0.43s; }
   .nav .roll-link.is-current::after { bottom: -0.2rem; height: 2px; }
+
+  /* At the foot: how to reach us, in last. */
+  .nav-foot {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    margin-top: auto;
+    margin-left: -3rem;
+    font-family: var(--font-subtext);
+    font-size: 1.6rem;
+    opacity: 0;
+    translate: 0 1.2rem;
+    transition: opacity 0.2s var(--ease-out), translate 0.2s var(--ease-out);
+  }
+  .site-header.is-open .nav-foot { opacity: 1; translate: 0 0; transition: opacity 0.6s var(--ease-out) 0.6s, translate 0.8s var(--ease-out) 0.6s; }
+  .nav-foot-label {
+    font-family: 'Syne Mono', monospace;
+    font-size: 1.15rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #0ACD88;
+  }
+  .nav-foot-mail { color: var(--c-ink); text-decoration: underline; text-decoration-color: rgba(var(--c-ink-rgb), 0.3); text-underline-offset: 0.3em; }
+  .nav-foot-social { display: flex; gap: 2.4rem; color: rgba(var(--c-ink-rgb), 0.72); }
+
+  /* Moons, tossed up from the bottom and falling back, over and over: each
+     its own size, height, rhythm and spin (generate-pages.mjs MENU_MOONS).
+     Up slowing, down speeding, as anything thrown. Only while the menu is
+     open; never in the way of a tap. */
+  .nav-moons { display: block; position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+  .nav-moons i {
+    position: absolute;
+    left: var(--x);
+    bottom: calc(var(--s) * -1.2);
+    width: var(--s); height: var(--s);
+    background: center / contain no-repeat;
+    animation: moon-toss var(--d) var(--delay) infinite;
+    animation-play-state: paused;
+    will-change: transform;
+  }
+  /* (Closing too: frozen mid-air while the iris shuts they looked stuck.) */
+  .site-header.is-open .nav-moons i,
+  .site-header.is-closing .nav-moons i { animation-play-state: running; }
+  @keyframes moon-toss {
+    0% { transform: translate3d(0, 0, 0) rotate(0deg); animation-timing-function: cubic-bezier(0.5, 1, 0.89, 1); }
+    50% { transform: translate3d(var(--dx), calc(var(--h) * -1svh), 0) rotate(calc(var(--spin) / 2)); animation-timing-function: cubic-bezier(0.11, 0, 0.5, 0); }
+    100% { transform: translate3d(calc(var(--dx) * 2), 0, 0) rotate(var(--spin)); }
+  }
+}
+
+/* Asked for less motion: the menu simply fades in, the links with it; no
+   iris, warp, satellite or moons. */
+@media screen and (max-width: 767px) and (prefers-reduced-motion: reduce) {
+  .nav { clip-path: none; opacity: 0; transition: opacity 0.3s var(--ease-out), visibility 0s linear 0.3s; }
+  .site-header.is-open .nav { clip-path: none; opacity: 1; transition: opacity 0.3s var(--ease-out), visibility 0s; }
+  .site-header.is-open .nav::before { animation: none; }
+  .nav .nav-link, .site-header.is-open .nav-link { transform: none; filter: none; }
+  .site-header.is-open .menu-toggle-orbit { animation: none; }
+  .nav-moons { display: none; }
 }
 
 /* =================================================================

@@ -97,19 +97,49 @@ const roll = (text) =>
 const navItem = (href, label, on, inside) =>
   `<a class="nav-link roll-link${on ? ' is-current' : ''}${on && inside ? ' is-inside' : ''}" href="${href}" data-link aria-label="${esc(label)}"${on ? ' aria-current="page"' : ''}>${roll(label)}</a>`;
 
+/* The phone menu's moons (base.css .nav-moons): tossed up from the bottom
+   and falling back, over and over — each its own size (rem), height (of
+   the screen), rhythm, drift and spin, and one of four faces
+   (public/media/menu). Decoration only. */
+const MENU_MOONS = [
+  { img: 1, x: 7, s: 3.4, h: 46, d: 3.4, delay: -0.6, dx: 10, spin: 120 },
+  { img: 3, x: 24, s: 2.6, h: 30, d: 2.6, delay: -1.9, dx: -8, spin: -150 },
+  { img: 2, x: 42, s: 4, h: 54, d: 3.9, delay: -2.8, dx: 6, spin: 90 },
+  { img: 4, x: 60, s: 2.8, h: 36, d: 2.9, delay: -0.2, dx: -10, spin: -110 },
+  { img: 1, x: 76, s: 3.6, h: 48, d: 3.6, delay: -1.3, dx: -6, spin: 140 },
+  { img: 3, x: 89, s: 2.4, h: 26, d: 2.4, delay: -2.1, dx: 8, spin: -100 }
+];
+const menuMoons = () => `<div class="nav-moons" aria-hidden="true">${MENU_MOONS.map((m) =>
+  `<i style="--x: ${m.x}%; --s: ${m.s}rem; --h: ${m.h}; --d: ${m.d}s; --delay: ${m.delay}s; --dx: ${m.dx}px; --spin: ${m.spin}deg; background-image: url(/media/menu/moon-${m.img}.webp)"></i>`).join('')}</div>`;
+
 const header = (current, inside = false) => `  <header class="site-header">
     <!-- Hover: the letters jump one by one and the rocket flies a lap (fx/LogoRocket.js). -->
     <a class="logo" href="/" data-link aria-label="${esc(studio.wordmark)} — home">${logoSvg({ id: 'site-logo' })}</a>
-    <!-- Phones: the links fold into a panel behind this (core/App.js bindMenu). -->
+    <!-- Phones: the links fold into a panel behind this (core/App.js bindMenu);
+         open, a satellite circles the cross (base.css). -->
     <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Open menu">
       <span class="menu-toggle-line"></span><span class="menu-toggle-line"></span><span class="menu-toggle-line"></span>
+      <span class="menu-toggle-orbit" aria-hidden="true"></span>
     </button>
     <nav class="nav" id="site-nav" aria-label="Primary">
+      ${menuMoons()}
       ${navItem('/work/', 'Work', current === 'projects', inside)}
       ${navItem('/info/', 'About', current === 'info')}
       ${navItem('/contact/', studio.contactLabel || 'Contact', current === 'contact')}
+      <!-- Phones only: at the foot of the open menu, how to reach us. -->
+      <div class="nav-foot">
+        <span class="nav-foot-label">${esc(contact.title[0])}</span>
+        <a class="nav-foot-mail" href="mailto:${esc(studio.email)}">${esc(studio.email)}</a>
+        <span class="nav-foot-social">${studio.social.map((s) => `<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.label)} ↗</a>`).join('')}</span>
+      </div>
     </nav>
   </header>`;
+
+/* Where a wider-than-its-picture frame keeps the picture (`thumbFocus` in
+   the CMS, 0 = its top … 1 = its bottom; left out: the middle): the Work
+   page's cards are 1.62 : 1, the thumbnails 4 : 3, so each shows a
+   stretch of its thumbnail and this picks which. (gl/MediaMesh.js) */
+const focusAttr = (p) => (Number.isFinite(p.thumbFocus) ? ` data-focus="${Math.min(1, Math.max(0, p.thumbFocus))}"` : '');
 
 const mediaBlock = (src, alt, extra = '') =>
   `<div class="media-wrapper" data-media ${extra}><img class="media" src="${src}" alt="${esc(alt)}" loading="lazy" decoding="async" /></div>`;
@@ -119,8 +149,8 @@ const mediaBlock = (src, alt, extra = '') =>
    everywhere. (An empty frame holds the layout; with no data-media, WebGL
    leaves it alone.) */
 const WORK_PHOTOS = false;
-const workMedia = (p, src, alt) =>
-  WORK_PHOTOS || p.photos ? mediaBlock(src, alt) : '<div class="media-wrapper is-empty" aria-hidden="true"></div>';
+const workMedia = (p, src, alt, extra = '') =>
+  WORK_PHOTOS || p.photos ? mediaBlock(src, alt, extra) : '<div class="media-wrapper is-empty" aria-hidden="true"></div>';
 
 const splitTitle = (lines) =>
   lines.map((l) => `<span class="line"><span class="line-inner">${esc(l)}</span></span>`).join('\n        ');
@@ -220,8 +250,14 @@ const showcaseSection = () => {
     : '';
   /* The first `showcase.count` projects (CMS: Home page). */
   const shown = projects.slice(0, Math.max(1, Math.min(showcase.count || projects.length, projects.length)));
+  /* The stretch of the video a hover plays (fx/WaterReveal.js): past its
+     title screen, which the thumbnail already shows. */
+  const span = (p) => `${p.videoFrom > 0 ? ` data-video-from="${Number(p.videoFrom)}"` : ''}${p.videoTo > 0 ? ` data-video-to="${Number(p.videoTo)}"` : ''}`;
+  /* Every card is still and whole (is-still): the CMS makes each thumbnail
+     at the card's exact 4:3, so nothing about it is cropped here — no
+     overscan, no sideways drift cutting off its edges. */
   const cards = shown
-    .map((p, i) => `          <a class="show-card${p.screenshot ? ' is-still' : ''}" href="/work/${p.slug}/" data-link data-cursor="View"${p.video ? ` data-video="${esc(p.video)}"` : ''} style="--accent: ${p.accent}">
+    .map((p, i) => `          <a class="show-card is-still" href="/work/${p.slug}/" data-link data-cursor="View"${p.video ? ` data-video="${esc(p.video)}"${span(p)}` : ''} style="--accent: ${p.accent}">
             <span class="show-card-inner">
               <span class="show-card-media"><img class="show-card-img" src="/media/${p.slug}/featured.jpg"${srcset(p.slug)} alt="${esc(p.name)}" loading="lazy" decoding="async" /></span>
               <span class="show-card-meta">
@@ -243,8 +279,15 @@ const showcaseSection = () => {
           </div>
           <span class="showcase-count" aria-hidden="true"><span class="showcase-count-now">01</span> / ${pad(shown.length)}</span>
         </div>
-        <div class="showcase-track">
+        <div class="showcase-rail">
+          <div class="showcase-track">
 ${cards}
+          </div>
+          <!-- Touch tablets: the cards are swiped, not scrolled past — this says so, until they are (Main.js). -->
+          <div class="showcase-swipe" aria-hidden="true">
+            <svg class="showcase-swipe-hand" viewBox="0 0 24 24"><path d="M22 14a8 8 0 0 1-8 8"/><path d="M18 11v-1a2 2 0 0 0-2-2a2 2 0 0 0-2 2"/><path d="M14 10V9a2 2 0 0 0-2-2a2 2 0 0 0-2 2v1"/><path d="M10 9.5V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v10"/><path d="M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>
+            <span class="showcase-swipe-text">Swipe for more</span>
+          </div>
         </div>
         <div class="showcase-progress" aria-hidden="true"><span class="showcase-progress-bar"></span></div>
       </div>
@@ -291,7 +334,7 @@ const mainPage = () => {
       </figure>`;
 
   return shell({
-    title: `${studio.name} — ${studio.tagline}`,
+    title: studio.name,
     description: studio.description,
     pageId: 'main',
     body: `<div class="page" id="main" data-page="main">
@@ -357,7 +400,7 @@ const projectsPage = () => {
     .map(
       (p, i) => `        <li class="project-item">
           <a class="project" href="/work/${p.slug}/" data-link data-project="${i}" aria-label="${esc(p.name)}">
-            ${mediaBlock(`/media/${p.slug}/featured.jpg`, p.name, `data-video="/media/${p.slug}/preview.jpg"`)}
+            ${mediaBlock(`/media/${p.slug}/featured.jpg`, p.name, `data-video="/media/${p.slug}/preview.jpg"${focusAttr(p)}`)}
             <span class="project-meta"><span class="project-name">${esc(p.name)}</span><span class="project-year">${esc(p.year)}</span></span>
           </a>
         </li>`
@@ -375,12 +418,12 @@ const projectsPage = () => {
   const previews = projects
     .map(
       (p, i) =>
-        `          <div class="media-wrapper" data-media data-preview="${i}"><img class="media" src="/media/${p.slug}/featured.jpg" alt="" loading="lazy" decoding="async" /></div>`
+        `          <div class="media-wrapper" data-media data-preview="${i}"${focusAttr(p)}><img class="media" src="/media/${p.slug}/featured.jpg" alt="" loading="lazy" decoding="async" /></div>`
     )
     .join('\n');
 
   return shell({
-    title: `${studio.name} — Work`,
+    title: 'Work',
     description: studio.description,
     pageId: 'projects',
     body: `<div class="page" id="projects" data-page="projects">
@@ -460,7 +503,7 @@ ${header('projects', true)}
       ${certs[0] ? cert(certs[0], 'left') : ''}
       ${p.pageVideo && p.video
         ? `<div class="work-film"><video class="work-film-video" src="${esc(p.video)}" autoplay muted loop playsinline preload="auto" aria-label="${esc(p.name)}, a walkthrough"></video></div>`
-        : workMedia(p, `/media/${p.slug}/featured.jpg`, p.name)}
+        : workMedia(p, `/media/${p.slug}/featured.jpg`, p.name, focusAttr(p).trim())}
       ${certs[1] ? cert(certs[1], 'right') : ''}
     </div>
 
@@ -521,9 +564,14 @@ const offerCard = ({ title, items }) => infoCard('offer', title,
    beside the box, level with the row, on a wide screen with a mouse;
    under it otherwise (pages.css, Info.js). The panels share one place:
    only the open one shows. */
+/* Under the box (phones, tablets): a nudge that the rows open, gone once
+   one has been (pages.css .info-work-hint). The buttons say so themselves
+   to a screen reader (aria-expanded), so it's hidden from one. */
+const WORK_HINT = '<p class="info-work-hint" aria-hidden="true"><span class="info-work-hint-ping"></span>'
+  + '<span class="info-work-hint-tap">Tap one to peek inside</span><span class="info-work-hint-click">Click one to peek inside</span></p>';
 const workCard = ({ title, kinds }) => {
   const no = (k) => String(k + 1).padStart(2, '0');
-  const rows = kinds.map((kind, k) => `<li style="--j: ${k}"><button class="info-work-kind" type="button" data-kind="${k}" aria-expanded="false" aria-controls="info-work-${k}"><span class="info-card-rise"><span class="info-work-no">${no(k)}</span><span class="info-work-name">${esc(kind.name)}</span><span class="info-work-arrow" aria-hidden="true">→</span></span></button></li>`).join('');
+  const rows = kinds.map((kind, k) => `<li style="--j: ${k}"><button class="info-work-kind" type="button" data-kind="${k}" aria-expanded="false" aria-controls="info-work-${k}"><span class="info-card-rise"><span class="info-work-no">${no(k)}</span><span class="info-work-name">${esc(kind.name)}</span><span class="info-work-arrow" aria-hidden="true">→</span><span class="info-work-plus" aria-hidden="true"></span></span></button></li>`).join('');
   const panels = kinds.map((kind, k) => `
               <div class="info-work-detail" id="info-work-${k}" role="region" aria-label="${esc(kind.name)}">
                 <p class="info-work-head" style="--k: 0"><span class="info-work-no">${no(k)}</span> ${esc(kind.name)}</p>
@@ -531,7 +579,7 @@ const workCard = ({ title, kinds }) => {
                 <ul class="info-work-items">${kind.items.map((x, j) => `<li style="--k: ${j + 2}">${esc(x)}</li>`).join('')}</ul>
               </div>`).join('');
   return `        <div class="info-work">
-${infoCard('work', title, `<ol class="info-card-list info-work-list">${rows}</ol>`, 1)}
+${infoCard('work', title, `<ol class="info-card-list info-work-list">${rows}</ol>${WORK_HINT}`, 1)}
           <span class="info-work-line" aria-hidden="true"></span>
           <div class="info-work-panel">
             <div class="info-work-clip"><div class="info-work-box"><div class="info-work-details">${panels}
@@ -541,7 +589,7 @@ ${infoCard('work', title, `<ol class="info-card-list info-work-list">${rows}</ol
 };
 
 const infoPage = () => shell({
-  title: `${studio.name} — About`,
+  title: 'About',
   description: info.lead,
   pageId: 'info',
   body: `<div class="page" id="info" data-page="info">
@@ -621,7 +669,7 @@ const contactPage = () => {
     .join('');
 
   return shell({
-    title: `${studio.name} — Contact`,
+    title: studio.contactLabel,
     description: leadPlain,
     pageId: 'contact',
     body: `<div class="page" id="contact" data-page="contact">

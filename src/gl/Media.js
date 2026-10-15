@@ -6,6 +6,8 @@ import MediaMesh from './MediaMesh.js';
 /* How far the pointer swings the whole stack. Kept small: the stack's
    motion comes from scroll, the pointer only adds a hint of parallax. */
 const POINTER = { rotY: 0.035, rotX: 0.02, posX: -10, posZ: -6 };
+/* The gap between one index-rail preview and the next along its strip, px. */
+const PREVIEW_GAP = 8;
 
 /** Creates and owns every MediaMesh on the current page. */
 export default class Media {
@@ -83,10 +85,12 @@ export default class Media {
   }
 
   enter() {
-    /* Previews are driven by the index rail, not the page-enter stagger. */
     this.meshes
       .filter((m) => !m.isPreview)
       .forEach((m, i) => m.enter(i * 0.055));
+    /* The index rail's previews come in together, a little after the
+       cards; which one shows is the wheel's doing (placePreviews). */
+    this.previews.forEach((m) => m.enter(0.5));
   }
 
   leave() {
@@ -102,11 +106,24 @@ export default class Media {
     });
   }
 
-  /** Show the preview thumbnail for a project, or none when index is -1. */
-  showPreview(index) {
-    this.previews.forEach((m) => {
-      m.toggle(Number(m.el.dataset.preview) === index);
-    });
+  /**
+   * Slide the index rail's previews along the work wheel: `rels[i]` is
+   * how far preview i is from the frame, in frames (0 = in it, 1 = a frame
+   * below). Each is shifted that far (and a gap more) and the frame shows
+   * only what's inside it — so the strip moves exactly as the cards do.
+   */
+  placePreviews(rels) {
+    for (const m of this.previews) {
+      const rel = rels[Number(m.el.dataset.preview)];
+      if (rel === undefined) continue;
+      m.rel = rel;
+      m.dy = rel * (m.bounds.height + PREVIEW_GAP);
+    }
+  }
+
+  /** The rail has moved (it slides in): measure the previews again. */
+  remeasurePreviews() {
+    this.previews.forEach((m) => m.resize());
   }
 
   resize() {

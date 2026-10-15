@@ -18,7 +18,15 @@
  *   accent        the colour its page and card glow with
  *   video         plays in its card on hover ("" for none); with pageVideo,
  *                 it also leads its page
- *   screenshot    its thumbnail is a framed screenshot: shown whole, still
+ *   videoFrom, videoTo  (optional) on hover the card plays only this
+ *                 stretch of it, s — past a title screen the thumbnail
+ *                 already shows; no videoTo: to the end
+ *   screenshot    its thumbnail was kept whole on a backdrop (the CMS's
+ *                 "Keep it whole"); every home card shows its thumbnail
+ *                 whole and still either way
+ *   thumbFocus    (optional) which part of its thumbnail the Work page's
+ *                 wider cards keep: 0 = the top … 1 = the bottom (default
+ *                 0.5, the middle) — for one with a title near its top
  *   shots         how many detail shots it has (01.webp, 02.webp, …);
  *                 photos: false shows empty frames instead
  *   certificates  (optional) pinned either side of its page's video
@@ -134,7 +142,8 @@ export default {
       ],
       "shots": 3,
       "photos": true,
-      "video": "/media/css-arena/preview.mp4"
+      "video": "/media/css-arena/preview.mp4",
+      "videoFrom": 2.5
     },
     {
       "slug": "taskpilot",
@@ -155,14 +164,16 @@ export default {
       "github": "https://github.com/premkajiwala-hub/Task-Pilot",
       "shots": 3,
       "photos": true,
-      "video": "/media/taskpilot/preview.mp4"
+      "video": "/media/taskpilot/preview.mp4",
+      "videoFrom": 3,
+      "videoTo": 19.9
     },
     {
       "slug": "mesa-kitchen",
       "name": "Mewar Sync",
       "year": "2026",
       "role": "Front-end Development",
-      "accent": "#B8343C",
+      "accent": "#D4A24C",
       "excerpt": "Restaurant & reservations",
       "description": "Mewar Sync is an AI-powered platform empowering traditional artisans through voice-based accounting, smart inventory management, financial tracking, and digital tools while preserving India's rich cultural heritage.",
       "deliverables": [
@@ -174,27 +185,35 @@ export default {
       "github": "https://github.com/premkajiwala-hub/Mewar_Sync.git",
       "shots": 3,
       "video": "/media/mesa-kitchen/preview.mp4",
+      "videoFrom": 3,
+      "videoTo": 19.9,
       "photos": true,
       "screenshot": false,
       "pageVideo": true
     },
     {
       "slug": "atlas-fitness",
-      "name": "Atlas Fitness",
-      "year": "2025",
+      "name": "Indus Brain",
+      "year": "2026",
       "role": "Design & Development",
-      "accent": "#1F8F6A",
+      "accent": "#8A8A8A",
       "excerpt": "Class booking platform",
-      "description": "A booking platform for a studio running forty classes a week. Members see a schedule that loads instantly; staff see a dashboard that replaced three spreadsheets.",
+      "description": "IndusBrain is an AI-powered knowledge platform for industrial plants. It reads manuals, logs and standards, builds a knowledge graph, and answers engineering questions with cited evidence, flagging contradictions between documents instead of guessing. Runs fully on your own machine.",
       "deliverables": [
         "Product design",
         "Booking platform",
         "Staff dashboard",
         "Automation"
       ],
-      "github": "",
+      "github": "https://github.com/indusbrain/indusbrain.git",
       "shots": 3,
-      "video": "/media/sample/preview.mp4"
+      "video": "/media/atlas-fitness/preview.mp4",
+      "photos": true,
+      "screenshot": false,
+      "pageVideo": true,
+      "thumbFocus": 0.05,
+      "videoFrom": 3,
+      "videoTo": 21.2
     }
   ]
 };

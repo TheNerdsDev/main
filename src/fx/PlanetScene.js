@@ -5,6 +5,7 @@ import {
   SRGBColorSpace, ACESFilmicToneMapping, RepeatWrapping,
   DoubleSide, BackSide, AdditiveBlending, DynamicDrawUsage
 } from 'three';
+import store from '../core/Store.js';
 
 /*
  * The planets of the closing shower, drawn with three.js.
@@ -377,7 +378,7 @@ export default class PlanetScene {
   resize(w, h) {
     this.w = w;
     this.h = h;
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    this.renderer.setPixelRatio(store.fxDpr);
     this.renderer.setSize(w, h, false);
     const c = this.camera;
     c.left = 0;

@@ -1,6 +1,8 @@
 import {
   Points, Mesh, PlaneGeometry, BufferGeometry, BufferAttribute,
-  ShaderMaterial, AdditiveBlending, Color, Vector2
+  ShaderMaterial, AdditiveBlending, Color, Vector2,
+  WebGLRenderTarget, HalfFloatType, RGBAFormat, LinearFilter, NoColorSpace,
+  Scene, OrthographicCamera
 } from 'three';
 import store from '../core/Store.js';
 
@@ -8,6 +10,17 @@ import vertexShader from './shaders/stars.vert';
 import fragmentShader from './shaders/stars.frag';
 import skyVertex from './shaders/quad.vert';
 import skyFragment from './shaders/sky.frag';
+import nebulaFragment from './shaders/nebula.frag';
+
+/* The band's clouds are drawn into their own small image (nebula.frag):
+   at this share of the screen's CSS size, redrawn every NEBULA_EVERY
+   frames. Drawn into every pixel of every frame instead, they were most
+   of the frame on a laptop's GPU (≈17 ms of it on an Iris Xe, measured —
+   the whole of a 60 fps frame). The image covers NEBULA_SPAN of the
+   screen, so the pointer's parallax only shifts it. */
+const NEBULA_SCALE = 0.5;
+const NEBULA_EVERY = 4;
+const NEBULA_SPAN = 1.05;
 
 /* The galaxy's band runs up and to the right across the screen. Stars are
    placed in the same height-normalised screen space the sky shader uses,
@@ -50,6 +63,43 @@ export default class Stars {
   /* ------------------------------------------------------------- sky */
 
   createSky() {
+    /* The clouds, into their own small image (see NEBULA_SCALE). */
+    this.nebulaRT = new WebGLRenderTarget(1, 1, {
+      type: HalfFloatType,
+      format: RGBAFormat,
+      minFilter: LinearFilter,
+      magFilter: LinearFilter,
+      depthBuffer: false,
+      stencilBuffer: false
+    });
+    this.nebulaRT.texture.colorSpace = NoColorSpace;
+    this.nebulaMaterial = new ShaderMaterial({
+      vertexShader: skyVertex,
+      fragmentShader: nebulaFragment,
+      depthTest: false,
+      depthWrite: false,
+      defines: { OCTAVES: store.isMobile ? 3 : 5 },
+      uniforms: {
+        uTime:     this.world.uniforms.uTime,
+        uRes:      this.world.uniforms.uRes,
+        uSpan:     { value: NEBULA_SPAN },
+        uBandDir:  { value: BAND_DIR },
+        uBandWidth:{ value: BAND_WIDTH },
+        /* Neutral greys — a black sky with a faint milky band, no tint. */
+        uBand:     { value: new Color('#9A9CA3') },
+        uHaze:     { value: new Color('#C9CACF') }
+      }
+    });
+    const quad = new Mesh(new PlaneGeometry(2, 2), this.nebulaMaterial);
+    quad.frustumCulled = false;
+    this.nebulaScene = new Scene();
+    this.nebulaScene.add(quad);
+    this.nebulaCamera = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    this.nebulaFrame = 0;
+    this.nebulaDirty = true;
+
+    /* The sky itself, every frame: the clouds looked up from their image,
+       and the shooting stars, at full resolution. */
     this.skyMaterial = new ShaderMaterial({
       vertexShader: skyVertex,
       fragmentShader: skyFragment,
@@ -57,18 +107,14 @@ export default class Stars {
       depthTest: false,
       depthWrite: false,
       blending: AdditiveBlending,
-      defines: { OCTAVES: store.isMobile ? 3 : 5 },
       uniforms: {
+        tNebula:   { value: this.nebulaRT.texture },
+        uSpan:     { value: NEBULA_SPAN },
         uTime:     this.world.uniforms.uTime,
         uIntro:    this.world.uniforms.uIntro,
         uRes:      this.world.uniforms.uRes,
         uDpr:      this.world.uniforms.uDpr,
-        uPointer:  { value: this.pointer },
-        uBandDir:  { value: BAND_DIR },
-        uBandWidth:{ value: BAND_WIDTH },
-        /* Neutral greys — a black sky with a faint milky band, no tint. */
-        uBand:     { value: new Color('#9A9CA3') },
-        uHaze:     { value: new Color('#C9CACF') }
+        uPointer:  { value: this.pointer }
       }
     });
     this.sky = new Mesh(new PlaneGeometry(2, 2), this.skyMaterial);
@@ -156,6 +202,19 @@ export default class Stars {
   /** Positions are in screen heights — scale them into world pixels. */
   resize() {
     this.points?.scale.set(store.height, store.height, 1);
+    const k = NEBULA_SCALE * NEBULA_SPAN;
+    this.nebulaRT.setSize(Math.max(1, Math.round(store.width * k)), Math.max(1, Math.round(store.height * k)));
+    this.nebulaDirty = true;
+  }
+
+  /** The clouds, into their image (World.loop calls loop() before it draws the frame). */
+  drawNebula() {
+    const r = this.world.renderer;
+    const target = r.getRenderTarget();
+    r.setRenderTarget(this.nebulaRT);
+    r.render(this.nebulaScene, this.nebulaCamera);
+    r.setRenderTarget(target);
+    this.nebulaDirty = false;
   }
 
   loop() {
@@ -165,6 +224,9 @@ export default class Stars {
     this.points.position.y += (store.mouse.y * -40 - this.points.position.y) * k;
     this.pointer.x += (store.mouse.x - this.pointer.x) * k;
     this.pointer.y += (store.mouse.y - this.pointer.y) * k;
+    /* The clouds drift too slowly for every frame to differ. */
+    this.nebulaFrame = (this.nebulaFrame + 1) % NEBULA_EVERY;
+    if (this.nebulaDirty || this.nebulaFrame === 0) this.drawNebula();
   }
 
   destroy() {
@@ -174,5 +236,8 @@ export default class Stars {
     this.material.dispose();
     this.sky.geometry.dispose();
     this.skyMaterial.dispose();
+    this.nebulaScene.children[0].geometry.dispose();
+    this.nebulaMaterial.dispose();
+    this.nebulaRT.dispose();
   }
 }

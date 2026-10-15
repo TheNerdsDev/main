@@ -20,7 +20,7 @@ export const studio = {
   available: 'January 2027',
   year: '2026',
   social: [
-    { label: 'Instagram', url: 'https://instagram.com/' },
+    { label: 'Instagram', url: 'https://www.instagram.com/thenerds.dev/' },
     { label: 'LinkedIn', url: 'https://www.linkedin.com/company/145305179/' }
   ]
 };
@@ -164,7 +164,8 @@ export const contact = {
     errors: {
       required: 'Please fill this in.',
       email: "That doesn't look like an email address.",
-      phone: "That doesn't look like a phone number.",
+      emailDomain: "We couldn't find that email's domain. Please check how it's spelled.",
+      phone: 'Enter a 10-digit Indian mobile number, starting with 6, 7, 8 or 9.',
       long: "That's a little too long."
     }
   }

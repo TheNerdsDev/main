@@ -140,7 +140,9 @@ export default class World {
       store.mouseScreen.y = 1 - y;
       store.mouse.x = x * 2 - 1;
       store.mouse.y = -(y * 2 - 1);
-      this.ink.setPointer(x, 1 - y);
+      /* A finger on a touch screen is scrolling, not stirring: no smoke
+         under it (nor the cost of the trail for every scroll). */
+      if (e.pointerType !== 'touch') this.ink.setPointer(x, 1 - y);
     };
     window.addEventListener('pointermove', this.onPointerMove, { passive: true });
 
@@ -180,6 +182,8 @@ export default class World {
         jobs.push(r.compileAsync(this.scene, this.camera));
         r.setRenderTarget(this.ink.write);
         jobs.push(r.compileAsync(this.ink.scene, this.ink.camera));
+        r.setRenderTarget(this.stars.nebulaRT);
+        jobs.push(r.compileAsync(this.stars.nebulaScene, this.stars.nebulaCamera));
         r.setRenderTarget(null);
         jobs.push(r.compileAsync(this.quadScene, this.quadCamera));
       } catch {
