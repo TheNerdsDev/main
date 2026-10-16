@@ -142,7 +142,7 @@ export function ffmpegVersion() {
 /** Length and size of a video, from ffmpeg's own report. */
 export function inspectVideo(file) {
   return new Promise((resolve, reject) => {
-    execFile(FFMPEG, ['-hide_banner', '-i', file], (err, stdout, stderr) => {
+    execFile(FFMPEG, ['-hide_banner', '-nostdin', '-i', file], (err, stdout, stderr) => {
       const text = String(stderr);
       const dur = text.match(/Duration:\s*(\d+):(\d+):([\d.]+)/);
       const vid = text.match(/Stream #[^\n]*Video:[^\n]*?(\d{2,5})x(\d{2,5})/);
@@ -186,14 +186,17 @@ function encode(input, output, mode, seconds, onProgress, hdr) {
   const tone = hdr
     ? 'zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=mobius:param=0.3:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p,'
     : '';
+  /* (The HDR tone-map runs after the picture is down to size: a phone's
+     4K frame is five times the pixels.) */
+  const toneEnd = tone ? `,${tone.slice(0, -1)}` : '';
   const filter = mode === 'fit'
-    ? `[0:v]${tone}split[src1][src2];`
-      + `[src1]scale=${w / 4}:${h / 4}:force_original_aspect_ratio=increase,crop=${w / 4}:${h / 4},boxblur=10:2,scale=${w}:${h},setsar=1,eq=brightness=-0.18:saturation=0.85[bg];`
-      + `[src2]scale=${w}:${h}:force_original_aspect_ratio=decrease,setsar=1[fg];`
+    ? `[0:v]split[src1][src2];`
+      + `[src1]scale=${w / 4}:${h / 4}:force_original_aspect_ratio=increase,crop=${w / 4}:${h / 4},${tone}boxblur=10:2,scale=${w}:${h},setsar=1,eq=brightness=-0.18:saturation=0.85[bg];`
+      + `[src2]scale=${w}:${h}:force_original_aspect_ratio=decrease,setsar=1${toneEnd}[fg];`
       + `[bg][fg]overlay=(W-w)/2:(H-h)/2,fps=${fps},${BT709},format=yuv420p[v]`
-    : `[0:v]${tone}scale=${w}:${h}:force_original_aspect_ratio=increase,crop=${w}:${h},setsar=1,fps=${fps},${BT709},format=yuv420p[v]`;
+    : `[0:v]scale=${w}:${h}:force_original_aspect_ratio=increase,crop=${w}:${h},setsar=1,${tone}fps=${fps},${BT709},format=yuv420p[v]`;
   const args = [
-    '-hide_banner', '-y', '-i', input, '-t', String(length),
+    '-hide_banner', '-nostdin', '-y', '-i', input, '-t', String(length),
     '-filter_complex', filter, '-map', '[v]', '-an',
     '-c:v', 'libx264', '-preset', 'slow', '-crf', '21', '-profile:v', 'high',
     '-maxrate', '5000k', '-bufsize', '10000k', '-pix_fmt', 'yuv420p',
@@ -201,7 +204,10 @@ function encode(input, output, mode, seconds, onProgress, hdr) {
     '-movflags', '+faststart', '-progress', 'pipe:1', '-nostats', output
   ];
   return new Promise((resolve, reject) => {
-    const run = spawn(FFMPEG, args, { windowsHide: true });
+    /* (No keyboard input — '-nostdin', and stdin not even opened. Started
+       from Node with an open stdin, ffmpeg kept polling it for commands and
+       ran ~30x slower: 168 s for a clip it does in 5.) */
+    const run = spawn(FFMPEG, args, { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
     let err = '';
     run.stdout.on('data', (chunk) => {
       const m = String(chunk).match(/out_time_us=(\d+)/g);
@@ -220,7 +226,7 @@ const FADE_OUT = 0.6;
 /** One frame at time t, tiny and grey, for telling two frames apart. */
 function frameAt(file, t) {
   return new Promise((resolve) => {
-    execFile(FFMPEG, ['-hide_banner', '-v', 'error', '-ss', String(Math.max(0, t)), '-i', file, '-frames:v', '1', '-vf', 'scale=64:48', '-f', 'rawvideo', '-pix_fmt', 'gray', '-'],
+    execFile(FFMPEG, ['-hide_banner', '-nostdin', '-v', 'error', '-ss', String(Math.max(0, t)), '-i', file, '-frames:v', '1', '-vf', 'scale=64:48', '-f', 'rawvideo', '-pix_fmt', 'gray', '-'],
       { encoding: 'buffer', maxBuffer: 1 << 20, windowsHide: true }, (err, out) => resolve(err ? null : out));
   });
 }
@@ -260,7 +266,7 @@ export async function detectStretch(file, seconds) {
 /** freezedetect's stills: [{ start, end }] (end null when it runs to the end). */
 function freezes(file) {
   return new Promise((resolve) => {
-    execFile(FFMPEG, ['-hide_banner', '-nostats', '-i', file, '-vf', 'scale=320:-2,freezedetect=n=-50dB:d=0.6', '-an', '-f', 'null', '-'],
+    execFile(FFMPEG, ['-hide_banner', '-nostdin', '-nostats', '-i', file, '-vf', 'scale=320:-2,freezedetect=n=-50dB:d=0.6', '-an', '-f', 'null', '-'],
       { maxBuffer: 1 << 24, windowsHide: true }, (err, stdout, stderr) => {
         if (err) return resolve([]);
         const text = String(stderr);
