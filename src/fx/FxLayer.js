@@ -1,4 +1,5 @@
 import gsap from 'gsap';
+import store from '../core/Store.js';
 
 /**
  * A full-screen 2D canvas above the page for short-lived effects —
@@ -27,8 +28,9 @@ export default class FxLayer {
 
   resize() {
     this.dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-    this.w = window.innerWidth;
-    this.h = window.innerHeight;
+    /* (The stable viewport, as tall as the canvas: core/Store.js.) */
+    this.w = store.width;
+    this.h = store.height;
     this.canvas.width = Math.round(this.w * this.dpr);
     this.canvas.height = Math.round(this.h * this.dpr);
     this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);

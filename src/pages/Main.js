@@ -783,8 +783,13 @@ export default class Main extends Page {
       /* Reveal the wrapper, never the button: the button's own scale and
          translate belong to the hover. */
       tl.fromTo(this.buttonWrap || this.button, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' }, buttonAt);
-      /* The label draws together from wide tracking as it arrives. */
-      tl.fromTo(this.buttonText, { letterSpacing: '0.7em', opacity: 0 }, { letterSpacing: '0.22em', opacity: 1, duration: 0.7, ease: 'power3.out' }, buttonAt + 0.1);
+      /* The label draws together from wide tracking as it arrives: each
+         letter slid out from the middle by --spread (em per letter,
+         main-page.css) — the look of 0.7em tracking closing to 0.22em,
+         moved rather than re-laid-out on every frame. */
+      const chars = this.buttonText?.querySelectorAll('.about-button-char').length || 0;
+      this.buttonText?.style.setProperty('--mid', String((chars - 1) / 2));
+      tl.fromTo(this.buttonText, { '--spread': 0.48, opacity: 0 }, { '--spread': 0, opacity: 1, duration: 0.7, ease: 'power3.out' }, buttonAt + 0.1);
     }
 
     /* A short hold so the finished section sits still before the page moves on. */

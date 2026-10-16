@@ -26,6 +26,12 @@ export default class Media {
 
   create(root = document, pageId = 'main') {
     this.destroyMeshes();
+    /* Phones show the photos as the images themselves (Store isPhone,
+       html.flat-media): no planes. */
+    if (store.isPhone) {
+      this.meshes = [];
+      return this.meshes;
+    }
 
     const isHome = pageId === 'projects';
     const colour = isHome ? 0 : 0.88;
