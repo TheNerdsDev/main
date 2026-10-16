@@ -12,8 +12,9 @@
   width: 100%; height: 100%;
   object-fit: cover;
 }
-html.webgl .media { visibility: hidden; }
-html.webgl .media-wrapper { background: none; }
+/* (Phones show the image itself — html.flat-media, core/Store.js isPhone.) */
+html.webgl:not(.flat-media) .media { visibility: hidden; }
+html.webgl:not(.flat-media) .media-wrapper { background: none; }
 /* A frame still waiting for its photo (scripts/generate-pages.mjs). */
 html .media-wrapper.is-empty {
   background: rgba(var(--c-ink-rgb), 0.04);

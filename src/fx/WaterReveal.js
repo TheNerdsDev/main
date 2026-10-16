@@ -356,6 +356,12 @@ export default class WaterReveal {
       if (Math.abs(v.currentTime - c.from) > 0.01) v.currentTime = c.from;
       c.fresh = true;
     };
+    /* The frame it's waiting on, on the GPU as soon as it's decoded —
+       when it has loaded, and each time it has been rewound while paused
+       (after a hover) — so the next hover opens on it, not on the
+       thumbnail, and nothing has to be uploaded in that first frame. */
+    v.addEventListener('loadeddata', () => { if (!v.seeking) this.upload(c); });
+    v.addEventListener('seeked', () => { if (v.paused) this.upload(c); });
     if (stretch) {
       /* Its first frame decoded and waiting before anyone hovers. */
       if (c.from > 0) v.addEventListener('loadedmetadata', c.rewind, { once: true });
@@ -380,6 +386,31 @@ export default class WaterReveal {
       };
       v.requestVideoFrameCallback(onFrame);
     }
+  }
+
+  /**
+   * The video's current frame onto card c's texture, if it has one to
+   * give. The first allocates the texture; after that each new frame is
+   * written into it in place.
+   */
+  upload(c) {
+    const v = c.video;
+    if (this.dead || !v || v.readyState < 2 || !v.videoWidth) return;
+    const gl = this.gl;
+    c.vtex ||= this.texture(0);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, c.vtex);
+    try {
+      if (c.vw === v.videoWidth && c.vh === v.videoHeight) {
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, v);
+      } else {
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, v);
+        c.vw = v.videoWidth;
+        c.vh = v.videoHeight;
+      }
+      c.hasFrame = true;
+      if (c.fresh) c.fresh = false;
+    } catch { /* a frame that can't be read yet */ }
   }
 
   texture(unit) {
@@ -497,26 +528,17 @@ export default class WaterReveal {
       /* The video frame — round to the start of its stretch at its end. */
       const v = c.video;
       if (c.to > 0 && v && v.currentTime >= c.to) c.rewind();
-      const ready = v && v.readyState >= 2 && v.videoWidth;
+      if (c.fresh !== false) this.upload(c);
       c.vtex ||= this.texture(0);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, c.vtex);
-      if (ready && c.fresh !== false) {
-        try {
-          /* The first frame allocates the texture; after that each new
-             frame is written into it in place. */
-          if (c.vw === v.videoWidth && c.vh === v.videoHeight) {
-            gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, v);
-          } else {
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, v);
-            c.vw = v.videoWidth;
-            c.vh = v.videoHeight;
-          }
-          if (c.fresh) c.fresh = false;
-        } catch { /* a frame that can't be read yet */ }
-      }
-      gl.uniform1f(this.u.uReady, ready ? 1 : 0);
-      gl.uniform2f(this.u.uVideoSize, ready ? v.videoWidth : 16, ready ? v.videoHeight : 9);
+      /* The water shows whatever frame the texture holds — even while the
+         video itself has none to give, as it does for a moment each time
+         it jumps back to the start of its stretch (looping round, or
+         rewound after a hover). Asking the video instead flashed the
+         thumbnail across the whole card for those moments. */
+      gl.uniform1f(this.u.uReady, c.hasFrame ? 1 : 0);
+      gl.uniform2f(this.u.uVideoSize, c.hasFrame ? c.vw : 16, c.hasFrame ? c.vh : 9);
 
       /* The thumbnail, uploaded once, placed exactly where the page shows it
          (it has its own parallax transform). */

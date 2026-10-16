@@ -1,4 +1,5 @@
 import gsap from 'gsap';
+import store from '../core/Store.js';
 import { team, main } from '../content/site.js';
 import SpaceRocks from './SpaceRocks.js';
 import { RockThrow, RockImpact } from './Rock.js';
@@ -489,7 +490,7 @@ export default class Duo {
   /** Where the rocks met (viewport px): the centre, and each rock as it was. */
   meeting() {
     return {
-      at: { x: window.innerWidth / 2, y: window.innerHeight / 2 },
+      at: { x: store.width / 2, y: store.height / 2 },
       rocks: this.actions.map((a) => ({ x: a.x, y: a.y, size: a.orbit.size }))
     };
   }
@@ -773,6 +774,8 @@ export default class Duo {
   }
 
   loop = () => {
+    /* (Under the open phone menu: unseen.) */
+    if (store.covered) return;
     const now = performance.now();
     const dt = Math.min((now - this.last) / 1000, 1 / 30);
     this.last = now;
@@ -834,8 +837,9 @@ export default class Duo {
     const hRy = a.size * 0.74;
 
     /* Travelling orbit: the same loop, round the middle of the screen. */
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
+    /* (The stable viewport — the address bar sliding doesn't move it.) */
+    const vw = store.width;
+    const vh = store.height;
     const tRx = Math.min(vw * 0.3, 460);
     const tRy = Math.min(vh * 0.3, 250);
 

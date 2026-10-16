@@ -1,0 +1,127 @@
+{
+  "base": "http://localhost:4190",
+  "label": "check-new",
+  "when": "2026-10-16T19:42:56.623Z",
+  "results": {
+    "pixel7@4x": {
+      "home": {
+        "scroll": {
+          "n": 2494,
+          "p50": 13.8,
+          "p95": 20.7,
+          "p99": 21.1,
+          "max": 124.9,
+          "over16": 5.49,
+          "over33": 0.32,
+          "missed": 56.7
+        },
+        "down": {
+          "n": 1084,
+          "p50": 13.8,
+          "p95": 20.8,
+          "p99": 27.8,
+          "max": 124.9,
+          "over16": 7.29,
+          "over33": 0.74,
+          "missed": 56.73
+        },
+        "up": {
+          "n": 1165,
+          "p50": 13.7,
+          "p95": 14.2,
+          "p99": 21,
+          "max": 27.9,
+          "over16": 4.21,
+          "over33": 0,
+          "missed": 55.45
+        },
+        "long": {
+          "count": 1,
+          "worst": 100,
+          "blocking": 50
+        },
+        "layoutShift": {
+          "cls": 0,
+          "sources": []
+        },
+        "rocksDown": {
+          "frames": 1084,
+          "empty": 0,
+          "pops": 1,
+          "maxJump": 32,
+          "bigJumps": 0,
+          "firstJumps": []
+        },
+        "rocksUp": {
+          "frames": 1165,
+          "empty": 0,
+          "pops": 0,
+          "maxJump": 38,
+          "bigJumps": 0,
+          "firstJumps": []
+        },
+        "rocksFlick": {
+          "frames": 245,
+          "empty": 0,
+          "pops": 1,
+          "maxJump": 108,
+          "bigJumps": 12,
+          "firstJumps": [
+            {
+              "t": 32925,
+              "y": 1777,
+              "piece": 9,
+              "px": 108
+            },
+            {
+              "t": 32925,
+              "y": 1777,
+              "piece": 10,
+              "px": 92
+            },
+            {
+              "t": 32959,
+              "y": 1851,
+              "piece": 36,
+              "px": 62
+            },
+            {
+              "t": 32959,
+              "y": 1851,
+              "piece": 38,
+              "px": 70
+            },
+            {
+              "t": 32973,
+              "y": 1863,
+              "piece": 19,
+              "px": 67
+            }
+          ]
+        }
+      },
+      "urlbar": {
+        "top": {
+          "titleMoved": 0,
+          "headerMoved": 0
+        },
+        "about": {
+          "scrollMoved": [
+            0,
+            0
+          ],
+          "rockPChange": 0,
+          "cellsReassigned": [
+            0,
+            0
+          ],
+          "fragmentShift": [
+            6,
+            13
+          ],
+          "aboutTextMutations": 0
+        }
+      }
+    }
+  }
+}

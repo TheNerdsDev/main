@@ -10,11 +10,29 @@
 export default class Finale {
   constructor(section) {
     this.section = section;
+    /* The planets bring the heading in with them each time they fall… */
     const reveal = () => {
+      /* (…unless it has come in already, waiting for them: see `early`.) */
+      if (this.textEarly) {
+        this.textEarly = false;
+        return;
+      }
       section.classList.remove('is-in');
       void section.offsetWidth;
       section.classList.add('is-in');
     };
+    /* …but never waits on them. Their maps (~1.7 MB on a phone) may still
+       be on their way the first time the section comes into view on a
+       slow connection: the heading, text and button come in at once then,
+       and the planets fall in when they're ready, without replaying it. */
+    this.early = new IntersectionObserver((entries) => {
+      if (!entries.some((e) => e.isIntersecting)) return;
+      if (this.planets && !this.planets.dead && this.planets.scene?.warmed) return;
+      if (section.classList.contains('is-in')) return;
+      section.classList.add('is-in');
+      this.textEarly = true;
+    }, { threshold: 0.3 });
+    this.early.observe(section);
     const canvas = section.querySelector('.planet-canvas');
     const plain = () => {
       if (this.destroyed || this.io) return;
@@ -42,5 +60,6 @@ export default class Finale {
     this.destroyed = true;
     this.planets?.destroy();
     this.io?.disconnect();
+    this.early.disconnect();
   }
 }

@@ -43,7 +43,10 @@ const shell = ({ title, description, pageId, body, bodyClass = '' }) => `<!docty
 <meta property="og:title" content="${esc(title)}" />
 <meta property="og:description" content="${esc(description)}" />
 <meta property="og:site_name" content="${esc(studio.name)}" />
-<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
+<link rel="icon" href="/favicon-48.png" type="image/png" sizes="48x48" />
+<link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <!-- The first paint, before the stylesheet arrives (in dev it's injected by
      script): dark, with the loader covering the page. The loader's contents
      stay hidden until base.css sets --styled, so nothing shows unstyled. -->
@@ -141,8 +144,18 @@ const header = (current, inside = false) => `  <header class="site-header">
    stretch of its thumbnail and this picks which. (gl/MediaMesh.js) */
 const focusAttr = (p) => (Number.isFinite(p.thumbFocus) ? ` data-focus="${Math.min(1, Math.max(0, p.thumbFocus))}"` : '');
 
-const mediaBlock = (src, alt, extra = '') =>
-  `<div class="media-wrapper" data-media ${extra}><img class="media" src="${src}" alt="${esc(alt)}" loading="lazy" decoding="async" /></div>`;
+/* On phones the <img> itself is what shows (src/core/Store.js isPhone):
+   a project thumbnail offers its 960px WebP there, and keeps the part of
+   it its `thumbFocus` names, as the WebGL plane does. (The planes always
+   load `src`.) */
+const mediaBlock = (src, alt, extra = '') => {
+  const thumb = src.match(/^\/media\/([^/]+)\/featured\.jpg$/);
+  const small = thumb && existsSync(join(root, 'public', 'media', thumb[1], 'featured-960.webp'));
+  const set = small ? ` srcset="/media/${thumb[1]}/featured-960.webp 960w, ${src} 1600w" sizes="(max-width: 767px) 100vw, 50vw"` : '';
+  const focus = extra.match(/data-focus="([\d.]+)"/);
+  const pos = focus ? ` style="object-position: 50% ${(Number(focus[1]) * 100).toFixed(1)}%"` : '';
+  return `<div class="media-wrapper" data-media ${extra}><img class="media" src="${src}"${set} alt="${esc(alt)}"${pos} loading="lazy" decoding="async" /></div>`;
+};
 
 /* Project pages show empty frames until the real photos are in — a project
    with `photos: true` shows its own, and setting this to true shows them
@@ -733,7 +746,10 @@ const maintenancePage = () => {
 <meta property="og:title" content="${esc(title)}" />
 <meta property="og:description" content="${esc(description)}" />
 <meta property="og:site_name" content="${esc(studio.name)}" />
-<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
+<link rel="icon" href="/favicon-48.png" type="image/png" sizes="48x48" />
+<link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <style>html { background: #05060F; color-scheme: dark; }</style>
 </head>
 <body class="maint">
@@ -795,12 +811,7 @@ for (const entry of readdirSync(join(root, 'work'), { withFileTypes: true })) {
   }
 }
 
-/* favicon */
-mkdirSync(join(root, 'public'), { recursive: true });
-writeFileSync(
-  join(root, 'public', 'favicon.svg'),
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" fill="#05060F"/><circle cx="19" cy="24" r="10" fill="#F4F3EE"/><circle cx="29" cy="24" r="10" fill="#F4F3EE" fill-opacity=".55"/></svg>`,
-  'utf8'
-);
-console.log('  ✓ public/favicon.svg');
+/* The tab icon is the logo on space, as files in public/ (favicon-32.png,
+   favicon-48.png, icon-192.png, icon-512.png, apple-touch-icon.png) — not
+   made here. */
 console.log(`Done — ${projects.length + 4} pages.`);

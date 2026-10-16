@@ -182,9 +182,13 @@ h1 {
 /* =================================================================
    CANVAS + OVERLAY
    ================================================================= */
+/* The full-screen canvases are as tall as the viewport ever gets (the
+   phone's address bar slid away) and pinned to its top, so the bar
+   sliding in and out never stretches them or makes them reallocate
+   mid-scroll (core/Store.js viewHeight). */
 .canvas {
-  position: fixed; inset: 0;
-  width: 100%; height: 100%;
+  position: fixed; top: 0; left: 0;
+  width: 100%; height: 100vh; height: 100lvh;
   z-index: 1;
   pointer-events: none;
   opacity: 0;
@@ -343,8 +347,11 @@ h1 {
     justify-content: center;
     gap: 0.6rem;
     width: 4.4rem; height: 4.4rem;
+    /* (A finger-sized target on the narrowest phones too, where 4.4rem is
+       only ~35px; the lines keep their size, centred in it.) */
+    min-width: 44px; min-height: 44px;
     margin: -1rem -1rem -1rem 0;
-    padding: 1.1rem 1rem;
+    padding: max(1.1rem, calc((44px - 1.2rem - 6px) / 2)) max(1rem, calc((44px - 2.4rem) / 2));
   }
   .menu-toggle-line {
     display: block;
@@ -404,8 +411,11 @@ h1 {
     --iris-r: 160vmax;
     position: absolute;
     top: 100%; left: 0; right: 0;
+    /* Down to the bottom of the screen as it is right now (dvh): with the
+       address bar slid away the screen is taller than 100svh, and the page
+       showed through under the panel. */
     height: calc(100vh - 100%);
-    height: calc(100svh - 100%);
+    height: calc(100dvh - 100%);
     flex-direction: column;
     align-items: flex-start;
     justify-content: flex-start;
@@ -425,6 +435,10 @@ h1 {
       var(--c-bg);
     clip-path: circle(0 at var(--iris-x) var(--iris-y));
     visibility: hidden;
+    /* Its own compositor layer: the starfield is painted once, and the
+       iris only clips it — rather than the whole screen of gradients being
+       repainted on every frame of the opening. */
+    will-change: transform;
     /* Closing: at once, everything shrinking back into the button. */
     transition: clip-path 0.5s cubic-bezier(0.4, 0, 0.2, 1), visibility 0s linear 0.5s;
   }
@@ -434,13 +448,16 @@ h1 {
     transition: clip-path 0.85s cubic-bezier(0.65, 0, 0.2, 1), visibility 0s;
   }
   /* Opening, a jump to warp: streaks of starlight rush out from the
-     button and are gone. */
+     button and are gone. Drawn at 120vmax and scaled (on its own layer)
+     to the size it reaches — at its full 260vmax it was a ~6000px-square
+     texture to paint on a phone before the first frame could show. */
   .nav::before {
     content: '';
     position: absolute;
     left: var(--iris-x); top: var(--iris-y);
-    width: 260vmax; height: 260vmax;
+    width: 120vmax; height: 120vmax;
     translate: -50% -50%;
+    will-change: transform, opacity;
     background: repeating-conic-gradient(from 0deg, transparent 0deg, rgba(var(--c-ink-rgb), 0.32) 0.35deg, transparent 0.8deg, transparent 6.5deg);
     -webkit-mask: radial-gradient(circle, transparent 4%, #000 14%, #000 26%, transparent 40%);
     mask: radial-gradient(circle, transparent 4%, #000 14%, #000 26%, transparent 40%);
@@ -448,14 +465,17 @@ h1 {
     pointer-events: none;
   }
   .site-header.is-open .nav::before { animation: nav-warp 1.1s cubic-bezier(0.2, 0.6, 0.2, 1) both; }
+  /* (The same sizes as before: 0.15 → 1.4 of 260vmax.) */
   @keyframes nav-warp {
-    0% { opacity: 0; transform: scale(0.15) rotate(0deg); }
+    0% { opacity: 0; transform: scale(0.325) rotate(0deg); }
     22% { opacity: 1; }
-    100% { opacity: 0; transform: scale(1.4) rotate(6deg); }
+    100% { opacity: 0; transform: scale(3.03) rotate(6deg); }
   }
 
-  /* The links fly in from the depths (small and soft, then sharp) one
-     after another, each numbered; closing, they're gone at once. */
+  /* The links fly in from the depths (small and faint, then full size)
+     one after another, each numbered; closing, they're gone at once.
+     Only transform and opacity move — compositor work; a blur on each
+     was repainted every frame of the flight. */
   .nav .nav-link {
     position: relative;
     z-index: 1;
@@ -468,8 +488,7 @@ h1 {
     opacity: 0;
     transform: translate3d(0, 2.4rem, 0) scale(0.86);
     transform-origin: 0 100%;
-    filter: blur(6px);
-    transition: color 0.4s var(--ease-out), opacity 0.2s var(--ease-out), transform 0.2s var(--ease-out), filter 0.2s var(--ease-out);
+    transition: color 0.4s var(--ease-out), opacity 0.2s var(--ease-out), transform 0.2s var(--ease-out);
   }
   .nav .nav-link::before {
     content: counter(navlink, decimal-leading-zero);
@@ -484,8 +503,7 @@ h1 {
   .site-header.is-open .nav-link {
     opacity: 1;
     transform: none;
-    filter: blur(0);
-    transition: color 0.4s var(--ease-out), opacity 0.6s var(--ease-out) var(--d, 0.25s), transform 0.9s var(--ease-out) var(--d, 0.25s), filter 0.7s var(--ease-out) var(--d, 0.25s);
+    transition: color 0.4s var(--ease-out), opacity 0.6s var(--ease-out) var(--d, 0.25s), transform 0.9s var(--ease-out) var(--d, 0.25s);
   }
   .site-header.is-open a.nav-link:nth-of-type(1) { --d: 0.25s; }
   .site-header.is-open a.nav-link:nth-of-type(2) { --d: 0.34s; }
@@ -495,14 +513,15 @@ h1 {
   /* At the foot: how to reach us, in last. */
   .nav-foot {
     position: relative;
-    z-index: 1;
+    /* (Over the tossed moons, which fly behind the links and this.) */
+    z-index: 2;
     display: flex;
     flex-direction: column;
     gap: 0.8rem;
     margin-top: auto;
     margin-left: -3rem;
     font-family: var(--font-subtext);
-    font-size: 1.6rem;
+    font-size: max(1.8rem, 15px);
     opacity: 0;
     translate: 0 1.2rem;
     transition: opacity 0.2s var(--ease-out), translate 0.2s var(--ease-out);
@@ -510,13 +529,18 @@ h1 {
   .site-header.is-open .nav-foot { opacity: 1; translate: 0 0; transition: opacity 0.6s var(--ease-out) 0.6s, translate 0.8s var(--ease-out) 0.6s; }
   .nav-foot-label {
     font-family: 'Syne Mono', monospace;
-    font-size: 1.15rem;
+    font-size: max(1.2rem, 11px);
     letter-spacing: 0.18em;
     text-transform: uppercase;
     color: #0ACD88;
   }
   .nav-foot-mail { color: var(--c-ink); text-decoration: underline; text-decoration-color: rgba(var(--c-ink-rgb), 0.3); text-underline-offset: 0.3em; }
   .nav-foot-social { display: flex; gap: 2.4rem; color: rgba(var(--c-ink-rgb), 0.72); }
+  /* Finger-sized: each link is at least 44px tall (the text stays put). */
+  .nav-foot a { display: inline-flex; align-items: center; align-self: flex-start; min-height: 44px; }
+  .nav-foot { gap: 0; }
+  .nav-foot-label { margin-bottom: 0.2rem; }
+  .nav-foot a:active { opacity: 0.6; }
 
   /* Moons, tossed up from the bottom and falling back, over and over: each
      its own size, height, rhythm and spin (generate-pages.mjs MENU_MOONS).

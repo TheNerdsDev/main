@@ -33,6 +33,25 @@ const copyText = async (text) => {
   if (!ok) throw new Error('copy failed');
 };
 
+/**
+ * The page's photos on its first screen and a half, fetched now (not
+ * lazily) and decoded — never waited on for more than 4s.
+ */
+const decodeFirst = (root) => {
+  const near = window.innerHeight * 1.5;
+  /* (Shown ones only: one in a hidden box — the desktop index rail's
+     previews, on a phone — measures as being at the top.) */
+  const imgs = [...root.querySelectorAll('[data-media] img')].filter((img) => {
+    const r = img.getBoundingClientRect();
+    return r.width > 0 && r.top < near;
+  });
+  imgs.forEach((img) => { img.loading = 'eager'; });
+  return Promise.race([
+    Promise.all(imgs.map((img) => img.decode().catch(() => {}))),
+    new Promise((r) => setTimeout(r, 4000))
+  ]);
+};
+
 export default class App {
   constructor() {
     this.canvas = document.querySelector('.canvas');
@@ -40,6 +59,8 @@ export default class App {
     this.hoistHeader(this.pageEl);
 
     store.html.classList.add('webgl');
+    /* Phones: photos as plain images (core/Store.js isPhone). */
+    store.html.classList.toggle('flat-media', store.isPhone);
 
     this.scroll = new Scroll();
     this.scroll.stop();
@@ -63,7 +84,11 @@ export default class App {
     /* Only what this page shows. (The work index's thumbnails used to be
        loaded here too, on every page — ~0.9 MB the loader waited for; they
        are now fetched once the page is up, see below.) */
-    const urls = assets.collectFromDOM(document);
+    /* (Phones show the photos as images, not textures — Store isPhone:
+       the ones on the first screen and a half are fetched and decoded
+       instead, so none of them pops in once the loader lifts.) */
+    const urls = store.isPhone ? [] : assets.collectFromDOM(document);
+    const firstImages = store.isPhone ? decodeFirst(document) : Promise.resolve();
     /* This page's code, fetched while the loader loads its pictures. */
     const pageCode = loadPage(this.pageEl.dataset.page);
     /* …and the subtext's font: the page measures its lines when it's built,
@@ -75,6 +100,7 @@ export default class App {
     ]).catch(() => {});
 
     await this.loader.preload([...new Set(urls)]);
+    await firstImages;
     await pageCode;
     await subtextFont;
 
@@ -107,13 +133,23 @@ export default class App {
     /* Warm the About page's photo and the work index's thumbnails in idle
        moments, one at a time, so the first trip to either is still instant
        (decoded and on the GPU already) — without the loader waiting on them. */
-    const thumbs = ['/media/studio/portrait.jpg', ...projects.map((p) => `/media/${p.slug}/featured.jpg`)];
+    /* (Phones: the images they actually show — the thumbnails' 960px WebP —
+       fetched and decoded, not made into textures.) */
+    const thumbs = store.isPhone
+      ? ['/media/studio/portrait.jpg', ...projects.map((p) => `/media/${p.slug}/featured-960.webp`)]
+      : ['/media/studio/portrait.jpg', ...projects.map((p) => `/media/${p.slug}/featured.jpg`)];
+    const warm = (url) => {
+      if (!store.isPhone) return assets.load(url, { srgb: true });
+      const img = new Image();
+      img.src = url;
+      return img.decode();
+    };
     const later = (fn) => ('requestIdleCallback' in window ? requestIdleCallback(fn, { timeout: 3000 }) : setTimeout(fn, 400));
     const next = () => {
       const url = thumbs.shift();
       /* Then the other pages' code (pages/index.js). */
       if (!url) return warmPages();
-      Promise.resolve(assets.load(url, { srgb: true })).catch(() => {}).finally(() => later(next));
+      Promise.resolve().then(() => warm(url)).catch(() => {}).finally(() => later(next));
     };
     later(next);
   }
@@ -168,6 +204,9 @@ export default class App {
     this.world.media.create(this.pageEl, this.page.id);
 
     await new Promise((r) => requestAnimationFrame(r));
+    /* Phones: its first photos decoded before it fades in (a moment at
+       most — they were fetched ahead in idle time). */
+    if (store.isPhone) await Promise.race([decodeFirst(this.pageEl), new Promise((r) => setTimeout(r, 700))]);
 
     if (covered) this.setMenu?.(false);
     this.world.fadeTo(1, 0.7);
@@ -261,11 +300,21 @@ export default class App {
         nav.style.setProperty('--iris-y', `${y}px`);
         nav.style.setProperty('--iris-r', `${Math.ceil(r) + 24}px`);
       }
+      /* Once the iris has opened over everything, stop drawing the sky,
+         the rocks and the page beneath it (store.covered); closing, they
+         draw again from the first frame, before any of them shows. */
+      clearTimeout(this.menuCovering);
+      if (open) this.menuCovering = setTimeout(() => { store.covered = true; }, 900);
+      else store.covered = false;
       /* Closing, the moons keep flying until the iris has shut over them. */
       clearTimeout(this.menuClosing);
       header.classList.toggle('is-closing', !open);
       if (!open) this.menuClosing = setTimeout(() => header.classList.remove('is-closing'), 600);
       header.classList.toggle('is-open', open);
+      /* The page under the panel can't be reached — not by Tab, not by a
+         screen reader — while it's covered; the header (logo, button,
+         links) is all there is. Escape or the button closes it. */
+      if (this.pageEl) this.pageEl.inert = open;
       btn.setAttribute('aria-expanded', String(open));
       btn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
       /* Only hand scrolling back if the menu was what stopped it. */
@@ -342,7 +391,10 @@ export default class App {
     this.onResize = () => {
       clearTimeout(t);
       t = setTimeout(() => {
-        store.resize();
+        /* On a phone, most resizes are just the address bar sliding in or
+           out: the viewport the site draws against doesn't change (Store),
+           so nothing is re-measured, re-split or reallocated mid-scroll. */
+        if (!store.resize()) return;
         this.world.resize();
         this.scroll.resize();
         this.page?.resize();
@@ -354,6 +406,8 @@ export default class App {
   }
 
   loop = (time) => {
+    /* Hidden under the open phone menu: nothing to draw. */
+    if (store.covered) return;
     /* The page moves the carousel's DOM boxes; the world reads them.
        Order matters — swap these and the planes lag a frame behind. */
     this.page?.loop();

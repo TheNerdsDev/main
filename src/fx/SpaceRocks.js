@@ -4,6 +4,7 @@ import {
 import gsap from 'gsap';
 import { makeAsteroid, prebuildAsteroids, rockMaterial } from './asteroid.js';
 import { rand } from './particles.js';
+import store from '../core/Store.js';
 
 /* The last page's offscreen renderer and material, kept when it goes (as
    RockStage keeps its own), so coming back doesn't build them again. */
@@ -114,6 +115,8 @@ export default class SpaceRocks {
   }
 
   tick = (time, deltaMs) => {
+    /* (Under the open phone menu: unseen.) */
+    if (store.covered) return;
     const dt = Math.min(deltaMs / 1000, 1 / 30);
     for (const it of this.items) {
       it.boost += ((it.hovered ? 1 : 0) - it.boost) * Math.min(1, dt * 4);

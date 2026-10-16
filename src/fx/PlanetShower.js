@@ -1,4 +1,5 @@
 import gsap from 'gsap';
+import store from '../core/Store.js';
 import PlanetScene, { ringShape, MERCURY, VENUS, EARTH, MOON, MARS, JUPITER, SATURN, URANUS, NEPTUNE } from './PlanetScene.js';
 
 /*
@@ -232,17 +233,23 @@ export default class PlanetShower {
     section.addEventListener('pointercancel', this.onUp);
     section.addEventListener('pointerleave', this.onLeave, { passive: true });
 
+    /* Fetch the maps as the section approaches, not with the page — a few
+       screens ahead, so on a phone's connection they're in by the time it
+       arrives — and get them onto the GPU before they're needed
+       (PlanetScene.warm). */
+    this.loadIo = new IntersectionObserver((entries) => {
+      if (!entries.some((e) => e.isIntersecting)) return;
+      this.loadIo.disconnect();
+      this.scene.load(PlanetShower.capacity())
+        .then(() => this.scene.warm())
+        .catch(() => { this.dead = true; });
+    }, { rootMargin: '300% 0px 300% 0px' });
+    this.loadIo.observe(section);
     /* Only run while the section is near the screen. */
     this.io = new IntersectionObserver((entries) => {
       this.near = entries.some((e) => e.isIntersecting);
-      if (this.near) {
-        /* Fetch the maps as the section approaches, not with the page. */
-        this.scene.load(PlanetShower.capacity())
-          /* …and get them onto the GPU before they're needed (PlanetScene.warm). */
-          .then(() => this.scene.warm())
-          .catch(() => { this.dead = true; });
-        this.start();
-      } else this.stop();
+      if (this.near) this.start();
+      else this.stop();
     }, { rootMargin: '100% 0px 100% 0px' });
     this.io.observe(section);
     /* When to rain: armed once the section has gone (its top below 95% of
@@ -593,7 +600,8 @@ export default class PlanetShower {
   }
 
   tick = () => {
-    if (this.dead) return;
+    /* (Under the open phone menu: unseen.) */
+    if (this.dead || store.covered) return;
     const now = performance.now();
     const dt = Math.min((now - this.last) / 1000, 1 / 30);
     this.last = now;
@@ -632,6 +640,7 @@ export default class PlanetShower {
   destroy() {
     this.stop();
     clearTimeout(this.refit);
+    this.loadIo?.disconnect();
     this.io?.disconnect();
     this.armIo?.disconnect();
     this.fireIo?.disconnect();
