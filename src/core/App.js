@@ -339,26 +339,49 @@ export default class App {
 
   bindEvents() {
     let t;
+    this.refit = () => {
+      store.resize();
+      this.world.resize();
+      this.scroll.resize();
+      this.page?.resize();
+      this.world.media.resize();
+    };
     this.onResize = () => {
       clearTimeout(t);
-      t = setTimeout(() => {
-        store.resize();
-        this.world.resize();
-        this.scroll.resize();
-        this.page?.resize();
-        this.world.media.resize();
-      }, 150);
+      t = setTimeout(this.refit, 150);
     };
     window.addEventListener('resize', this.onResize);
     window.addEventListener('orientationchange', this.onResize);
   }
 
-  loop = (time) => {
+  loop = (time, deltaMs) => {
     /* The page moves the carousel's DOM boxes; the world reads them.
        Order matters — swap these and the planes lag a frame behind. */
     this.page?.loop();
     this.world.loop(time);
+    this.watch(deltaMs);
   };
+
+  /**
+   * A device that can't keep up steps down to drawing lighter (fewer
+   * pixels in every canvas: store.setDpr) — and, if that's not enough,
+   * once more. Judged on the typical frame over two seconds or so: when a
+   * third of them miss the screen's refresh, it's slow. Hitches (a page
+   * being built, a tab coming back) don't count, nor anything while the
+   * page is hidden or changing.
+   */
+  watch(dt) {
+    if (store.quality >= 2 || document.hidden || store.isTransitioning || !(dt < 100)) return;
+    const f = (this.frames ||= []);
+    f.push(dt);
+    if (f.length < 120) return;
+    f.sort((a, b) => a - b);
+    const slow = f[80] > 21;
+    f.length = 0;
+    if (!slow) return;
+    store.quality += 1;
+    this.refit();
+  }
 
   destroy() {
     gsap.ticker.remove(this.loop);

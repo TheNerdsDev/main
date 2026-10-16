@@ -1,4 +1,5 @@
 import gsap from 'gsap';
+import store from '../core/Store.js';
 import PlanetScene, { ringShape, MERCURY, VENUS, EARTH, MOON, MARS, JUPITER, SATURN, URANUS, NEPTUNE } from './PlanetScene.js';
 
 /*
@@ -622,7 +623,12 @@ export default class PlanetShower {
         if (!this.awake) break;
       }
     }
-    if (this.visible) this.draw();
+    /* At rest, the pile only turns slowly on its axes: a touch screen
+       redraws it every third frame then (the biggest canvas on the page,
+       and the dearest to draw) — every frame while anything falls or is
+       pushed. */
+    this.rest = this.awake || this.drag ? 0 : (this.rest || 0) + 1;
+    if (this.visible && (!store.isTouch || this.rest % 3 === 0)) this.draw();
   };
 
   draw() {

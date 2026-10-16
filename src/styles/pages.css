@@ -12,8 +12,9 @@
   width: 100%; height: 100%;
   object-fit: cover;
 }
-html.webgl .media { visibility: hidden; }
-html.webgl .media-wrapper { background: none; }
+/* (Touch screens show the images themselves: gl/Media.js.) */
+html.webgl:not(.dom-media) .media { visibility: hidden; }
+html.webgl:not(.dom-media) .media-wrapper { background: none; }
 /* A frame still waiting for its photo (scripts/generate-pages.mjs). */
 html .media-wrapper.is-empty {
   background: rgba(var(--c-ink-rgb), 0.04);
@@ -886,6 +887,15 @@ html .media-wrapper.is-empty {
     0 0.2rem 0.4rem rgba(0, 0, 0, 0.22),
     0 2rem 4rem -1.2rem rgba(0, 0, 0, 0.45),
     0 5rem 10rem -3rem rgba(20, 60, 140, 0.3);
+}
+/* Touch screens: no frost (redrawn every frame the sky moves behind it —
+   a whole screen of it here, on a phone), more of the dark glass instead. */
+@media (hover: none) and (pointer: coarse) {
+  #contact .contact-form {
+    background-color: rgba(var(--c-bg-rgb), 0.62);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
 }
 #contact .contact-form::before {
   content: '';

@@ -9,15 +9,27 @@ const POINTER = { rotY: 0.035, rotX: 0.02, posX: -10, posZ: -6 };
 /* The gap between one index-rail preview and the next along its strip, px. */
 const PREVIEW_GAP = 8;
 
-/** Creates and owns every MediaMesh on the current page. */
+/**
+ * Creates and owns every MediaMesh on the current page.
+ *
+ * Not on a touch screen: there the pictures are the page's own images,
+ * drawn by the browser — sharp at the screen's full resolution (the world
+ * draws at less, store.setDpr), in their own colours, with no grain over
+ * the small print in them, and nothing for a phone's GPU to draw. (Nor is
+ * there a pointer for the planes' hover to answer.) They fade in and out
+ * with the page instead.
+ */
 export default class Media {
   constructor(world) {
     this.world = world;
+    this.dom = store.isTouch;
+    store.html.classList.toggle('dom-media', this.dom);
     /* One shared unit plane (flat: nothing bends it). */
     this.geometry = new PlaneGeometry(1, 1);
     this.meshes = [];
     this.cards = [];
     this.previews = [];
+    this.imgs = [];
 
     /* Cards live in their own group so the pointer can swing the whole set. */
     this.group = new Group();
@@ -30,6 +42,19 @@ export default class Media {
     const isHome = pageId === 'projects';
     const colour = isHome ? 0 : 0.88;
     const nodes = [...root.querySelectorAll('[data-media]')];
+
+    if (this.dom) {
+      this.imgs = nodes.map((el) => {
+        const img = el.querySelector('.media');
+        if (!img) return null;
+        /* Kept where the frame keeps it (data-focus, as MediaMesh does). */
+        const focus = parseFloat(el.dataset.focus);
+        if (Number.isFinite(focus)) img.style.objectPosition = `50% ${Math.min(1, Math.max(0, focus)) * 100}%`;
+        gsap.set(img, { opacity: 0 });
+        return img;
+      }).filter(Boolean);
+      return this.meshes;
+    }
 
     this.meshes = nodes.map((el, i) => {
       const isPreview = el.hasAttribute('data-preview');
@@ -85,6 +110,9 @@ export default class Media {
   }
 
   enter() {
+    if (this.imgs.length) {
+      gsap.to(this.imgs, { opacity: 1, duration: 0.9, ease: 'power2.out', stagger: 0.055, delay: 0.1, overwrite: 'auto' });
+    }
     this.meshes
       .filter((m) => !m.isPreview)
       .forEach((m, i) => m.enter(i * 0.055));
@@ -94,7 +122,10 @@ export default class Media {
   }
 
   leave() {
-    return Promise.all(this.meshes.map((m) => m.leave()));
+    const imgs = this.imgs.length
+      ? gsap.to(this.imgs, { opacity: 0, duration: 0.4, ease: 'power2.in', overwrite: 'auto' }).then(() => {})
+      : null;
+    return Promise.all([...this.meshes.map((m) => m.leave()), imgs]);
   }
 
   /** Hover a card from outside — used by the project index rail. */
@@ -157,6 +188,8 @@ export default class Media {
   }
 
   destroyMeshes() {
+    gsap.killTweensOf(this.imgs);
+    this.imgs = [];
     this.meshes.forEach((m) => {
       m._cleanup?.();
       m.destroy();

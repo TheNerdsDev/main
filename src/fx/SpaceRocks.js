@@ -2,6 +2,7 @@ import {
   WebGLRenderer, Scene, PerspectiveCamera, AmbientLight, DirectionalLight, Mesh, Vector3
 } from 'three';
 import gsap from 'gsap';
+import store from '../core/Store.js';
 import { makeAsteroid, prebuildAsteroids, rockMaterial } from './asteroid.js';
 import { rand } from './particles.js';
 
@@ -98,8 +99,7 @@ export default class SpaceRocks {
   resize() {
     const c = this.items[0]?.canvas;
     if (!c) return;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    this.size = Math.max(1, Math.round(c.offsetWidth * dpr));
+    this.size = Math.max(1, Math.round(c.offsetWidth * store.fxDpr));
     /* (Only when it changes: resizing reallocates the drawing buffer.) */
     const el = this.renderer.domElement;
     if (this.renderer.getPixelRatio() !== 1 || el.width !== this.size || el.height !== this.size) {
@@ -113,12 +113,21 @@ export default class SpaceRocks {
     });
   }
 
-  tick = (time, deltaMs) => {
+  tick = (time, deltaMs, frame) => {
     const dt = Math.min(deltaMs / 1000, 1 / 30);
-    for (const it of this.items) {
+    /* Each rock drawn, then copied to its canvas, makes the GPU stop and
+       catch up: a phone draws them in turns — half of them a frame, or
+       one a frame on a slow one. Turning slowly, each still moves in
+       steps too small to see; they all keep turning in between. */
+    const n = this.items.length;
+    const per = !store.isTouch ? n : store.quality > 0 ? 1 : Math.ceil(n / 2);
+    const from = (frame * per) % n;
+    for (let k = 0; k < n; k++) {
+      const it = this.items[k];
       it.boost += ((it.hovered ? 1 : 0) - it.boost) * Math.min(1, dt * 4);
       const speed = 1 + it.boost * 4 + this.frenzy * 16;
       it.rot.addScaledVector(it.spin, dt * speed);
+      if ((k - from + n) % n >= per) continue;
 
       this.mesh.geometry = it.geo;
       this.material.userData.rock.uSeed.value = it.i * 4.3;
