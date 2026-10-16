@@ -7,13 +7,23 @@
  * `emailed` stays false. Once it sends from our own domain, the client
  * also gets a short thank-you; replying to that reaches us.
  *
+ * From our own domain, the thank-you goes first, and what becomes of it
+ * says whether their address is real: delivered, and the enquiry reaches
+ * us from enquiries@ (allow-listed in our mailbox: the Inbox); bounced —
+ * the address doesn't exist — and it comes from unverified@, marked so
+ * (our mailbox files that sender under Spam). Neither is our own inbox's
+ * address: mail "from" our own address, arriving from outside (Resend),
+ * looks like spoofing to our host's filter, and went to Spam however real.
+ *
  * Deployed public (--no-verify-jwt: the site has no key to send), and
  * guarded instead by: an origin list, a bot trap field, a minimum fill
  * time, a per-sender rate limit, and the same checks as the form.
  *
  * Settings (supabase secrets): RESEND_API_KEY, CONTACT_TO (comma-separated),
  * CONTACT_FROM, CONTACT_REPLY_TO, ALLOWED_ORIGINS (comma-separated),
- * RATE_SALT; CONTACT_THANKS=off to stop the thank-you.
+ * RATE_SALT; CONTACT_THANKS=off to stop the thank-you. Optional:
+ * CONTACT_NOTIFY_FROM / CONTACT_UNVERIFIED_FROM (default enquiries@ and
+ * unverified@ on CONTACT_FROM's domain).
  * SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided by Supabase.
  * Setup, step by step: supabase/README.md.
  */
@@ -37,6 +47,17 @@ const REPLY_TO = env('CONTACT_REPLY_TO') || TO[0] || FROM_ADDRESS;
    the thank-you needs our own, verified domain. */
 const THANKS = env('CONTACT_THANKS', 'on') !== 'off' && !FROM_ADDRESS.endsWith('@resend.dev');
 const RESEND_KEY = env('RESEND_API_KEY');
+/* Who an enquiry reaches us from: never our inbox's own address (see the
+   top). Real address → NOTIFY_FROM (allow-listed: Inbox); one that bounced
+   → UNVERIFIED_FROM (filtered to Spam). */
+const DOMAIN = FROM_ADDRESS.slice(FROM_ADDRESS.lastIndexOf('@') + 1);
+const NOTIFY_FROM = env('CONTACT_NOTIFY_FROM', `enquiries@${DOMAIN}`);
+const UNVERIFIED_FROM = env('CONTACT_UNVERIFIED_FROM', `unverified@${DOMAIN}`);
+/* How long the enquiry may wait for the thank-you's fate, and how often to
+   ask. A missing mailbox is refused on the spot (Gmail and most hosts answer
+   in a second or two); past this, the enquiry is sent as usual. */
+const VERDICT_WAIT_MS = 12_000;
+const VERDICT_EVERY_MS = 1_500;
 const SALT = env('RATE_SALT', 'the-nerds');
 
 const SITE = { name: 'The Nerds' };
@@ -90,12 +111,23 @@ async function sha256(text: string) {
 const esc = (s: string) =>
   s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
+/* What became of the thank-you: their address is real, doesn't exist, or
+   couldn't be told in time (or there was no thank-you to tell by). */
+type Verdict = 'real' | 'bounced' | 'unknown';
+
+const WARNING: Record<Verdict, string> = {
+  real: '',
+  bounced: 'Their email address doesn’t exist — the thank-you sent to it bounced. Likely fake: don’t rely on replying.',
+  unknown: ''
+};
+
 /** The email to us: every field, the empty ones as a dash. */
-function message(data: Record<string, string | null>) {
+function message(data: Record<string, string | null>, verdict: Verdict = 'unknown') {
   const rows = Object.entries(FIELDS).map(([key, rule]) => [rule.label, data[key] || '—']);
-  const text = rows.map(([label, value]) => `${label}:\n${value}`).join('\n\n');
+  const warn = WARNING[verdict];
+  const text = (warn ? `⚠ ${warn}\n\n` : '') + rows.map(([label, value]) => `${label}:\n${value}`).join('\n\n');
   const html = `<div style="font-family:system-ui,sans-serif;font-size:15px;line-height:1.5;color:#111">
-<h2 style="margin:0 0 16px">New enquiry from ${esc(data.name ?? '')}</h2>
+${warn ? `<p style="margin:0 0 16px;padding:10px 14px;border-radius:8px;background:#fdecea;color:#8a1c12">⚠ ${esc(warn)}</p>\n` : ''}<h2 style="margin:0 0 16px">New enquiry from ${esc(data.name ?? '')}</h2>
 <table cellpadding="8" style="border-collapse:collapse">${rows
     .map(([label, value]) => `<tr><td style="vertical-align:top;color:#666;white-space:nowrap">${esc(label)}</td><td style="white-space:pre-wrap">${esc(value)}</td></tr>`)
     .join('')}</table>
@@ -128,15 +160,55 @@ ${THANKS_NOTE.map((p) => `<p style="margin:0 0 16px">${esc(p)}</p>`).join('\n')}
   return { subject, text, html };
 }
 
-/** One email through Resend: true if it was accepted. */
-async function send(email: Record<string, unknown>, what: string) {
+/** One email through Resend: its id if it was accepted, else null. */
+async function send(email: Record<string, unknown>, what: string): Promise<string | null> {
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${RESEND_KEY}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(email)
   });
-  if (!res.ok) console.error(`[contact] ${what} failed`, res.status, await res.text());
-  return res.ok;
+  if (!res.ok) {
+    console.error(`[contact] ${what} failed`, res.status, await res.text());
+    return null;
+  }
+  try {
+    return String((await res.json()).id ?? '') || 'sent';
+  } catch {
+    return 'sent';
+  }
+}
+
+const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * What became of an email we sent (Resend's last event for it): delivered
+ * — or opened, clicked, even reported — means the address is real; bounced
+ * means it isn't. Asked every moment until one or the other, or until
+ * VERDICT_WAIT_MS has gone by.
+ */
+async function verdict(id: string): Promise<Verdict> {
+  const until = Date.now() + VERDICT_WAIT_MS;
+  while (Date.now() < until) {
+    await pause(VERDICT_EVERY_MS);
+    try {
+      const res = await fetch(`https://api.resend.com/emails/${id}`, { headers: { Authorization: `Bearer ${RESEND_KEY}` } });
+      /* A Sending-access key may send but not look: it will never tell, so
+         don't keep the enquiry waiting on it. */
+      if (res.status === 401 || res.status === 403) {
+        console.warn('[contact] RESEND_API_KEY cannot read an email’s status (it needs Full access): addresses not checked');
+        return 'unknown';
+      }
+      if (!res.ok) continue;
+      const last = String((await res.json()).last_event ?? '');
+      if (last === 'bounced') return 'bounced';
+      if (['delivered', 'opened', 'clicked', 'complained'].includes(last)) return 'real';
+      /* Their server said "try later": that can take hours to settle. */
+      if (last === 'delivery_delayed') return 'unknown';
+    } catch {
+      /* asked again in a moment */
+    }
+  }
+  return 'unknown';
 }
 
 /* For a display name in a From line: no quotes, brackets or line breaks. */
@@ -211,22 +283,26 @@ Deno.serve(async (req) => {
   /* Saved, so it's safe: answer now, and send the emails after — the
      visitor doesn't wait on them. */
   const emails = (async () => {
-    const { text, html } = message(data);
+    /* From our own domain: the thank-you first, and its fate decides how the
+       enquiry reaches us (see the top). On Resend's test sender there's no
+       thank-you, so nothing to tell by: straight to us, as it is. */
+    let seen: Verdict = 'unknown';
+    if (THANKS) {
+      const id = await send({ from: FROM, to: [data.email], reply_to: REPLY_TO, ...thanks(data) }, 'thank-you');
+      if (id && id !== 'sent') seen = await verdict(id);
+    }
+    const { text, html } = message(data, seen);
     /* To us — from "Their Name via The Nerds", so the inbox shows who it is. */
     const who = displayName(data.name ?? '');
-    const toUs = send({
-      from: THANKS && who ? `${who} via ${SITE.name} <${FROM_ADDRESS}>` : FROM,
+    const sender = seen === 'bounced' ? UNVERIFIED_FROM : NOTIFY_FROM;
+    const usOk = await send({
+      from: THANKS ? `${who || 'Someone'} via ${SITE.name} <${sender}>` : FROM,
       to: TO,
       reply_to: data.email,
-      subject: `New enquiry from ${data.name}`,
+      subject: `${seen === 'bounced' ? '[Unverified] ' : ''}New enquiry from ${data.name}`,
       text,
       html
     }, 'email to us');
-    /* To them: the thank-you. */
-    const toThem = THANKS
-      ? send({ from: FROM, to: [data.email], reply_to: REPLY_TO, ...thanks(data) }, 'thank-you')
-      : Promise.resolve(false);
-    const [usOk] = await Promise.all([toUs, toThem]);
     if (usOk) await db.from('enquiries').update({ emailed: true }).eq('id', row.id);
   })().catch((err) => console.error('[contact] emails failed', err));
 
