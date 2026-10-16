@@ -8,13 +8,20 @@
  * reminder while maintenance is on — and the maintenance page at
  * /maintenance/ to preview.
  */
-import { existsSync, mkdirSync, writeFileSync, readdirSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync, readdirSync, rmSync, readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { studio, maintenance, main, team, workIndex, info, contact, showcase, finale, projects, getNext, getPrev } from '../src/content/site.js';
 import { logoSvg } from '../src/content/logo.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+/* The tab icons' fingerprint, on their addresses: browsers keep a tab icon
+   long after the page (and past a reload) — a new icon is a new address,
+   so it shows at once, everywhere. */
+const ICON_V = createHash('md5')
+  .update(['favicon.svg', 'favicon.ico', 'apple-touch-icon.png'].map((f) => readFileSync(join(root, 'public', f))).reduce((a, b) => Buffer.concat([a, b])))
+  .digest('hex').slice(0, 8);
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const BUILD = process.argv.includes('--build');
 
@@ -43,7 +50,12 @@ const shell = ({ title, description, pageId, body, bodyClass = '' }) => `<!docty
 <meta property="og:title" content="${esc(title)}" />
 <meta property="og:description" content="${esc(description)}" />
 <meta property="og:site_name" content="${esc(studio.name)}" />
-<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<!-- The tab icon, the N and its rocket (public/): the SVG takes the browser's
+     light or dark; the .ico is for every browser that doesn't read it. -->
+<link rel="icon" href="/favicon.ico?v=${ICON_V}" sizes="16x16 32x32 48x48" />
+<link rel="icon" href="/favicon.svg?v=${ICON_V}" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=${ICON_V}" />
+<link rel="manifest" href="/site.webmanifest?v=${ICON_V}" />
 <!-- The first paint, before the stylesheet arrives (in dev it's injected by
      script): dark, with the loader covering the page. The loader's contents
      stay hidden until base.css sets --styled, so nothing shows unstyled. -->
@@ -733,7 +745,12 @@ const maintenancePage = () => {
 <meta property="og:title" content="${esc(title)}" />
 <meta property="og:description" content="${esc(description)}" />
 <meta property="og:site_name" content="${esc(studio.name)}" />
-<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<!-- The tab icon, the N and its rocket (public/): the SVG takes the browser's
+     light or dark; the .ico is for every browser that doesn't read it. -->
+<link rel="icon" href="/favicon.ico?v=${ICON_V}" sizes="16x16 32x32 48x48" />
+<link rel="icon" href="/favicon.svg?v=${ICON_V}" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=${ICON_V}" />
+<link rel="manifest" href="/site.webmanifest?v=${ICON_V}" />
 <style>html { background: #05060F; color-scheme: dark; }</style>
 </head>
 <body class="maint">
@@ -795,12 +812,6 @@ for (const entry of readdirSync(join(root, 'work'), { withFileTypes: true })) {
   }
 }
 
-/* favicon */
-mkdirSync(join(root, 'public'), { recursive: true });
-writeFileSync(
-  join(root, 'public', 'favicon.svg'),
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" fill="#05060F"/><circle cx="19" cy="24" r="10" fill="#F4F3EE"/><circle cx="29" cy="24" r="10" fill="#F4F3EE" fill-opacity=".55"/></svg>`,
-  'utf8'
-);
-console.log('  ✓ public/favicon.svg');
+/* (The tab icons are fixed files in public/ — favicon.svg, favicon.ico,
+   apple-touch-icon.png, icon-192/512.png, site.webmanifest — not written here.) */
 console.log(`Done — ${projects.length + 4} pages.`);

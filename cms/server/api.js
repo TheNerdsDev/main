@@ -10,7 +10,7 @@ import { join, extname, normalize } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { readContent, writeContent, regenerate } from './content.js';
 import { MEDIA, TMP, mediaDir, originalsDir } from './paths.js';
-import { inspectImage, inspectVideo, encodeVideo, ffmpegVersion, VIDEO_EXT } from './media.js';
+import { inspectImage, inspectVideo, encodeVideo, detectStretch, ffmpegVersion, VIDEO_EXT } from './media.js';
 import { getShots, layoutShots, keepShotOriginal, setThumb, trashProject, trash, mediaInfo, newId, rename } from './store.js';
 import { status, publish, pull } from './git.js';
 
@@ -226,7 +226,7 @@ async function api(req, res, url) {
           const out = join(mediaDir(slug), `preview-${newId()}.mp4`);
           await mkdir(mediaDir(slug), { recursive: true });
           try {
-            await encodeVideo(file, out, mode, info.seconds, (p) => progress(p, 'Converting the video…'));
+            await encodeVideo(file, out, mode, info.seconds, (p) => progress(p * 0.92, 'Converting the video…'), { hdr: info.hdr });
             const final = join(mediaDir(slug), 'preview.mp4');
             await trash(final, `${slug}-preview.mp4`);
             await rename(out, final);
@@ -234,9 +234,21 @@ async function api(req, res, url) {
             await rm(out, { force: true });
             await rm(file, { force: true });
           }
+          /* Where its card should start and stop on hover: past a still
+             title it opens on, short of the title coming back (media.js). */
+          progress(0.95, 'Finding where it starts…');
+          const stretch = await detectStretch(join(mediaDir(slug), 'preview.mp4'), Math.min(info.seconds, 90));
           progress(0.995, 'Saving…');
-          const p = await updateProject(slug, (p) => { p.video = `/media/${slug}/preview.mp4`; });
-          return { project: p, media: await mediaInfo(p), note: info.seconds > 90 ? 'It was longer than 90 seconds, so it was cut there.' : '' };
+          const p = await updateProject(slug, (p) => {
+            p.video = `/media/${slug}/preview.mp4`;
+            if (stretch.from) p.videoFrom = stretch.from; else delete p.videoFrom;
+            if (stretch.to) p.videoTo = stretch.to; else delete p.videoTo;
+          });
+          const notes = [];
+          if (info.seconds > 90) notes.push('It was longer than 90 seconds, so it was cut there.');
+          if (info.hdr) notes.push('It was HDR; its colours were brought to normal.');
+          if (stretch.from || stretch.to) notes.push(`On hover its card plays ${stretch.from ? `from ${stretch.from} s` : 'from the start'}${stretch.to ? ` to ${stretch.to} s` : ''} (past its title) — change it under “On hover, play” if you like.`);
+          return { project: p, media: await mediaInfo(p), note: notes.join(' ') };
         });
         return send(res, 202, { job: job.id });
       }
