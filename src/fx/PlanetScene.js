@@ -378,7 +378,10 @@ export default class PlanetScene {
   resize(w, h) {
     this.w = w;
     this.h = h;
-    this.renderer.setPixelRatio(store.fxDpr);
+    /* Hard edges and fine maps: on a touch screen the planets keep 1.5×
+       however light the rest draws (store.setDpr) — a settled pile is only
+       redrawn every third frame there (PlanetShower), so it's still cheap. */
+    this.renderer.setPixelRatio(store.isTouch ? Math.min(window.devicePixelRatio || 1, 1.5) : store.fxDpr);
     this.renderer.setSize(w, h, false);
     const c = this.camera;
     c.left = 0;
