@@ -896,6 +896,20 @@ ${redirects.map((r) => `RedirectMatch 301 ^${r.from.replace(/\/$/, '').replace(/
 writeFileSync(join(root, 'public', '.htaccess'), htaccess, 'utf8');
 console.log('  ✓ public/.htaccess');
 
+/* The same moved addresses for Cloudflare (Workers static assets read a
+   `_redirects` file from the build): "<from> <to> 301", with and without the
+   trailing slash. The 404 page is set in wrangler.jsonc (not_found_handling). */
+const cfRedirects = redirects.flatMap((r) => {
+  const bare = r.from.replace(/\/$/, '');
+  return [`${bare} ${r.to} 301`, `${bare}/ ${r.to} 301`];
+});
+writeFileSync(
+  join(root, 'public', '_redirects'),
+  `# Written by \`npm run pages\` (scripts/generate-pages.mjs) — edit it there.\n${cfRedirects.join('\n')}\n`,
+  'utf8'
+);
+console.log('  ✓ public/_redirects');
+
 /* The tab icon is the logo on space, as files in public/ (favicon-32.png,
    favicon-48.png, icon-192.png, icon-512.png, apple-touch-icon.png) — not
    made here. */

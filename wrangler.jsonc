@@ -1,0 +1,15 @@
+{
+  // Cloudflare Workers config: serves the built site (dist/) as static assets.
+  // `name` must match the Worker's name in the Cloudflare dashboard.
+  "name": "thenerdsportfolio",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    // An address with no page gets dist/404.html with a 404 status, instead
+    // of the home page (Cloudflare's single-page-app guess for Vite sites).
+    "not_found_handling": "404-page",
+    // /work -> /work/ (every page is a folder with an index.html)
+    "html_handling": "auto-trailing-slash"
+  },
+  "observability": { "enabled": true }
+}
