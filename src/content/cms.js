@@ -32,14 +32,11 @@
  *   shots         how many detail shots it has (01.webp, 02.webp, …);
  *                 photos: false shows empty frames instead
  *   certificates  (optional) pinned either side of its page's video
- *   searchDescription  (optional) the short text under its link in Google
- *                 (up to 160 characters; not shown on the site); empty: the
- *                 first sentence of its description
  *   role          kept, not shown on the site at present
  */
 export default {
   "maintenance": {
-    "on": true,
+    "on": false,
     "title": "We’ll be right back",
     "message": "We’re giving the site a tune-up — new work and a few fixes. It’ll be back shortly.",
     "back": ""
