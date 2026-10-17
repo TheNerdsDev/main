@@ -30,19 +30,68 @@ const maintenanceNote = !BUILD && maintenance.on
 
 /* ---------------------------------------------------------------- shell */
 
-const shell = ({ title, description, pageId, body, bodyClass = '' }) => `<!doctype html>
+/* -------------------------------------------------------------- search */
+
+/* What a link to the site shows when it's shared (WhatsApp, LinkedIn, X…):
+   the logo on space, 1200 × 630 — or a project's own thumbnail. */
+const SHARE = { src: '/media/share/the-nerds.jpg', width: 1200, height: 630, alt: `${studio.name} — logo on a starfield` };
+const abs = (path) => `${studio.url}${path}`;
+
+/* Who we are, for search engines (schema.org JSON-LD): the studio, the two
+   of us, where we are and how to reach us. Every page points back to it
+   by its @id; the home page carries it in full. */
+const ORG_ID = `${studio.url}/#studio`;
+const phones = (contact.details.find((d) => d.lines)?.lines || []).map((l) => l.href.replace(/^tel:/, ''));
+const organization = {
+  '@type': 'ProfessionalService',
+  '@id': ORG_ID,
+  name: studio.name,
+  url: `${studio.url}/`,
+  logo: abs('/icon-512.png'),
+  image: abs(SHARE.src),
+  description: studio.description,
+  email: studio.email,
+  ...(phones.length ? { telephone: phones[0] } : {}),
+  address: { '@type': 'PostalAddress', addressLocality: 'Surat', addressRegion: 'Gujarat', addressCountry: 'IN' },
+  areaServed: 'Worldwide',
+  founder: team.map((m) => ({ '@type': 'Person', name: `${m.name} ${m.surname}` })),
+  sameAs: studio.social.map((s) => s.url)
+};
+const website = { '@type': 'WebSite', '@id': `${studio.url}/#website`, name: studio.name, url: `${studio.url}/`, publisher: { '@id': ORG_ID } };
+/* One script per page, safe inside HTML (a "</" can't close it early). */
+const jsonLd = (graph) => `<script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@graph': [].concat(graph) }).replace(/</g, '\\u003c')}</script>`;
+
+/**
+ * path     the page's own address (from the root, with its trailing slash):
+ *          its canonical — the one official address, https with www,
+ *          whichever address it was reached at
+ * image    what a share of it shows (SHARE unless it has its own)
+ * schema   its structured data (jsonLd)
+ */
+const shell = ({ title, description, pageId, body, bodyClass = '', path = '/', image = SHARE, schema = null }) => `<!doctype html>
 <html lang="en" class="is-transitioning">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(description)}" />
+<link rel="canonical" href="${esc(abs(path))}" />
 <meta name="author" content="${esc(studio.name)}" />
 <meta name="theme-color" content="#05060F" />
 <meta property="og:type" content="website" />
+<meta property="og:url" content="${esc(abs(path))}" />
 <meta property="og:title" content="${esc(title)}" />
 <meta property="og:description" content="${esc(description)}" />
 <meta property="og:site_name" content="${esc(studio.name)}" />
+<meta property="og:image" content="${esc(abs(image.src))}" />
+<meta property="og:image:width" content="${image.width}" />
+<meta property="og:image:height" content="${image.height}" />
+<meta property="og:image:alt" content="${esc(image.alt)}" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="${esc(title)}" />
+<meta name="twitter:description" content="${esc(description)}" />
+<meta name="twitter:image" content="${esc(abs(image.src))}" />
+${schema ? jsonLd(schema) : ''}
 <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
 <link rel="icon" href="/favicon-48.png" type="image/png" sizes="48x48" />
 <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
@@ -355,6 +404,8 @@ const mainPage = () => {
     title: studio.name,
     description: studio.description,
     pageId: 'main',
+    path: '/',
+    schema: [organization, website],
     body: `<div class="page" id="main" data-page="main">
   <div class="page-content" id="page-content" tabindex="-1">
 ${header('main')}
@@ -444,6 +495,17 @@ const projectsPage = () => {
     title: 'Work',
     description: workIndex.description,
     pageId: 'projects',
+    path: '/work/',
+    schema: {
+      '@type': 'CollectionPage',
+      '@id': abs('/work/'),
+      url: abs('/work/'),
+      name: `Work — ${studio.name}`,
+      description: workIndex.description,
+      isPartOf: { '@id': `${studio.url}/#website` },
+      about: { '@id': ORG_ID },
+      hasPart: projects.map((p) => ({ '@type': 'CreativeWork', name: p.name, url: abs(`/work/${p.slug}/`) }))
+    },
     body: `<div class="page" id="projects" data-page="projects">
   <div class="page-content" id="page-content" tabindex="-1">
 ${header('projects')}
@@ -507,6 +569,21 @@ const workPage = (p) => {
     title: `${studio.name} — ${p.name}`,
     description: searchDescription(p),
     pageId: 'work',
+    path: `/work/${p.slug}/`,
+    /* Shared, it shows its own thumbnail (4:3). */
+    image: { src: `/media/${p.slug}/featured.jpg`, width: 1600, height: 1200, alt: p.name },
+    schema: {
+      '@type': 'CreativeWork',
+      '@id': abs(`/work/${p.slug}/`),
+      url: abs(`/work/${p.slug}/`),
+      name: p.name,
+      description: p.description,
+      image: abs(`/media/${p.slug}/featured.jpg`),
+      ...(p.year ? { dateCreated: String(p.year) } : {}),
+      creator: { '@id': ORG_ID },
+      isPartOf: { '@id': `${studio.url}/#website` },
+      ...(p.github ? { sameAs: p.github } : {})
+    },
     body: `<div class="page" id="work" data-page="work" data-slug="${p.slug}" data-accent="${p.accent}">
   <div class="page-content" id="page-content" tabindex="-1">
 ${header('projects', true)}
@@ -610,6 +687,17 @@ const infoPage = () => shell({
   title: 'About',
   description: info.description,
   pageId: 'info',
+  path: '/info/',
+  schema: {
+    '@type': 'AboutPage',
+    '@id': abs('/info/'),
+    url: abs('/info/'),
+    name: `About — ${studio.name}`,
+    description: info.description,
+    isPartOf: { '@id': `${studio.url}/#website` },
+    about: { '@id': ORG_ID },
+    mainEntity: organization
+  },
   body: `<div class="page" id="info" data-page="info">
   <div class="page-content" id="page-content" tabindex="-1">
 ${header('info')}
@@ -690,6 +778,16 @@ const contactPage = () => {
     title: studio.contactLabel,
     description: leadPlain,
     pageId: 'contact',
+    path: '/contact/',
+    schema: {
+      '@type': 'ContactPage',
+      '@id': abs('/contact/'),
+      url: abs('/contact/'),
+      name: `${studio.contactLabel} — ${studio.name}`,
+      description: leadPlain,
+      isPartOf: { '@id': `${studio.url}/#website` },
+      about: { '@id': ORG_ID }
+    },
     body: `<div class="page" id="contact" data-page="contact">
   <div class="page-content" id="page-content" tabindex="-1">
 ${header('contact')}
