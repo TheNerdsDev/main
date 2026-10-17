@@ -214,6 +214,15 @@ export const info = {
    described at the top of cms.js. */
 export const projects = cms.projects.filter((p) => !p.hidden);
 
+/* Addresses that have moved: each a permanent (301) redirect, on the host
+   (public/.htaccess, written by `npm run pages`) and in `npm run dev` /
+   `npm run preview` (vite.config.js) alike. A project renamed in the CMS
+   adds its old address here by itself (formerSlugs). */
+export const redirects = [
+  { from: '/about', to: '/info/' },
+  ...projects.flatMap((p) => (p.formerSlugs || []).map((old) => ({ from: `/work/${old}`, to: `/work/${p.slug}/` })))
+];
+
 export const getProject = (slug) => projects.find((p) => p.slug === slug);
 export const getNext = (slug) => {
   const i = projects.findIndex((p) => p.slug === slug);

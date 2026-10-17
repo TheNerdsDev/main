@@ -1,0 +1,70 @@
+/* =================================================================
+   404 — an address with no page (scripts/generate-pages.mjs
+   notFoundPage). A heading, a line and the way home, centred on the
+   site's own sky (src/notfound.js). The heading is the pages' .title,
+   the line their subtext, the button the About Us one (main-page.css,
+   #notfound).
+   ================================================================= */
+body.lost { min-height: 100vh; min-height: 100dvh; background: var(--c-bg); }
+
+/* Without WebGL (or with less motion): a plain twinkling sky, as tall as
+   the viewport ever gets so a phone's address bar never stretches it. */
+.lost-stars {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100vh;
+  height: 100lvh;
+  pointer-events: none;
+}
+
+/* Over the sky (.canvas, .overlay), centred in the screen as it is right
+   now (dvh) — it doesn't jump as a phone's address bar slides — and clear
+   of a notch or the home indicator. */
+.lost-main {
+  position: relative;
+  z-index: 3;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding:
+    max(4rem, env(safe-area-inset-top, 0px))
+    max(var(--unit), env(safe-area-inset-right, 0px))
+    max(4rem, env(safe-area-inset-bottom, 0px))
+    max(var(--unit), env(safe-area-inset-left, 0px));
+  text-align: center;
+}
+#notfound .title { cursor: default; }
+@media screen and (max-width: 767px) {
+  #notfound .title { font-size: 4.9rem; }
+}
+
+/* The pages' subtext (.subtext), as it sits under their headings. */
+.lost-text {
+  max-width: 56rem;
+  margin-top: 3.2rem;
+  font-size: 2rem;
+  line-height: 1.5;
+  color: rgba(var(--c-ink-rgb), 0.78);
+  text-wrap: balance;
+}
+.lost-cta { margin-top: 4.4rem; }
+@media screen and (max-width: 767px) {
+  .lost-text { font-size: max(1.7rem, 15px); margin-top: 2.4rem; }
+  .lost-cta { margin-top: 3.6rem; }
+}
+
+/* In as the other pages come in: the heading rises out of its mask, the
+   line and the button follow — from the moment they're let in (the page's
+   head holds them back, lost-wait, until their fonts are there). */
+@keyframes lost-rise { from { transform: translateY(115%); } }
+@keyframes lost-fade { from { opacity: 0; transform: translateY(1.2rem); } }
+html:not(.lost-wait) #notfound .title .line-inner { animation: lost-rise 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both; }
+html:not(.lost-wait) .lost-text { animation: lost-fade 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.4s both; }
+html:not(.lost-wait) .lost-cta { animation: lost-fade 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.55s both; }
+@media (prefers-reduced-motion: reduce) {
+  #notfound .title .line-inner, .lost-text, .lost-cta { animation: none; }
+}
