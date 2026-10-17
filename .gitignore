@@ -15,6 +15,8 @@ supabase/.branches/
 /404.html
 /public/.htaccess
 /public/_redirects
+/public/robots.txt
+/public/sitemap.xml
 /info/
 /contact/
 /work/

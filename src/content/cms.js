@@ -32,6 +32,9 @@
  *   shots         how many detail shots it has (01.webp, 02.webp, …);
  *                 photos: false shows empty frames instead
  *   certificates  (optional) pinned either side of its page's video
+ *   searchDescription  (optional) the short text under its link in Google
+ *                 (up to 160 characters; not shown on the site); empty: the
+ *                 first sentence of its description
  *   role          kept, not shown on the site at present
  */
 export default {
@@ -124,6 +127,7 @@ export default {
       "screenshot": true,
       "pageVideo": true,
       "description": "A CSS battle platform built for the Vivacity 2K26 tech fest. Contestants recreate a target design in HTML and CSS against the clock, and every attempt is scored pixel by pixel, across more than 60 machines on an offline LAN.",
+      "searchDescription": "A CSS battle platform for the Vivacity 2K26 tech fest: recreate a design against the clock, scored pixel by pixel across 60+ machines on an offline LAN.",
       "github": "https://github.com/meetRaval09/css-arena",
       "certificates": [
         {
@@ -149,6 +153,7 @@ export default {
       "screenshot": true,
       "pageVideo": true,
       "description": "A local-first task scheduler for planning the day, tracking what got done and staying focused. It brings a dashboard with your day at a glance, a month calendar, analytics on streaks and trends, desktop reminders, and themes from dark to sandstone.",
+      "searchDescription": "A local-first task scheduler with a daily dashboard, month calendar, streak analytics and desktop reminders, for planning the day and staying focused.",
       "github": "https://github.com/premkajiwala-hub/Task-Pilot",
       "shots": 3,
       "photos": true,
@@ -163,6 +168,7 @@ export default {
       "role": "Front-end Development",
       "accent": "#D4A24C",
       "description": "Mewar Sync is an AI-powered platform empowering traditional artisans through voice-based accounting, smart inventory management, financial tracking, and digital tools while preserving India's rich cultural heritage.",
+      "searchDescription": "An AI-powered platform for traditional artisans: voice-based accounting, smart inventory and financial tracking, preserving India’s cultural heritage.",
       "github": "https://github.com/premkajiwala-hub/Mewar_Sync.git",
       "shots": 3,
       "video": "/media/mewar-sync/preview.mp4",
@@ -179,6 +185,7 @@ export default {
       "role": "Design & Development",
       "accent": "#8A8A8A",
       "description": "IndusBrain is an AI-powered knowledge platform for industrial plants. It reads manuals, logs and standards, builds a knowledge graph, and answers engineering questions with cited evidence, flagging contradictions between documents instead of guessing. Runs fully on your own machine.",
+      "searchDescription": "An AI knowledge platform for industrial plants that answers engineering questions from manuals, logs and standards, with cited evidence. Runs locally.",
       "github": "https://github.com/indusbrain/indusbrain.git",
       "shots": 3,
       "video": "/media/indus-brain/preview.mp4",

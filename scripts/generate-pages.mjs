@@ -165,6 +165,11 @@ const WORK_PHOTOS = false;
 const workMedia = (p, src, alt, extra = '') =>
   WORK_PHOTOS || p.photos ? mediaBlock(src, alt, extra) : '<div class="media-wrapper is-empty" aria-hidden="true"></div>';
 
+/* What Google shows under a project's link: its search description (CMS),
+   or else the first sentence of its description. */
+const searchDescription = (p) => (p.searchDescription || '').trim()
+  || (String(p.description || '').match(/^.*?[.!?](?=\s|$)/) || [p.description || ''])[0].trim();
+
 const splitTitle = (lines) =>
   lines.map((l) => `<span class="line"><span class="line-inner">${esc(l)}</span></span>`).join('\n        ');
 
@@ -437,7 +442,7 @@ const projectsPage = () => {
 
   return shell({
     title: 'Work',
-    description: studio.description,
+    description: workIndex.description,
     pageId: 'projects',
     body: `<div class="page" id="projects" data-page="projects">
   <div class="page-content" id="page-content" tabindex="-1">
@@ -500,7 +505,7 @@ const workPage = (p) => {
 
   return shell({
     title: `${studio.name} — ${p.name}`,
-    description: p.description,
+    description: searchDescription(p),
     pageId: 'work',
     body: `<div class="page" id="work" data-page="work" data-slug="${p.slug}" data-accent="${p.accent}">
   <div class="page-content" id="page-content" tabindex="-1">
@@ -603,7 +608,7 @@ ${infoCard('work', title, `<ol class="info-card-list info-work-list">${rows}</ol
 
 const infoPage = () => shell({
   title: 'About',
-  description: info.lead,
+  description: info.description,
   pageId: 'info',
   body: `<div class="page" id="info" data-page="info">
   <div class="page-content" id="page-content" tabindex="-1">
@@ -895,6 +900,27 @@ ${redirects.map((r) => `RedirectMatch 301 ^${r.from.replace(/\/$/, '').replace(/
 `;
 writeFileSync(join(root, 'public', '.htaccess'), htaccess, 'utf8');
 console.log('  ✓ public/.htaccess');
+
+/* For search engines. robots.txt: every crawler may visit every page, and
+   here's the list of them. sitemap.xml: that list — every page there is to
+   find, at its official address (studio.url), the projects included as they
+   come and go in the CMS. (Hidden projects, the 404 page and the
+   maintenance preview aren't pages to find.) */
+const pagesToFind = ['/', '/work/', '/info/', '/contact/', ...projects.map((p) => `/work/${p.slug}/`)];
+writeFileSync(join(root, 'public', 'robots.txt'), `# Written by \`npm run pages\` (scripts/generate-pages.mjs).
+# Every crawler may visit every page; the list of them is in the sitemap.
+User-agent: *
+Allow: /
+
+Sitemap: ${studio.url}/sitemap.xml
+`, 'utf8');
+writeFileSync(join(root, 'public', 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>
+<!-- Written by \`npm run pages\` (scripts/generate-pages.mjs): every page there is to find. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${pagesToFind.map((path) => `  <url><loc>${esc(studio.url + path)}</loc></url>`).join('\n')}
+</urlset>
+`, 'utf8');
+console.log('  ✓ public/robots.txt, public/sitemap.xml');
 
 /* The same moved addresses for Cloudflare (Workers static assets read a
    `_redirects` file from the build): "<from> <to> 301", with and without the

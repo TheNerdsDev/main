@@ -10,9 +10,14 @@ import cms from './cms.js';
 export const studio = {
   name: 'The Nerds',
   wordmark: 'The Nerds',
+  /* The site's one official address (https, with www) — what the sitemap,
+     robots.txt and search engines are given. No trailing slash. */
+  url: 'https://www.thenerds.dev',
   tagline: 'Creative Development Studio',
+  /* The home page's description for search results (Google shows about
+     160 characters). */
   description:
-    'A two-person studio building websites, software and automation for businesses that deserve better than a template.',
+    'A two-person studio in Surat, India, building websites, software and automation for businesses that deserve better than a template.',
   email: 'getintouch@thenerds.dev',
   /* The header's way to the contact page. */
   contactLabel: 'Contact Us',
@@ -193,12 +198,18 @@ export const workIndex = {
      beside the card stack that's about ten letters. */
   title: ['Heavy on', 'ideas.', 'Light on', 'boring.'],
   intro:
-    'We turn wild ideas into websites, clever software, and digital experiences worth showing off. Take a peek at what happens when nerds get creative.'
+    'We turn wild ideas into websites, clever software, and digital experiences worth showing off. Take a peek at what happens when nerds get creative.',
+  /* For search results (not shown on the page). */
+  description:
+    'Projects we’ve built: a live CSS battle platform, an AI accounting app for artisans, an AI knowledge platform for industry and a local-first task scheduler.'
 };
 
 export const info = {
   /* Each line must fit on one row — it is revealed behind its own mask. */
   title: ['A little', 'about us'],
+  /* For search results (not shown on the page; the lead is too long for one). */
+  description:
+    'Meet and Prem, two developers from Surat, India, building websites, custom software and automations that just work. No corporate BS, no middlemen.',
   lead:
     'We’re The Nerds, two devs from Surat, India, who love cooking up cool stuff for the web. From slick websites to custom software and crazy useful automations, we build things that just work. No corporate BS, no middlemen, just two nerds turning your ideas into something awesome.',
   /* The two boxes in their own section under the heading and photo
