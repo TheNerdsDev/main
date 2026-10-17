@@ -24,6 +24,8 @@
  *   screenshot    its thumbnail was kept whole on a backdrop (the CMS's
  *                 "Keep it whole"); every home card shows its thumbnail
  *                 whole and still either way
+ *   formerSlugs   (set by the CMS) the addresses it had before it was
+ *                 renamed: they send visitors on to its page
  *   thumbFocus    (optional) which part of its thumbnail the Work page's
  *                 wider cards keep: 0 = the top … 1 = the bottom (default
  *                 0.5, the middle) — for one with a title near its top
@@ -169,7 +171,7 @@ export default {
       "videoTo": 19.9
     },
     {
-      "slug": "mesa-kitchen",
+      "slug": "mewar-sync",
       "name": "Mewar Sync",
       "year": "2026",
       "role": "Front-end Development",
@@ -184,7 +186,7 @@ export default {
       ],
       "github": "https://github.com/premkajiwala-hub/Mewar_Sync.git",
       "shots": 3,
-      "video": "/media/mesa-kitchen/preview.mp4",
+      "video": "/media/mewar-sync/preview.mp4",
       "videoFrom": 3,
       "videoTo": 19.9,
       "photos": true,
@@ -192,7 +194,7 @@ export default {
       "pageVideo": true
     },
     {
-      "slug": "atlas-fitness",
+      "slug": "indus-brain",
       "name": "Indus Brain",
       "year": "2026",
       "role": "Design & Development",
@@ -207,7 +209,7 @@ export default {
       ],
       "github": "https://github.com/indusbrain/indusbrain.git",
       "shots": 3,
-      "video": "/media/atlas-fitness/preview.mp4",
+      "video": "/media/indus-brain/preview.mp4",
       "photos": true,
       "screenshot": false,
       "pageVideo": true,

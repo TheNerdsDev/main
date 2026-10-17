@@ -94,6 +94,41 @@ async function receive(req, kind) {
 const slugify = (s) => String(s).toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '')
   .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48) || 'project';
 
+/**
+ * A project renamed (`p`, its name changed since it was saved as `s`): its
+ * address follows — a slug from the new name, unique among the projects
+ * (and their old addresses) and the folders already there — and its media
+ * and originals folders, and every path into them, move with it. The old
+ * address is kept (formerSlugs): the site sends anyone who has it on to the
+ * new one (generate-pages → public/.htaccess). Returns [old, new], or null
+ * when the address stays (the name gives the same slug).
+ */
+async function follow(p, s, content) {
+  const base = slugify(p.name);
+  if (base === p.slug) return null;
+  const own = new Set([p.slug, ...(s.formerSlugs || [])]);
+  const taken = (slug) => content.projects.some((x) => x !== p && (x.slug === slug || (x.formerSlugs || []).includes(slug)))
+    || (!own.has(slug) && (existsSync(mediaDir(slug)) || existsSync(originalsDir(slug))));
+  let next = base;
+  for (let i = 2; taken(next); i++) next = `${base}-${i}`;
+  if (next === p.slug) return null;
+
+  const from = p.slug;
+  for (const dir of [mediaDir, originalsDir]) {
+    if (existsSync(dir(from))) await rename(dir(from), dir(next));
+  }
+  const swap = (v) => {
+    if (typeof v === 'string') return v.split(`/media/${from}/`).join(`/media/${next}/`);
+    if (Array.isArray(v)) return v.map(swap);
+    if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, swap(x)]));
+    return v;
+  };
+  for (const key of Object.keys(p)) p[key] = swap(p[key]);
+  p.formerSlugs = [...new Set([...(s.formerSlugs || []), from])].filter((x) => x !== next);
+  p.slug = next;
+  return [from, next];
+}
+
 /* Where the site is running, for the maintenance preview. Its dev server asks
    for 5173 but takes the next free port when something else has it (another
    project's dev server, say), so the preview can't assume one address — and
@@ -140,6 +175,7 @@ async function api(req, res, url) {
 
   if (method === 'PUT' && path === '/content') {
     const content = await readJson(req);
+    const renamed = [];
     await serial(async () => {
       /* Media fields belong to the server (uploads may have changed them
          since the dashboard last loaded): keep the saved ones. */
@@ -147,14 +183,21 @@ async function api(req, res, url) {
       for (const p of content.projects || []) {
         const s = saved.projects.find((x) => x.slug === p.slug);
         if (!s) continue;
-        for (const key of ['shots', 'photos', 'video', 'screenshot', 'certificates']) {
+        for (const key of ['shots', 'photos', 'video', 'screenshot', 'certificates', 'formerSlugs']) {
           if (key in s) p[key] = s[key]; else delete p[key];
         }
+      }
+      /* Renamed: the address follows the name. */
+      for (const p of content.projects || []) {
+        const s = saved.projects.find((x) => x.slug === p.slug);
+        if (!s || s.name === p.name) continue;
+        const moved = await follow(p, s, content);
+        if (moved) renamed.push(moved);
       }
       await writeContent(content);
       await regenerate();
     });
-    return send(res, 200, await state());
+    return send(res, 200, { ...(await state()), renamed });
   }
 
   if (method === 'POST' && path === '/projects') {

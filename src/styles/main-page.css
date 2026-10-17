@@ -569,12 +569,16 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
   justify-content: center;
   pointer-events: none;
 }
-:is(#main, #info) .about-button {
+/* The pill button: About Us, Contact us (the closing screen) and the 404
+   page's Take me home — one component, in all three. */
+:is(#main, #info, #notfound) .about-button {
   position: relative;
   pointer-events: auto;
   display: flex;
   align-items: center;
   justify-content: center;
+  /* (A finger-sized target even on the narrowest phones.) */
+  min-height: 44px;
   padding: 1.6rem 3.6rem;
   border: 1px solid rgba(var(--c-ink-rgb), 0.9);
   border-radius: 10rem;
@@ -585,7 +589,7 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
     inset 0 0 0.8rem rgba(var(--c-ink-rgb), 0.2);
   transition: box-shadow 0.6s var(--ease-out), border-color 0.6s var(--ease-out);
 }
-:is(#main, #info) .about-button {
+:is(#main, #info, #notfound) .about-button {
   /* Magnetic lean (set by Main.js) and the hover grow, kept apart from
      the transform GSAP animates. */
   translate: var(--nx, 0px) var(--ny, 0px);
@@ -595,7 +599,7 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
 /* (Hover only where there is one: on a touch screen a tap would leave it
    stuck on. Touch gets a press instead, below.) */
 @media (hover: hover) {
-  :is(#main, #info) .about-button:hover {
+  :is(#main, #info, #notfound) .about-button:hover {
     scale: 1.15;
     border-color: #0ACD88;
     box-shadow:
@@ -603,15 +607,15 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
       0 0 2.6rem rgba(10, 205, 136, 0.4),
       inset 0 0 1rem rgba(10, 205, 136, 0.3);
   }
-  :is(#main, #info) .about-button:hover .about-button-text { color: #0ACD88; text-shadow: none; }
-  :is(#main, #info) .about-button:hover .about-button-char { transform: translateY(-100%); }
+  :is(#main, #info, #notfound) .about-button:hover .about-button-text { color: #0ACD88; text-shadow: none; }
+  :is(#main, #info, #notfound) .about-button:hover .about-button-char { transform: translateY(-100%); }
 }
-:is(#main, #info) .about-button:active {
+:is(#main, #info, #notfound) .about-button:active {
   scale: 0.96;
   border-color: #0ACD88;
   transition-duration: 0.12s;
 }
-:is(#main, #info) .about-button:focus-visible {
+:is(#main, #info, #notfound) .about-button:focus-visible {
   scale: 1.15;
   border-color: #0ACD88;
   box-shadow:
@@ -621,9 +625,9 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
   outline: none;
 }
 /* Hover: the outline glows green and the label turns green with it. */
-:is(#main, #info) .about-button:focus-visible .about-button-text { color: #0ACD88; text-shadow: none; }
+:is(#main, #info, #notfound) .about-button:focus-visible .about-button-text { color: #0ACD88; text-shadow: none; }
 
-:is(#main, #info) .about-button-text {
+:is(#main, #info, #notfound) .about-button-text {
   display: flex;
   overflow: hidden;
   font-size: 1.4rem;
@@ -637,7 +641,7 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
   text-shadow: 0 0 0.8rem rgba(var(--c-ink-rgb), 0.55);
   transition: color 0.4s var(--ease-out), text-shadow 0.4s var(--ease-out);
 }
-:is(#main, #info) .about-button-char {
+:is(#main, #info, #notfound) .about-button-char {
   position: relative;
   display: inline-block;
   /* Slid out from the middle while the label arrives (Main.js --spread). */
@@ -647,13 +651,13 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
 }
 /* Letter-spacing also trails the last letter — cancel it so the label
    sits truly centred in the pill. */
-:is(#main, #info) .about-button-char:last-child { margin-right: -0.22em; }
-:is(#main, #info) .about-button-char::after {
+:is(#main, #info, #notfound) .about-button-char:last-child { margin-right: -0.22em; }
+:is(#main, #info, #notfound) .about-button-char::after {
   content: attr(data-c);
   position: absolute;
   left: 0; top: 100%;
 }
-:is(#main, #info) .about-button:focus-visible .about-button-char { transform: translateY(-100%); }
+:is(#main, #info, #notfound) .about-button:focus-visible .about-button-char { transform: translateY(-100%); }
 
 /* The welcome page's About Us: a step up from the base size. */
 #main .about-cta .about-button { padding: 2rem 4.6rem; }
@@ -1073,7 +1077,7 @@ html.no-webgl #main .about-hint { display: none; }
   #main .about-hint { gap: 1rem; font-size: 1.1rem; letter-spacing: 0.22em; padding-left: 0.22em; }
   #main .about-text { font-size: 2.1rem; }
   #main .about-cta { margin-top: 3.2rem; }
-  :is(#main, #info) .about-button { padding: 1.4rem 3rem; }
+  :is(#main, #info, #notfound) .about-button { padding: 1.4rem 3rem; }
   #main .about-body { align-items: center; }
 }
 
