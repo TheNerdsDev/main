@@ -119,7 +119,9 @@ export default class Projects extends Page {
   measureStack() {
     if (!this.cards.length) return;
 
-    this.mode = store.isDesktop ? 'desktop' : store.isMobile ? 'mobile' : 'tablet';
+    /* (A phone turned sideways is wider than the phone layout, but it's
+       still a phone: its cards stay flat images, all in focus.) */
+    this.mode = store.isPhone ? 'mobile' : store.isDesktop ? 'desktop' : store.isMobile ? 'mobile' : 'tablet';
     this.cfg = STACK[this.mode];
     this.pinned = this.mode === 'desktop';
     /* The pinned stack has no labels — the index rail names the card in focus. */

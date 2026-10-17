@@ -129,8 +129,11 @@ export default class RockStage {
   }
 
   resize() {
-    this.w = window.innerWidth;
-    this.h = window.innerHeight;
+    /* (The stable viewport, as tall as the canvas: core/Store.js — so the
+       address bar sliding doesn't move the centre everything is placed
+       about, or reallocate the buffer mid-scroll.) */
+    this.w = store.width;
+    this.h = store.height;
     /* Resized only when it has to be: every resize reallocates the
        full-screen (antialiased) drawing buffer. */
     const dpr = store.fxDpr;
@@ -236,6 +239,8 @@ export default class RockStage {
   }
 
   tick = (time, deltaMs) => {
+    /* (Under the open phone menu: unseen.) */
+    if (store.covered) return;
     const dt = Math.min(deltaMs / 1000, 1 / 30);
 
     this.chunks = this.chunks.filter((c) => {

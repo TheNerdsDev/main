@@ -12,9 +12,10 @@
   width: 100%; height: 100%;
   object-fit: cover;
 }
-/* (Touch screens show the images themselves: gl/Media.js.) */
-html.webgl:not(.dom-media) .media { visibility: hidden; }
-html.webgl:not(.dom-media) .media-wrapper { background: none; }
+/* (Touch screens show the image itself: phones — html.flat-media, core/
+   Store.js isPhone — and tablets, html.dom-media, gl/Media.js.) */
+html.webgl:not(.flat-media):not(.dom-media) .media { visibility: hidden; }
+html.webgl:not(.flat-media):not(.dom-media) .media-wrapper { background: none; }
 /* A frame still waiting for its photo (scripts/generate-pages.mjs). */
 html .media-wrapper.is-empty {
   background: rgba(var(--c-ink-rgb), 0.04);

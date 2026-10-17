@@ -203,9 +203,16 @@ async function save() {
   btn.dataset.saving = '1';
   try {
     const keep = location.hash;
-    apply(await call('PUT', '/api/content', S.draft));
-    toast('Saved — the site has the changes.', 'good');
-    if (location.hash === keep) route();
+    const st = await call('PUT', '/api/content', S.draft);
+    apply(st);
+    /* A renamed project's address followed its name (server/api.js follow):
+       say so, and stay on its page at the new one. */
+    const moves = st.renamed || [];
+    const names = moves.map(([, to]) => `/work/${to}/`).join(', ');
+    toast(moves.length ? `Saved — renamed, so its address is now ${names} (the old one sends visitors there).` : 'Saved — the site has the changes.', 'good');
+    const moved = moves.find(([from]) => keep === `#/projects/${from}`);
+    if (moved) location.hash = `#/projects/${moved[1]}`;
+    else if (location.hash === keep) route();
     return true;
   } catch (err) {
     toast(err.message, 'error');

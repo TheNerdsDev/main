@@ -114,6 +114,8 @@ export default class SpaceRocks {
   }
 
   tick = (time, deltaMs, frame) => {
+    /* (Under the open phone menu: unseen.) */
+    if (store.covered) return;
     const dt = Math.min(deltaMs / 1000, 1 / 30);
     /* Each rock drawn, then copied to its canvas, makes the GPU stop and
        catch up: a phone draws them in turns — half of them a frame, or

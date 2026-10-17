@@ -12,7 +12,8 @@ const PREVIEW_GAP = 8;
 /**
  * Creates and owns every MediaMesh on the current page.
  *
- * Not on a touch screen: there the pictures are the page's own images,
+ * Not on a touch screen (phones: Store isPhone, below; tablets: `dom`):
+ * there the pictures are the page's own images,
  * drawn by the browser — sharp at the screen's full resolution (the world
  * draws at less, store.setDpr), in their own colours, with no grain over
  * the small print in them, and nothing for a phone's GPU to draw. (Nor is
@@ -38,6 +39,12 @@ export default class Media {
 
   create(root = document, pageId = 'main') {
     this.destroyMeshes();
+    /* Phones show the photos as the images themselves (Store isPhone,
+       html.flat-media): no planes. */
+    if (store.isPhone) {
+      this.meshes = [];
+      return this.meshes;
+    }
 
     const isHome = pageId === 'projects';
     const colour = isHome ? 0 : 0.88;

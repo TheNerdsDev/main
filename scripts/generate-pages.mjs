@@ -12,7 +12,7 @@ import { existsSync, mkdirSync, writeFileSync, readdirSync, rmSync, readFileSync
 import { createHash } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { studio, maintenance, main, team, workIndex, info, contact, showcase, finale, projects, getNext, getPrev } from '../src/content/site.js';
+import { studio, maintenance, main, team, workIndex, info, contact, showcase, finale, projects, redirects, getNext, getPrev } from '../src/content/site.js';
 import { logoSvg } from '../src/content/logo.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -20,7 +20,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
    long after the page (and past a reload) — a new icon is a new address,
    so it shows at once, everywhere. */
 const ICON_V = createHash('md5')
-  .update(['favicon.svg', 'favicon.ico', 'apple-touch-icon.png'].map((f) => readFileSync(join(root, 'public', f))).reduce((a, b) => Buffer.concat([a, b])))
+  .update(['favicon-32.png', 'favicon-48.png', 'favicon.ico', 'icon-192.png', 'apple-touch-icon.png'].map((f) => readFileSync(join(root, 'public', f))).reduce((a, b) => Buffer.concat([a, b])))
   .digest('hex').slice(0, 8);
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const BUILD = process.argv.includes('--build');
@@ -50,10 +50,12 @@ const shell = ({ title, description, pageId, body, bodyClass = '' }) => `<!docty
 <meta property="og:title" content="${esc(title)}" />
 <meta property="og:description" content="${esc(description)}" />
 <meta property="og:site_name" content="${esc(studio.name)}" />
-<!-- The tab icon, the N and its rocket (public/): the SVG takes the browser's
-     light or dark; the .ico is for every browser that doesn't read it. -->
+<!-- The tab icon, the logo on space (public/). ?v= changes with the files,
+     so a browser drops one it has kept from before. -->
+<link rel="icon" href="/favicon-32.png?v=${ICON_V}" type="image/png" sizes="32x32" />
+<link rel="icon" href="/favicon-48.png?v=${ICON_V}" type="image/png" sizes="48x48" />
+<link rel="icon" href="/icon-192.png?v=${ICON_V}" type="image/png" sizes="192x192" />
 <link rel="icon" href="/favicon.ico?v=${ICON_V}" sizes="16x16 32x32 48x48" />
-<link rel="icon" href="/favicon.svg?v=${ICON_V}" type="image/svg+xml" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=${ICON_V}" />
 <link rel="manifest" href="/site.webmanifest?v=${ICON_V}" />
 <!-- The first paint, before the stylesheet arrives (in dev it's injected by
@@ -153,8 +155,18 @@ const header = (current, inside = false) => `  <header class="site-header">
    stretch of its thumbnail and this picks which. (gl/MediaMesh.js) */
 const focusAttr = (p) => (Number.isFinite(p.thumbFocus) ? ` data-focus="${Math.min(1, Math.max(0, p.thumbFocus))}"` : '');
 
-const mediaBlock = (src, alt, extra = '') =>
-  `<div class="media-wrapper" data-media ${extra}><img class="media" src="${src}" alt="${esc(alt)}" loading="lazy" decoding="async" /></div>`;
+/* On phones the <img> itself is what shows (src/core/Store.js isPhone):
+   a project thumbnail offers its 960px WebP there, and keeps the part of
+   it its `thumbFocus` names, as the WebGL plane does. (The planes always
+   load `src`.) */
+const mediaBlock = (src, alt, extra = '') => {
+  const thumb = src.match(/^\/media\/([^/]+)\/featured\.jpg$/);
+  const small = thumb && existsSync(join(root, 'public', 'media', thumb[1], 'featured-960.webp'));
+  const set = small ? ` srcset="/media/${thumb[1]}/featured-960.webp 960w, ${src} 1600w" sizes="(max-width: 767px) 100vw, 50vw"` : '';
+  const focus = extra.match(/data-focus="([\d.]+)"/);
+  const pos = focus ? ` style="object-position: 50% ${(Number(focus[1]) * 100).toFixed(1)}%"` : '';
+  return `<div class="media-wrapper" data-media ${extra}><img class="media" src="${src}"${set} alt="${esc(alt)}"${pos} loading="lazy" decoding="async" /></div>`;
+};
 
 /* Project pages show empty frames until the real photos are in — a project
    with `photos: true` shows its own, and setting this to true shows them
@@ -745,10 +757,12 @@ const maintenancePage = () => {
 <meta property="og:title" content="${esc(title)}" />
 <meta property="og:description" content="${esc(description)}" />
 <meta property="og:site_name" content="${esc(studio.name)}" />
-<!-- The tab icon, the N and its rocket (public/): the SVG takes the browser's
-     light or dark; the .ico is for every browser that doesn't read it. -->
+<!-- The tab icon, the logo on space (public/). ?v= changes with the files,
+     so a browser drops one it has kept from before. -->
+<link rel="icon" href="/favicon-32.png?v=${ICON_V}" type="image/png" sizes="32x32" />
+<link rel="icon" href="/favicon-48.png?v=${ICON_V}" type="image/png" sizes="48x48" />
+<link rel="icon" href="/icon-192.png?v=${ICON_V}" type="image/png" sizes="192x192" />
 <link rel="icon" href="/favicon.ico?v=${ICON_V}" sizes="16x16 32x32 48x48" />
-<link rel="icon" href="/favicon.svg?v=${ICON_V}" type="image/svg+xml" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=${ICON_V}" />
 <link rel="manifest" href="/site.webmanifest?v=${ICON_V}" />
 <style>html { background: #05060F; color-scheme: dark; }</style>
@@ -773,6 +787,67 @@ const maintenancePage = () => {
 `;
 };
 
+/* ------------------------------------------------------------------ 404 */
+
+/* Any address with no page: a heading, a line and the way home, on the
+   site's own sky and with its cursor (src/notfound.js) — and nothing
+   else: no header, no menu, no footer, no loader. The host
+   serves it with a 404 status and the address left as typed (public/.htaccess;
+   in dev and `vite preview`, vite.config.js). Its button is the About Us one
+   (main-page.css, #notfound). Every URL in it is absolute: it's served at
+   any depth. */
+const notFoundPage = () => {
+  const label = 'BACK TO HOME';
+  const chars = [...label]
+    .map((c, i) => `<span class="about-button-char" style="--i: ${i}" data-c="${c === ' ' ? '\u00a0' : esc(c)}">${c === ' ' ? '&nbsp;' : esc(c)}</span>`)
+    .join('');
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Page not found — ${esc(studio.name)}</title>
+<meta name="robots" content="noindex" />
+<meta name="theme-color" content="#05060F" />
+<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
+<link rel="icon" href="/favicon-48.png" type="image/png" sizes="48x48" />
+<link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<!-- The first paint, before the stylesheet arrives (in dev it's injected by
+     script): the sky's colour and nothing on it. The words stay hidden until
+     base.css sets --styled and their fonts are in (src/notfound.js lifts
+     lost-wait), so nothing flashes unstyled or in a stand-in face; the
+     timer is the backstop, should the script never run. -->
+<style>
+  html { background: #05060F; color-scheme: dark; }
+  body { margin: 0; }
+  .lost-main { visibility: var(--styled, hidden); }
+  html.lost-wait .lost-main { visibility: hidden; }
+</style>
+<script>
+  document.documentElement.classList.add('lost-wait');
+  setTimeout(function () { document.documentElement.classList.remove('lost-wait'); }, 2500);
+</script>
+</head>
+<body class="lost">
+<canvas class="canvas" aria-hidden="true"></canvas>
+<div class="overlay" aria-hidden="true"></div>
+<canvas class="lost-stars" aria-hidden="true" hidden></canvas>
+<main class="lost-main" id="notfound">
+  <h1 class="title"><span class="line"><span class="line-inner">Lost in space.</span></span></h1>
+  <p class="lost-text subtext">Yeah, this page doesn’t exist. Even we nerds couldn’t find it. Let’s head back to where the good stuff is.</p>
+  <div class="lost-cta">
+    <a class="about-button" href="/" aria-label="Back to home">
+      <span class="about-button-text" aria-hidden="true">${chars}</span>
+    </a>
+  </div>
+</main>
+<script type="module" src="/src/notfound.js"></script>
+</body>
+</html>
+`;
+};
+
 /* ----------------------------------------------------------------- emit */
 
 const write = (relDir, html) => {
@@ -786,7 +861,12 @@ console.log(BUILD && maintenance.on ? 'Generating pages… (maintenance is on: t
 if (BUILD && maintenance.on) {
   const page = maintenancePage();
   ['', 'work', 'info', 'contact', ...projects.map((p) => join('work', p.slug))].forEach((dir) => write(dir, page));
+  /* …and at an address with no page, too. */
+  writeFileSync(join(root, '404.html'), page, 'utf8');
+  console.log('  ✓ 404.html (the maintenance page)');
 } else {
+  writeFileSync(join(root, '404.html'), notFoundPage(), 'utf8');
+  console.log('  ✓ 404.html');
   write('', mainPage());
   write('work', projectsPage());
   write('info', infoPage());
@@ -812,6 +892,26 @@ for (const entry of readdirSync(join(root, 'work'), { withFileTypes: true })) {
   }
 }
 
-/* (The tab icons are fixed files in public/ — favicon.svg, favicon.ico,
-   apple-touch-icon.png, icon-192/512.png, site.webmanifest — not written here.) */
+/* The host's server config (Apache / LiteSpeed — Hostinger), copied into
+   the build: the 404 page for an address with no page, and the addresses
+   that have moved (site.js redirects) as permanent redirects — matched with
+   or without the trailing slash. vite.config.js reads it too, so dev and
+   preview answer the same. */
+const htaccess = `# Written by \`npm run pages\` (scripts/generate-pages.mjs) — edit it there.
+# The host's server (Apache / LiteSpeed — Hostinger). Copied into the build.
+
+# An address with no page: the 404 page (/404.html), with a 404 status, at
+# the address as typed — not a redirect. (Netlify, Vercel, Cloudflare Pages
+# and GitHub Pages pick up /404.html by themselves.)
+ErrorDocument 404 /404.html
+
+# Addresses that have moved (src/content/site.js redirects).
+${redirects.map((r) => `RedirectMatch 301 ^${r.from.replace(/\/$/, '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/?$ ${r.to}`).join('\n')}
+`;
+writeFileSync(join(root, 'public', '.htaccess'), htaccess, 'utf8');
+console.log('  ✓ public/.htaccess');
+
+/* The tab icon is the logo on space, as files in public/ (favicon-32.png,
+   favicon-48.png, favicon.ico made from favicon-48, icon-192.png,
+   icon-512.png, apple-touch-icon.png, site.webmanifest) — not made here. */
 console.log(`Done — ${projects.length + 4} pages.`);
