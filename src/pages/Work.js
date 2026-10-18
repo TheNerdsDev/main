@@ -54,6 +54,27 @@ export default class Work extends Page {
     this.bindCerts();
   }
 
+  /**
+   * The film shows its poster until it plays. If the video can't be had
+   * at all, the poster stays, as a picture, instead of a dead player.
+   */
+  watchFilm(video) {
+    const failed = () => {
+      if (this.filmFailed) return;
+      this.filmFailed = true;
+      console.warn(`[work] video failed to load: ${video.currentSrc || video.src}`);
+      const poster = video.getAttribute('poster');
+      if (!poster) return;
+      const img = document.createElement('img');
+      img.className = 'work-film-video';
+      img.src = poster;
+      img.alt = video.getAttribute('aria-label') || '';
+      video.replaceWith(img);
+    };
+    if (video.error) failed();
+    else video.addEventListener('error', failed, { once: true });
+  }
+
   /* ---------------------------------------------------- certificates */
 
   /**
@@ -282,6 +303,7 @@ export default class Work extends Page {
       video.replaceWith(fresh);
       video = fresh;
     }
+    this.watchFilm(video);
     video.play().catch(() => {});
     /* Scrolled out of sight, it pauses (no decoding nobody sees); back in,
        it carries on. */

@@ -8,26 +8,9 @@ import '@fontsource/atkinson-hyperlegible/latin-700.css';
 import './styles/main.css';
 
 import store from './core/Store.js';
-
-/* --------------------------------------------------------------------
-   No WebGL, or the visitor asked for reduced motion:
-   serve the plain document and wire up only what still makes sense.
-   -------------------------------------------------------------------- */
-const fallback = () => {
-  const html = document.documentElement;
-  html.classList.add('no-webgl', 'loaded');
-  html.classList.remove('is-transitioning');
-
-  document.querySelector('.loader')?.remove();
-  document.querySelector('.canvas')?.remove();
-  document.querySelector('.overlay')?.remove();
-
-  document.querySelectorAll('[data-email]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      window.location.href = `mailto:${btn.getAttribute('data-email')}`;
-    });
-  });
-};
+/* No WebGL, or the visitor asked for reduced motion: the plain document,
+   wired up only where that still makes sense. */
+import fallback from './core/plain.js';
 
 const boot = async () => {
   if (!store.hasWebGL) return fallback();

@@ -445,6 +445,10 @@ h1 {
   .site-header.is-open .nav {
     clip-path: circle(var(--iris-r) at var(--iris-x) var(--iris-y));
     visibility: visible;
+    /* A drag on the open panel moves nothing beneath it (the page's own
+       scroll is only stopped once the iris is fully open: App.js). */
+    touch-action: none;
+    overscroll-behavior: contain;
     transition: clip-path 0.85s cubic-bezier(0.65, 0, 0.2, 1), visibility 0s;
   }
   /* Opening, a jump to warp: streaks of starlight rush out from the

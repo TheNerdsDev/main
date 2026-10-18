@@ -542,6 +542,13 @@ ${previews}
 
 /* ----------------------------------------------------------------- work */
 
+/* What a project's film shows until its first frame is in (on a phone,
+   a second or more of black otherwise): its thumbnail, the same 4:3 —
+   the small one if there is one (on a phone it's already been fetched). */
+const filmPoster = (p) => (existsSync(join(root, 'public', 'media', p.slug, 'featured-960.webp'))
+  ? `/media/${p.slug}/featured-960.webp`
+  : `/media/${p.slug}/featured.jpg`);
+
 const workPage = (p) => {
   const next = getNext(p.slug);
   const prev = getPrev(p.slug);
@@ -600,7 +607,7 @@ ${header('projects', true)}
     <div class="hero-media${certs.length ? ' has-certs' : ''}">
       ${certs[0] ? cert(certs[0], 'left') : ''}
       ${p.pageVideo && p.video
-        ? `<div class="work-film"><video class="work-film-video" src="${esc(p.video)}" autoplay muted loop playsinline preload="auto" aria-label="${esc(p.name)}, a walkthrough"></video></div>`
+        ? `<div class="work-film"><video class="work-film-video" src="${esc(p.video)}" poster="${filmPoster(p)}" autoplay muted loop playsinline preload="auto" aria-label="${esc(p.name)}, a walkthrough"></video></div>`
         : workMedia(p, `/media/${p.slug}/featured.jpg`, p.name, focusAttr(p).trim())}
       ${certs[1] ? cert(certs[1], 'right') : ''}
     </div>

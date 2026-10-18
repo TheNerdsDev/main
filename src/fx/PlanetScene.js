@@ -6,6 +6,7 @@ import {
   DoubleSide, BackSide, AdditiveBlending, DynamicDrawUsage
 } from 'three';
 import store from '../core/Store.js';
+import { release } from '../core/gpu.js';
 
 /*
  * The planets of the closing shower, drawn with three.js.
@@ -56,9 +57,9 @@ const Y_AXIS = new Vector3(0, 1, 0);
 const Z_AXIS = new Vector3(0, 0, 1);
 
 /* Where the light comes from (towards the light), as the Sun used to be: up-left, in front. */
-const SUN = new Vector3(-0.62, 0.46, 0.63).normalize();
+export const SUN = new Vector3(-0.62, 0.46, 0.63).normalize();
 
-const texturesFor = (q) => ({
+export const texturesFor = (q) => ({
   earthDay: `/textures/planets/${q}/earth_day.jpg`,
   earthNormal: `/textures/planets/${q}/earth_normal.jpg`,
   earthRough: `/textures/planets/${q}/earth_rough.jpg`,
@@ -97,8 +98,8 @@ const decodesBitmaps = () => {
 const WRAP = new Set(['venus', 'jupiter', 'earthClouds']);
 
 /* Saturn's ring, as a fraction of the planet's radius (matches the ring map). */
-const SATURN_RING = [1.13, 2.27];
-const URANUS_RING = [1.6, 2.05];
+export const SATURN_RING = [1.13, 2.27];
+export const URANUS_RING = [1.6, 2.05];
 
 /**
  * Atmosphere shell: a slightly larger sphere drawn from the inside and added
@@ -202,7 +203,7 @@ const ringGeometry = ([inner, outer], segments) => {
 };
 
 /** A body's tilt: inclined towards us, then leaning by its axial tilt (direction from its seed). */
-function tiltFor(type, seed) {
+export function tiltFor(type, seed) {
   const lean = (SPIN[type][0] * Math.PI) / 180 * (seed < 0.5 ? 1 : -1);
   /* Uranus lies on its side; swing its pole part-way towards us so its
      rings open into a tall ellipse instead of a thin edge-on line. */
@@ -522,7 +523,6 @@ export default class PlanetScene {
       m.dispose();
     });
     Object.values(this.tex || {}).forEach((t) => t.dispose());
-    this.renderer.dispose();
-    this.renderer.forceContextLoss();
+    release(this.renderer);
   }
 }

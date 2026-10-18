@@ -5,6 +5,7 @@ import gsap from 'gsap';
 import { makeAsteroid, prebuildAsteroids, rockMaterial } from './asteroid.js';
 import { rand } from './particles.js';
 import store from '../core/Store.js';
+import gpu from '../core/gpu.js';
 
 /* The shapes: one detailed hero rock, a handful of chunks it breaks into. */
 const HERO = { seed: 7, detail: 5, craters: 13 };
@@ -32,9 +33,10 @@ export default class RockStage {
   static prepare() { prebuildAsteroids([HERO, ...CHUNKS]); }
 
   constructor() {
+    kept?.claim();
     const reuse = kept && !kept.renderer.getContext().isContextLost();
     if (reuse) {
-      ({ canvas: this.canvas, renderer: this.renderer, rockMat: this.rockMat, chunkMat: this.chunkMat } = kept);
+      ({ canvas: this.canvas, renderer: this.renderer, rockMat: this.rockMat, chunkMat: this.chunkMat, untrack: this.untrack } = kept);
       this.canvas.style.zIndex = '';
     } else {
       if (kept) RockStage.release(kept);
@@ -45,6 +47,9 @@ export default class RockStage {
       this.renderer.setClearColor(0x000000, 0);
       this.rockMat = rockMaterial(false, { bump: 1.4, seed: 3.7 });
       this.chunkMat = rockMaterial(true, { bump: 1.1, seed: 9.1 });
+      /* (three.js takes a lost context back by itself; the shapes and
+         materials go up again on the next throw.) */
+      this.untrack = gpu.track('thrown rock (RockStage)', this.canvas);
     }
     kept = null;
     /* Out of the picture while nothing's in the air: an empty layer over
@@ -273,10 +278,16 @@ export default class RockStage {
     this.destroyed = true;
     gsap.ticker.remove(this.tick);
     this.canvas.remove();
-    const parts = { canvas: this.canvas, renderer: this.renderer, rockMat: this.rockMat, chunkMat: this.chunkMat };
+    const parts = { canvas: this.canvas, renderer: this.renderer, rockMat: this.rockMat, chunkMat: this.chunkMat, untrack: this.untrack };
     if (!kept && !this.renderer.getContext().isContextLost()) {
       this.renderer.clear();
       kept = parts;
+      /* (On a phone, let go if the next page doesn't take it up: gpu.js.) */
+      parts.claim = gpu.keep(() => {
+        if (kept !== parts) return;
+        kept = null;
+        RockStage.release(parts);
+      });
     } else {
       this.rockGeo.dispose();
       this.chunkGeos.forEach((g) => g.dispose());
@@ -284,9 +295,10 @@ export default class RockStage {
     }
   }
 
-  static release({ renderer, rockMat, chunkMat }) {
+  static release({ renderer, rockMat, chunkMat, untrack }) {
     rockMat.dispose();
     chunkMat.dispose();
-    renderer.dispose();
+    untrack?.();
+    gpu.release(renderer);
   }
 }

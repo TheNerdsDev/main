@@ -326,6 +326,8 @@ html.lenis-stopped { overflow: hidden; }
    rocks lagged a frame behind the faces and jumped to catch up. Now the
    scroll carries them along with the faces. */
 #main .duo-actions { position: absolute; top: 0; left: 0; width: 0; height: 0; z-index: 6; pointer-events: none; }
+/* (Touch screens, travelling round the screen: pinned to it — Duo.js.) */
+#main .duo-actions.is-pinned { position: fixed; }
 #main .duo-action {
   position: absolute;
   top: 0; left: 0;

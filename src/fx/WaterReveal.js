@@ -1,4 +1,5 @@
 import gsap from 'gsap';
+import { track } from '../core/gpu.js';
 
 const VERT = `
 attribute vec2 aPos;
@@ -185,7 +186,26 @@ export default class WaterReveal {
       return;
     }
     this.gl = gl;
-    this.canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); this.dead = true; this.stop(); });
+    /* Lost, the cards are simply dry; given back, the program goes up
+       again and each card's textures are made afresh on its next hover. */
+    this.untrack = track('hover water (WaterReveal)', this.canvas, {
+      onLost: (e) => {
+        e.preventDefault();
+        this.dead = true;
+        this.stop();
+      },
+      onRestored: () => {
+        if (this.gone || !this.build(gl)) return;
+        this.cards.forEach((c) => {
+          c.vtex = c.ttex = null;
+          c.thumbReady = c.hasFrame = false;
+          c.vw = c.vh = 0;
+          c.fresh = true;
+        });
+        this.dead = false;
+        this.resize();
+      }
+    });
 
     this.layout = layout;
     /* Indexed as the page's cards are; a card without a video stays dry. */
@@ -570,6 +590,8 @@ export default class WaterReveal {
   destroy() {
     this.stop();
     this.dead = true;
+    this.gone = true;
+    this.untrack?.();
     this.cards?.forEach((c) => {
       c.bitmap?.close();
       if (c.video) {

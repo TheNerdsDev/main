@@ -7,6 +7,7 @@ import {
 import gsap from 'gsap';
 import store from '../core/Store.js';
 import assets from '../core/Assets.js';
+import { track } from '../core/gpu.js';
 import Stars from './Stars.js';
 import InkTrail from './InkTrail.js';
 import Media from './Media.js';
@@ -61,6 +62,12 @@ export default class World {
     this.renderer.outputColorSpace = SRGBColorSpace;
     this.renderer.setClearColor(PALETTE.bg, 1);
     assets.setRenderer(this.renderer);
+    /* three.js takes a lost context back by itself, and rebuilds its
+       shaders, targets and textures on the next draw; the sky's band of
+       clouds is drawn once into its own target, so it's redrawn then. */
+    this.untrack = track('sky (World)', this.canvas, {
+      onRestored: () => { if (this.stars) this.stars.nebulaDirty = true; }
+    });
   }
 
   initCamera() {
@@ -267,6 +274,7 @@ export default class World {
     this.stars.destroy();
     this.ink.destroy();
     this.sceneRT.dispose();
+    this.untrack();
     this.renderer.dispose();
   }
 }

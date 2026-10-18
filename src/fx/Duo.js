@@ -952,7 +952,20 @@ export default class Duo {
        (Written only now, after every measurement above: a style written
        before them made the browser work the page's styles out again for
        each one, several times a frame.) */
-    if (this.actionsEl && (box.left !== this.layerX || box.top !== this.layerY)) {
+    /* Touch screens, once the rocks are more on their way round the
+       screen than round the faces: their layer is pinned to the screen
+       instead. There the browser scrolls the page itself, a step ahead of
+       this — and a layer riding with the page was carried along by each
+       step, then pulled back here: every frame of the trip down, the rocks
+       jumped and snapped back. Pinned, they move only as they're placed. */
+    const pinned = store.isTouch && fe >= 0.5;
+    if (this.actionsEl && pinned !== this.layerPinned) {
+      this.layerPinned = pinned;
+      this.actionsEl.classList.toggle('is-pinned', pinned);
+      this.layerX = this.layerY = null;
+      if (pinned) this.actionsEl.style.transform = '';
+    }
+    if (this.actionsEl && !pinned && (box.left !== this.layerX || box.top !== this.layerY)) {
       this.layerX = box.left;
       this.layerY = box.top;
       this.actionsEl.style.transform = `translate3d(${(-box.left).toFixed(2)}px, ${(-box.top).toFixed(2)}px, 0)`;

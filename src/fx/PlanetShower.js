@@ -1,5 +1,7 @@
 import gsap from 'gsap';
 import store from '../core/Store.js';
+import gpu from '../core/gpu.js';
+import PlanetSprites from './PlanetSprites.js';
 import PlanetScene, { ringShape, MERCURY, VENUS, EARTH, MOON, MARS, JUPITER, SATURN, URANUS, NEPTUNE } from './PlanetScene.js';
 
 /*
@@ -128,13 +130,13 @@ const plan = (w, h) => {
    one's (canvas and all, see the constructor) rather than building it all
    again, which on each visit to a page held up its entrance. */
 let kept = null;
-/* Whether WebGL2 works here — asked once (asking makes a context). */
-let webgl2 = null;
 
 export default class PlanetShower {
+  /* (WebGL2 itself was checked at boot, Store.hasWebGL: without it the
+     site is the plain document. Should the planets' own context fail, they
+     fall in 2D: PlanetSprites.) */
   static supported() {
-    if (webgl2 === null) webgl2 = !!document.createElement('canvas').getContext('webgl2');
-    return webgl2 && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    return !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
 
   /** How many of each kind can ever fall at once (the widest screens). */
@@ -162,6 +164,7 @@ export default class PlanetShower {
     /* Phones and small screens get 1K maps and lighter geometry. */
     const small = Math.min(window.screen?.width || 9999, window.screen?.height || 9999) < 820;
     this.small = small;
+    kept?.claim();
     const reuse = kept && kept.small === small && !kept.scene.renderer.getContext().isContextLost();
     if (reuse) {
       /* The last page's scene, ready to go: its canvas takes this one's place. */
@@ -169,25 +172,23 @@ export default class PlanetShower {
       canvas = kept.canvas;
       this.scene = kept.scene;
       this.scene.blank = false;
-    } else {
-      kept?.scene.dispose();
+      kept.untrack();
+    } else if (kept) {
+      kept.untrack();
+      kept.scene.dispose();
     }
     kept = null;
     this.canvas = canvas;
     if (!reuse) {
       try {
         this.scene = new PlanetScene(canvas, { small });
-      } catch {
-        this.dead = true;
-        return;
+      } catch (err) {
+        gpu.warn('planets: no WebGL context, showing them in 2D', err);
+        this.toFlat();
+        if (this.dead) return;
       }
     }
-    this.onLost = (e) => {
-      e.preventDefault();
-      this.dead = true;
-      this.stop();
-    };
-    canvas.addEventListener('webglcontextlost', this.onLost);
+    if (!this.flat) this.watch();
 
     const local = (e) => {
       const r = this.section.getBoundingClientRect();
@@ -243,9 +244,7 @@ export default class PlanetShower {
       this.prepared = true;
       this.loadIo.disconnect();
       clearTimeout(this.prepareAt);
-      this.scene.load(PlanetShower.capacity())
-        .then(() => this.scene.warm())
-        .catch(() => { this.dead = true; });
+      this.ready(this.scene);
     };
     this.loadIo = new IntersectionObserver((entries) => {
       if (entries.some((e) => e.isIntersecting)) prepare();
@@ -313,6 +312,110 @@ export default class PlanetShower {
     this.ro = new ResizeObserver(() => this.resize());
     this.ro.observe(section);
     this.resize();
+  }
+
+  /* ------------------------------------------------- WebGL, or 2D */
+
+  /** Load a scene's maps and get it ready to draw; a failure falls back to 2D. */
+  ready(scene) {
+    Promise.resolve()
+      .then(() => scene.load(PlanetShower.capacity()))
+      .then(() => scene.warm())
+      .catch((err) => {
+        if (scene !== this.scene || this.gone) return;
+        if (this.flat) {
+          gpu.warn('planets (2D) failed too, showing the text alone', err);
+          this.dead = true;
+          this.stop();
+          return;
+        }
+        this.toFlat('their maps failed to load', err);
+      });
+  }
+
+  /** Log the WebGL context's loss (the shower goes on in 2D) and its return (back to WebGL). */
+  watch() {
+    this.untrack = gpu.track('planets (PlanetScene)', this.canvas, {
+      onLost: (e) => {
+        e.preventDefault();
+        this.toFlat(null, null, true);
+      },
+      onRestored: () => this.backToGl()
+    });
+  }
+
+  /** The largest a body of `type` is drawn on this screen (CSS px). */
+  largest(type) {
+    const row = BODIES.find((r) => r[0] === type);
+    const w = this.W || this.section.clientWidth;
+    const h = this.H || this.section.clientHeight;
+    return (row ? row[1] : 42) * GROW * plan(w, h).unit * 1.07 * PAD;
+  }
+
+  /**
+   * Go on in 2D, on a canvas of its own (one that has had a WebGL context
+   * can't give a 2D one). With `hold`, the WebGL scene is kept aside to come
+   * back to when its context does; otherwise it's let go.
+   */
+  toFlat(reason, err, hold = false) {
+    if (this.flat || this.gone || this.dead) return;
+    if (reason) gpu.warn(`planets: ${reason}, showing them in 2D`, ...(err ? [err] : []));
+    const old = this.canvas;
+    const canvas = document.createElement('canvas');
+    canvas.className = old?.className || 'planet-canvas';
+    canvas.setAttribute('aria-hidden', 'true');
+    if (old?.isConnected) old.replaceWith(canvas);
+    else this.section.querySelector('.planet-canvas')?.replaceWith(canvas);
+    if (this.scene) {
+      if (hold) this.held = { scene: this.scene, canvas: old };
+      else {
+        this.untrack?.();
+        this.untrack = null;
+        this.scene.dispose();
+      }
+    }
+    this.canvas = canvas;
+    try {
+      this.scene = new PlanetSprites(canvas, { radius: (t) => this.largest(t) });
+    } catch (e) {
+      gpu.warn('planets: no 2D canvas either, showing the text alone', e);
+      canvas.remove();
+      this.scene = null;
+      this.dead = true;
+      this.stop();
+      return;
+    }
+    this.flat = true;
+    if (this.W) this.scene.resize(this.W, this.H);
+    /* (Wanted now, if a shower is waiting or a pile is showing.) */
+    if (this.pending || this.bodies.length) this.scene.hurry = true;
+    if (this.prepared || this.pending || this.bodies.length) this.ready(this.scene);
+  }
+
+  /** The WebGL context is back: put the maps up again, then swap the 3D planets back in. */
+  backToGl() {
+    const held = this.held;
+    if (!held || this.gone) return;
+    const scene = held.scene;
+    Promise.resolve()
+      .then(() => scene.load(PlanetShower.capacity()))
+      .then(() => {
+        scene.warmed = false;
+        scene.warming = null;
+        scene.blank = false;
+        return scene.warm();
+      })
+      .then(() => {
+        if (this.gone || this.held !== held || scene.renderer.getContext().isContextLost()) return;
+        this.canvas.replaceWith(held.canvas);
+        this.scene.dispose();
+        this.scene = scene;
+        this.canvas = held.canvas;
+        this.held = null;
+        this.flat = false;
+        this.scene.resize(this.W, this.H);
+      })
+      .catch((err) => gpu.warn('planets: couldn\'t rebuild after the context came back, staying in 2D', err));
   }
 
   resize() {
@@ -665,10 +768,13 @@ export default class PlanetShower {
   };
 
   draw() {
-    this.scene.render(this.bodies, this.time);
+    /* (`awake`: a pile at rest needn't be redrawn in 2D. The 3D planets
+       keep turning, so they ignore it.) */
+    this.scene.render(this.bodies, this.time, this.awake);
   }
 
   destroy() {
+    this.gone = true;
     this.stop();
     clearTimeout(this.refit);
     clearTimeout(this.prepareAt);
@@ -684,16 +790,28 @@ export default class PlanetShower {
     this.section.removeEventListener('pointerup', this.onUp);
     this.section.removeEventListener('pointercancel', this.onUp);
     this.section.removeEventListener('pointerleave', this.onLeave);
-    this.canvas?.removeEventListener('webglcontextlost', this.onLost);
+    if (this.held) {
+      this.held.scene.dispose();
+      this.held = null;
+    }
     if (!this.scene) return;
-    if (this.dead) {
+    if (this.dead || this.flat || this.scene.renderer.getContext().isContextLost()) {
+      this.untrack?.();
       this.scene.dispose();
       return;
     }
     /* Kept, emptied, for the next page that has the shower — out of this
-       page, so it doesn't hold the rest of the old page in memory. */
+       page, so it doesn't hold the rest of the old page in memory. (On a
+       phone, let go if the next page has none: gpu.js.) */
     this.scene.render([], 0);
     this.canvas.remove();
-    kept = { scene: this.scene, canvas: this.canvas, small: this.small };
+    const parts = { scene: this.scene, canvas: this.canvas, small: this.small, untrack: this.untrack };
+    parts.claim = gpu.keep(() => {
+      if (kept !== parts) return;
+      kept = null;
+      parts.untrack();
+      parts.scene.dispose();
+    });
+    kept = parts;
   }
 }

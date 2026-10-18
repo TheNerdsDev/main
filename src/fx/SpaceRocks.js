@@ -5,6 +5,7 @@ import gsap from 'gsap';
 import { makeAsteroid, prebuildAsteroids, rockMaterial } from './asteroid.js';
 import { rand } from './particles.js';
 import store from '../core/Store.js';
+import gpu from '../core/gpu.js';
 
 /* The last page's offscreen renderer and material, kept when it goes (as
    RockStage keeps its own), so coming back doesn't build them again. */
@@ -34,22 +35,26 @@ export default class SpaceRocks {
       boost: 0,
       hovered: false
     })).filter((it) => it.canvas);
+    /* (Each one's place in the strip they're drawn in: tick.) */
+    this.items.forEach((it, k) => { it.slot = k; });
     /* 0 → 1 as the rocks rush into each other: they spin up hard. */
     this.frenzy = 0;
 
+    kept?.claim();
     const reuse = kept && !kept.renderer.getContext().isContextLost();
     if (reuse) {
-      ({ renderer: this.renderer, material: this.material } = kept);
+      ({ renderer: this.renderer, material: this.material, untrack: this.untrack } = kept);
     } else {
-      if (kept) {
-        kept.material.dispose();
-        kept.renderer.dispose();
-      }
+      if (kept) SpaceRocks.release(kept);
       this.renderer = new WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'low-power' });
       this.renderer.setClearColor(0x000000, 0);
       this.material = rockMaterial(false, { bump: 1.2 });
+      /* (three.js takes a lost context back by itself; meanwhile the rocks
+         just hold their last frame.) */
+      this.untrack = gpu.track('floating rocks (SpaceRocks)', this.renderer.domElement);
     }
     kept = null;
+    this.gl = this.renderer.getContext();
     this.scene = new Scene();
     this.camera = new PerspectiveCamera(28, 1, 0.1, 50);
     this.camera.position.z = 4.4;
@@ -101,11 +106,13 @@ export default class SpaceRocks {
     if (!c) return;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     this.size = Math.max(1, Math.round(c.offsetWidth * dpr));
-    /* (Only when it changes: resizing reallocates the drawing buffer.) */
+    /* All the rocks side by side in one strip (tick). (Only when it
+       changes: resizing reallocates the drawing buffer.) */
     const el = this.renderer.domElement;
-    if (this.renderer.getPixelRatio() !== 1 || el.width !== this.size || el.height !== this.size) {
+    const w = this.size * this.items.length;
+    if (this.renderer.getPixelRatio() !== 1 || el.width !== w || el.height !== this.size) {
       this.renderer.setPixelRatio(1);
-      this.renderer.setSize(this.size, this.size, false);
+      this.renderer.setSize(w, this.size, false);
     }
     this.items.forEach((it) => {
       it.canvas.width = this.size;
@@ -117,26 +124,37 @@ export default class SpaceRocks {
   tick = (time, deltaMs) => {
     /* (Under the open phone menu: unseen.) */
     if (store.covered) return;
+    /* (Context lost: each rock holds its last frame until it's back.) */
+    if (this.gl.isContextLost()) return;
     const dt = Math.min(deltaMs / 1000, 1 / 30);
-    /* Touch screens: each rock redrawn every other frame, two one frame and
-       two the next. Copying a rock out of the shared renderer makes the CPU
-       wait on the GPU, four times a frame; at the rocks' slow tumble the
-       half rate doesn't show. (Spun up — rushing in to collide, or under
-       a finger — they're all drawn every frame.) */
-    this.frame = this.frame ? 0 : 1;
-    const halve = store.isTouch && this.frenzy < 0.02;
+    /* Every rock, every frame — a tumble redrawn every other frame
+       juddered — all drawn side by side into one strip, then each copied
+       out to its own button. Copying out of the renderer makes the CPU
+       wait for the GPU to finish: once a frame like this, not once per
+       rock as when each was drawn and copied in turn. */
+    const r = this.renderer;
+    const n = this.size;
+    r.autoClear = false;
+    r.setScissorTest(false);
+    r.clear();
+    r.setScissorTest(true);
     for (const it of this.items) {
       it.boost += ((it.hovered ? 1 : 0) - it.boost) * Math.min(1, dt * 4);
       const speed = 1 + it.boost * 4 + this.frenzy * 16;
       it.rot.addScaledVector(it.spin, dt * speed);
-      if (halve && it.boost < 0.02 && (it.i + this.frame) % 2) continue;
 
       this.mesh.geometry = it.geo;
       this.material.userData.rock.uSeed.value = it.i * 4.3;
       this.mesh.rotation.set(it.rot.x, it.rot.y, it.rot.z);
-      this.renderer.render(this.scene, this.camera);
-      it.ctx.clearRect(0, 0, this.size, this.size);
-      it.ctx.drawImage(this.renderer.domElement, 0, 0);
+      r.setViewport(it.slot * n, 0, n, n);
+      r.setScissor(it.slot * n, 0, n, n);
+      r.render(this.scene, this.camera);
+    }
+    r.setScissorTest(false);
+    const strip = r.domElement;
+    for (const it of this.items) {
+      it.ctx.clearRect(0, 0, n, n);
+      it.ctx.drawImage(strip, it.slot * n, 0, n, n, 0, 0, n, n);
     }
   };
 
@@ -144,12 +162,24 @@ export default class SpaceRocks {
     gsap.ticker.remove(this.tick);
     this.io.disconnect();
     this.handlers.forEach((off) => off());
+    const parts = { renderer: this.renderer, material: this.material, untrack: this.untrack };
     if (!kept && !this.renderer.getContext().isContextLost()) {
-      kept = { renderer: this.renderer, material: this.material };
+      kept = parts;
+      /* (On a phone, let go if the next page doesn't take it up: gpu.js.) */
+      parts.claim = gpu.keep(() => {
+        if (kept !== parts) return;
+        kept = null;
+        SpaceRocks.release(parts);
+      });
       return;
     }
     this.items.forEach((it) => it.geo.dispose());
-    this.material.dispose();
-    this.renderer.dispose();
+    SpaceRocks.release(parts);
+  }
+
+  static release({ renderer, material, untrack }) {
+    material.dispose();
+    untrack?.();
+    gpu.release(renderer);
   }
 }
