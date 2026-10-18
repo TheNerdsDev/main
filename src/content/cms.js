@@ -39,7 +39,7 @@
  */
 export default {
   "maintenance": {
-    "on": false,
+    "on": true,
     "title": "We’ll be right back",
     "message": "We’re giving the site a tune-up — new work and a few fixes. It’ll be back shortly.",
     "back": ""
