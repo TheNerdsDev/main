@@ -407,9 +407,22 @@ export default class PlanetScene {
   async warm() {
     if (!this.ready || this.warming) return this.warming;
     const r = this.renderer;
+    /* A gap with room for an upload (≈8ms) if one comes — these run while
+       the page is still being scrolled towards the shower — but never more
+       than 250ms later, counted once: the page animates every frame, so
+       gaps that roomy may hardly come, and waiting on one (asking again
+       each time, which restarted the wait) left the planets unwarmed and
+       the shower never falling. */
     const idle = () => new Promise((res) => {
-      if ('requestIdleCallback' in window) requestIdleCallback(() => res(), { timeout: 250 });
-      else setTimeout(res, 16);
+      /* One a frame, no waiting for gaps: on a computer (whose GPU takes an
+         upload in its stride), or when someone's at the shower already,
+         waiting on it (PlanetShower sets `hurry`). The gaps are for touch
+         screens, mid-scroll. */
+      if (this.hurry || !store.isTouch) { requestAnimationFrame(() => res()); return; }
+      if (!('requestIdleCallback' in window)) { setTimeout(res, 16); return; }
+      const until = performance.now() + 250;
+      const ask = () => requestIdleCallback((d) => (d.timeRemaining() > 8 || performance.now() >= until ? res() : ask()), { timeout: Math.max(1, until - performance.now()) });
+      ask();
     });
     this.warming = (async () => {
       for (const t of Object.values(this.tex || {})) {

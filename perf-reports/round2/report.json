@@ -1,0 +1,431 @@
+{
+  "base": "http://localhost:4190",
+  "label": "round2",
+  "when": "2026-10-18T12:04:53.195Z",
+  "results": {
+    "pixel7@4x": {
+      "home": {
+        "scroll": {
+          "n": 2255,
+          "p50": 20.8,
+          "p95": 34.7,
+          "p99": 48.6,
+          "max": 173.5,
+          "over16": 62.17,
+          "over33": 6.08,
+          "missed": 56.98
+        },
+        "down": {
+          "n": 1043,
+          "p50": 20.8,
+          "p95": 34.6,
+          "p99": 41.8,
+          "max": 173.5,
+          "over16": 64.24,
+          "over33": 5.37,
+          "missed": 60.02
+        },
+        "up": {
+          "n": 1031,
+          "p50": 20.7,
+          "p95": 27.9,
+          "p99": 34.9,
+          "max": 90.4,
+          "over16": 56.06,
+          "over33": 3.49,
+          "missed": 49.66
+        },
+        "long": {
+          "count": 8,
+          "worst": 105,
+          "blocking": 213
+        },
+        "layoutShift": {
+          "cls": 0,
+          "sources": []
+        },
+        "rocksDown": {
+          "frames": 1043,
+          "empty": 0,
+          "pops": 1,
+          "maxJump": 56,
+          "bigJumps": 0,
+          "firstJumps": []
+        },
+        "rocksUp": {
+          "frames": 1031,
+          "empty": 0,
+          "pops": 0,
+          "maxJump": 123,
+          "bigJumps": 10,
+          "firstJumps": [
+            {
+              "t": 42696,
+              "y": 1657,
+              "piece": 0,
+              "px": 63
+            },
+            {
+              "t": 42696,
+              "y": 1657,
+              "piece": 4,
+              "px": 77
+            },
+            {
+              "t": 42696,
+              "y": 1657,
+              "piece": 9,
+              "px": 87
+            },
+            {
+              "t": 42696,
+              "y": 1657,
+              "piece": 10,
+              "px": 70
+            },
+            {
+              "t": 42696,
+              "y": 1657,
+              "piece": 17,
+              "px": 67
+            }
+          ]
+        },
+        "rocksFlick": {
+          "frames": 181,
+          "empty": 0,
+          "pops": 1,
+          "maxJump": 59,
+          "bigJumps": 0,
+          "firstJumps": []
+        }
+      },
+      "menu": {
+        "runs": [
+          {
+            "open": {
+              "n": 65,
+              "p50": 27.6,
+              "p95": 83.5,
+              "p99": 270.8,
+              "max": 270.8,
+              "over16": 61.54,
+              "over33": 38.46,
+              "missed": 73.85
+            },
+            "close": {
+              "n": 54,
+              "p50": 20.8,
+              "p95": 48.4,
+              "p99": 104.3,
+              "max": 104.3,
+              "over16": 55.56,
+              "over33": 14.81,
+              "missed": 85.19
+            },
+            "long": {
+              "count": 8,
+              "worst": 253,
+              "blocking": 346
+            }
+          },
+          {
+            "open": {
+              "n": 90,
+              "p50": 13.9,
+              "p95": 41.8,
+              "p99": 62.6,
+              "max": 62.6,
+              "over16": 37.78,
+              "over33": 11.11,
+              "missed": 63.33
+            },
+            "close": {
+              "n": 58,
+              "p50": 14,
+              "p95": 34.7,
+              "p99": 62.5,
+              "max": 62.5,
+              "over16": 41.38,
+              "over33": 5.17,
+              "missed": 77.59
+            },
+            "long": {
+              "count": 2,
+              "worst": 58,
+              "blocking": 16
+            }
+          },
+          {
+            "open": {
+              "n": 98,
+              "p50": 13.9,
+              "p95": 34.8,
+              "p99": 76.4,
+              "max": 76.4,
+              "over16": 34.69,
+              "over33": 7.14,
+              "missed": 59.18
+            },
+            "close": {
+              "n": 56,
+              "p50": 13.9,
+              "p95": 34.8,
+              "p99": 48.7,
+              "max": 48.7,
+              "over16": 35.71,
+              "over33": 10.71,
+              "missed": 69.64
+            },
+            "long": {
+              "count": 1,
+              "worst": 67,
+              "blocking": 17
+            }
+          }
+        ],
+        "rapid": {
+          "open": true,
+          "expanded": "true",
+          "navVisible": "visible",
+          "links": [
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      "work": {
+        "scroll": {
+          "n": 537,
+          "p50": 7.3,
+          "p95": 20.9,
+          "p99": 27.9,
+          "max": 97.3,
+          "over16": 12.85,
+          "over33": 0.74,
+          "missed": 47.49
+        },
+        "long": {
+          "count": 2,
+          "worst": 81,
+          "blocking": 32
+        },
+        "layoutShift": {
+          "cls": 0,
+          "sources": []
+        }
+      }
+    },
+    "pixel7@6x": {
+      "home": {
+        "scroll": {
+          "n": 1719,
+          "p50": 34.9,
+          "p95": 111.2,
+          "p99": 166.6,
+          "max": 645.9,
+          "over16": 95.93,
+          "over33": 64.4,
+          "missed": 64.4
+        },
+        "down": {
+          "n": 797,
+          "p50": 34.8,
+          "p95": 111.1,
+          "p99": 152.8,
+          "max": 645.9,
+          "over16": 95.36,
+          "over33": 60.6,
+          "missed": 60.6
+        },
+        "up": {
+          "n": 784,
+          "p50": 35.3,
+          "p95": 83.4,
+          "p99": 145.8,
+          "max": 201.4,
+          "over16": 96.05,
+          "over33": 64.92,
+          "missed": 64.92
+        },
+        "long": {
+          "count": 397,
+          "worst": 605,
+          "blocking": 12993
+        },
+        "layoutShift": {
+          "cls": 0,
+          "sources": []
+        },
+        "rocksDown": {
+          "frames": 797,
+          "empty": 0,
+          "pops": 1,
+          "maxJump": 66,
+          "bigJumps": 1,
+          "firstJumps": [
+            {
+              "t": 16810,
+              "y": 1724,
+              "piece": 33,
+              "px": 66
+            }
+          ]
+        },
+        "rocksUp": {
+          "frames": 784,
+          "empty": 0,
+          "pops": 0,
+          "maxJump": 79,
+          "bigJumps": 2,
+          "firstJumps": [
+            {
+              "t": 70941,
+              "y": 1728,
+              "piece": 6,
+              "px": 79
+            },
+            {
+              "t": 70941,
+              "y": 1728,
+              "piece": 33,
+              "px": 73
+            }
+          ]
+        },
+        "rocksFlick": {
+          "frames": 138,
+          "empty": 0,
+          "pops": 1,
+          "maxJump": 95,
+          "bigJumps": 1,
+          "firstJumps": [
+            {
+              "t": 84948,
+              "y": 1563,
+              "piece": 10,
+              "px": 95
+            }
+          ]
+        }
+      },
+      "menu": {
+        "runs": [
+          {
+            "open": {
+              "n": 41,
+              "p50": 48.7,
+              "p95": 118.1,
+              "p99": 291.6,
+              "max": 291.6,
+              "over16": 92.68,
+              "over33": 65.85,
+              "missed": 65.85
+            },
+            "close": {
+              "n": 27,
+              "p50": 34.8,
+              "p95": 124.5,
+              "p99": 138.8,
+              "max": 138.8,
+              "over16": 96.3,
+              "over33": 55.56,
+              "missed": 55.56
+            },
+            "long": {
+              "count": 20,
+              "worst": 245,
+              "blocking": 702
+            }
+          },
+          {
+            "open": {
+              "n": 40,
+              "p50": 41.7,
+              "p95": 118.2,
+              "p99": 131.8,
+              "max": 131.8,
+              "over16": 85,
+              "over33": 67.5,
+              "missed": 75
+            },
+            "close": {
+              "n": 37,
+              "p50": 27.7,
+              "p95": 97.3,
+              "p99": 118,
+              "max": 118,
+              "over16": 81.08,
+              "over33": 35.14,
+              "missed": 70.27
+            },
+            "long": {
+              "count": 15,
+              "worst": 114,
+              "blocking": 474
+            }
+          },
+          {
+            "open": {
+              "n": 34,
+              "p50": 55.5,
+              "p95": 118.1,
+              "p99": 569.3,
+              "max": 569.3,
+              "over16": 100,
+              "over33": 79.41,
+              "missed": 61.76
+            },
+            "close": {
+              "n": 23,
+              "p50": 55.6,
+              "p95": 131.9,
+              "p99": 229.1,
+              "max": 229.1,
+              "over16": 91.3,
+              "over33": 82.61,
+              "missed": 82.61
+            },
+            "long": {
+              "count": 26,
+              "worst": 514,
+              "blocking": 1252
+            }
+          }
+        ],
+        "rapid": {
+          "open": true,
+          "expanded": "true",
+          "navVisible": "visible",
+          "links": [
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      "work": {
+        "scroll": {
+          "n": 501,
+          "p50": 13.8,
+          "p95": 41.7,
+          "p99": 55.7,
+          "max": 527.7,
+          "over16": 30.74,
+          "over33": 12.18,
+          "missed": 56.89
+        },
+        "long": {
+          "count": 6,
+          "worst": 525,
+          "blocking": 559
+        },
+        "layoutShift": {
+          "cls": 0,
+          "sources": []
+        }
+      }
+    }
+  }
+}

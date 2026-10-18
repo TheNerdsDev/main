@@ -138,6 +138,57 @@ html.lenis-stopped { overflow: hidden; }
 #main .scroll-cue:focus-visible .scroll-cue-label { color: var(--c-ink); }
 #main .scroll-cue:focus-visible { outline: 1px solid var(--c-accent); outline-offset: 0.8rem; }
 
+/* Touch screens (where the heading's cue above isn't shown): the same
+   cue — a line, an arrowhead, "Scroll down" — at the foot of the screen,
+   from the welcome until our photos are in, through the stretch where only
+   the rocks travel with you. Its line fills as the photos near (Main.js
+   loop). (No spark running down it here: an endless animation over the
+   page cost a phone a frame in three, measured, all the way down.) */
+#main .journey-cue { display: none; }
+@media (hover: none) and (pointer: coarse) {
+  #main .journey-cue {
+    position: fixed;
+    left: 50%;
+    bottom: calc(2.4rem + env(safe-area-inset-bottom, 0px));
+    z-index: 9;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    translate: -50% 0;
+    color: var(--c-ink);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.6s var(--ease-out);
+  }
+  #main .journey-cue.is-on { opacity: 1; }
+}
+#main .journey-cue-track {
+  position: relative;
+  display: block;
+  width: 1.5px;
+  height: max(5.6rem, 44px);
+  overflow: hidden;
+  background: rgba(var(--c-ink-rgb), 0.16);
+}
+#main .journey-cue-fill {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(var(--c-ink-rgb), 0.2), rgba(var(--c-ink-rgb), 0.85));
+  transform: scaleY(0);
+  transform-origin: top center;
+}
+#main .journey-cue .scroll-cue-head { width: max(2.2rem, 18px); }
+#main .journey-cue-label {
+  margin-top: 0.8rem;
+  padding-left: 0.22em;   /* balances the trailing letter-spacing */
+  white-space: nowrap;
+  font-size: max(1.1rem, 10px);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--c-dim);
+}
+
+
 /* ------------------------------------------------------------ sketches */
 
 #main .duo {
@@ -440,35 +491,7 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
   overflow: hidden;
   background: #0a0b14;
 }
-/* Empty until the first scroll: just a nudge to scroll. */
-#main .about-hint {
-  position: absolute; inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1.4rem;
-  font-family: 'Syne Mono', ui-monospace, monospace;
-  font-size: 1.3rem;
-  letter-spacing: 0.3em;
-  padding-left: 0.3em;   /* balances the trailing letter-spacing */
-  text-transform: uppercase;
-  color: rgba(var(--c-ink-rgb), 0.78);
-  pointer-events: none;
-}
-#main .about-hint-arrow {
-  width: 1.8rem; height: 1.1rem;
-  fill: none;
-  stroke: var(--neon);
-  stroke-width: 1.6;
-  filter: drop-shadow(0 0 4px var(--neon));
-  animation: about-hint-bob 1.6s ease-in-out infinite;
-}
-@keyframes about-hint-bob {
-  0%, 100% { translate: 0 0; opacity: 0.45; }
-  50% { translate: 0 0.6rem; opacity: 1; }
-}
-/* The photo, square and whole: cut in by the scroll (Main.js). */
+/* The photo, square and whole: cut in as its frame rises (Main.js). */
 #main .about-photo {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
@@ -1017,15 +1040,7 @@ html.no-webgl #main .about-stage { position: relative; height: auto; min-height:
 /* No WebGL / no JS (or reduced motion): everything is simply visible, the
    photos in their frames, nothing to scroll for. */
 html.no-webgl #main .sketch-gasp,
-html.no-webgl #main .duo-actions,
-html.no-webgl #main .about-hint { display: none; }
-
-/* Out of sight (Main.js), the "Scroll down" arrows rest. */
-#main .about.is-away .about-hint-arrow { animation-play-state: paused; }
-
-@media (prefers-reduced-motion: reduce) {
-  #main .about-hint-arrow { animation: none; }
-}
+html.no-webgl #main .duo-actions { display: none; }
 
 /* ------------------------------------------------------------ tablets */
 
@@ -1074,7 +1089,6 @@ html.no-webgl #main .about-hint { display: none; }
   #main .about-who { top: calc(100% + 1.2rem); gap: 0.2rem 1rem; }
   #main .about-who-first { font-size: 2.8rem; }
   #main .about-who-last { font-size: 1.05rem; letter-spacing: 0.24em; margin-right: -0.24em; }
-  #main .about-hint { gap: 1rem; font-size: 1.1rem; letter-spacing: 0.22em; padding-left: 0.22em; }
   #main .about-text { font-size: 2.1rem; }
   #main .about-cta { margin-top: 3.2rem; }
   :is(#main, #info, #notfound) .about-button { padding: 1.4rem 3rem; }

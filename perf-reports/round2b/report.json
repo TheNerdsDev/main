@@ -1,0 +1,108 @@
+{
+  "base": "http://localhost:4190",
+  "label": "round2b",
+  "when": "2026-10-18T12:10:43.058Z",
+  "results": {
+    "pixel7@4x": {
+      "home": {
+        "scroll": {
+          "n": 2006,
+          "p50": 21,
+          "p95": 48.6,
+          "p99": 62.6,
+          "max": 145.9,
+          "over16": 77.12,
+          "over33": 26.87,
+          "missed": 59.67
+        },
+        "down": {
+          "n": 918,
+          "p50": 20.9,
+          "p95": 41.9,
+          "p99": 56.2,
+          "max": 145.9,
+          "over16": 78.1,
+          "over33": 23.86,
+          "missed": 58.28
+        },
+        "up": {
+          "n": 909,
+          "p50": 27.6,
+          "p95": 49.2,
+          "p99": 69.4,
+          "max": 90.5,
+          "over16": 75.58,
+          "over33": 31.13,
+          "missed": 70.19
+        },
+        "long": {
+          "count": 31,
+          "worst": 103,
+          "blocking": 347
+        },
+        "layoutShift": {
+          "cls": 0,
+          "sources": []
+        },
+        "rocksDown": {
+          "frames": 918,
+          "empty": 0,
+          "pops": 1,
+          "maxJump": 51,
+          "bigJumps": 0,
+          "firstJumps": []
+        },
+        "rocksUp": {
+          "frames": 909,
+          "empty": 0,
+          "pops": 0,
+          "maxJump": 67,
+          "bigJumps": 2,
+          "firstJumps": [
+            {
+              "t": 50028,
+              "y": 1713,
+              "piece": 6,
+              "px": 67
+            },
+            {
+              "t": 50028,
+              "y": 1713,
+              "piece": 33,
+              "px": 62
+            }
+          ]
+        },
+        "rocksFlick": {
+          "frames": 179,
+          "empty": 0,
+          "pops": 1,
+          "maxJump": 37,
+          "bigJumps": 0,
+          "firstJumps": []
+        }
+      },
+      "work": {
+        "scroll": {
+          "n": 590,
+          "p50": 7,
+          "p95": 13.9,
+          "p99": 20.8,
+          "max": 55.4,
+          "over16": 1.53,
+          "over33": 0.17,
+          "missed": 15.93
+        },
+        "long": {
+          "count": 1,
+          "worst": 50,
+          "blocking": 0
+        },
+        "layoutShift": {
+          "cls": 0,
+          "sources": []
+        }
+      }
+    }
+  }
+}

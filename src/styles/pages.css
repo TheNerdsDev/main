@@ -728,6 +728,15 @@ html .media-wrapper.is-empty {
   0% { scale: 0.4; opacity: 0.9; }
   70%, 100% { scale: 1.6; opacity: 0; }
 }
+/* Touch screens: a few rounds of each, then still. Endless, they had a
+   phone redrawing the page on every frame for as long as it was open — a
+   frame in three dropped while scrolling it, measured (the nudge changes
+   colour, which only the main thread can paint). By then the box has been
+   seen. */
+@media (hover: none) and (pointer: coarse) {
+  #info .info-cards.is-in .info-work:not(.was-opened) .info-work-plus { animation-iteration-count: 3; }
+  #info .info-work-hint-ping::after { animation-iteration-count: 7; }
+}
 /* (Tap on a touch screen; a narrow window with a mouse, click.) */
 #info .info-work-hint-click { display: none; }
 @media (hover: hover) and (pointer: fine) {

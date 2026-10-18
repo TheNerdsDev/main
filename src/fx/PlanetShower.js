@@ -233,18 +233,35 @@ export default class PlanetShower {
     section.addEventListener('pointercancel', this.onUp);
     section.addEventListener('pointerleave', this.onLeave, { passive: true });
 
-    /* Fetch the maps as the section approaches, not with the page — a few
-       screens ahead, so on a phone's connection they're in by the time it
-       arrives — and get them onto the GPU before they're needed
-       (PlanetScene.warm). */
-    this.loadIo = new IntersectionObserver((entries) => {
-      if (!entries.some((e) => e.isIntersecting)) return;
+    /* Fetch the maps and get them onto the GPU (PlanetScene.warm) before
+       the section arrives, so the planets fall the moment it does: once the
+       page has come in and things are quiet — on the welcome page, while
+       it's still being looked at, long before the scroll reaches the end —
+       or as the section comes within a few screens, if that's sooner. */
+    const prepare = () => {
+      if (this.prepared || this.dead) return;
+      this.prepared = true;
       this.loadIo.disconnect();
+      clearTimeout(this.prepareAt);
       this.scene.load(PlanetShower.capacity())
         .then(() => this.scene.warm())
         .catch(() => { this.dead = true; });
+    };
+    this.loadIo = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) prepare();
     }, { rootMargin: '300% 0px 300% 0px' });
     this.loadIo.observe(section);
+    /* (A moment after the page's entrance — never while the loader is
+       still fetching the page itself — then the first idle moment.) */
+    const later = () => {
+      if (!document.documentElement.classList.contains('loaded')) {
+        this.prepareAt = setTimeout(later, 600);
+        return;
+      }
+      if ('requestIdleCallback' in window) requestIdleCallback(prepare, { timeout: 2000 });
+      else prepare();
+    };
+    this.prepareAt = setTimeout(later, 1500);
     /* Only run while the section is near the screen. */
     this.io = new IntersectionObserver((entries) => {
       this.near = entries.some((e) => e.isIntersecting);
@@ -252,20 +269,34 @@ export default class PlanetShower {
       else this.stop();
     }, { rootMargin: '100% 0px 100% 0px' });
     this.io.observe(section);
-    /* When to rain: armed once the section has gone (its top below 95% of
-       the screen — scrolled back up past it), it falls when the top comes
-       up past 72%. Watched by the browser, after it has drawn the frame,
-       rather than read in tick(): there it made the browser restyle the
-       page mid-frame, every frame, while the work reel above was moving. */
+    /* When to rain: every time the section comes in from above — armed once
+       it has gone (its top below 95% of the screen: scrolled back up past
+       it), it falls when the top comes up past 72%. The moment it has gone,
+       the old pile is cleared, out of sight, so each return is a clean sky
+       to rain into — not the old pile showing for a moment and then swept
+       away for the new one. Watched by the browser, after it has drawn the
+       frame, rather than read in tick(): there it made the browser restyle
+       the page mid-frame, every frame, while the work reel above was
+       moving. */
     const last = (entries) => entries[entries.length - 1];
     this.armIo = new IntersectionObserver((entries) => {
       const e = last(entries);
-      if (!e.isIntersecting && e.boundingClientRect.top > 0) this.armed = true;
+      if (e.isIntersecting || e.boundingClientRect.top <= 0) return;
+      this.armed = true;
+      this.pending = false;
+      if (this.bodies.length) {
+        this.bodies = [];
+        this.order = [];
+        this.awake = false;
+      }
     }, { rootMargin: '0px 0px -5% 0px' });
     this.fireIo = new IntersectionObserver((entries) => {
       if (last(entries).isIntersecting && this.armed) {
         this.armed = false;
         this.pending = true;
+        /* (Here before the maps are on the GPU: finish them without waiting
+           for quiet moments — PlanetScene.warm.) */
+        if (!this.scene.warmed) this.scene.hurry = true;
       }
     }, { rootMargin: '0px 0px -28% 0px' });
     /* Drawn only while it's actually on screen: just above it the work
@@ -640,6 +671,8 @@ export default class PlanetShower {
   destroy() {
     this.stop();
     clearTimeout(this.refit);
+    clearTimeout(this.prepareAt);
+    this.prepared = true;
     this.loadIo?.disconnect();
     this.io?.disconnect();
     this.armIo?.disconnect();

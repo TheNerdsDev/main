@@ -55,9 +55,7 @@ export const main = {
   about: {
     text:
       "Hi, we're Meet and Prem, two curious developers who love turning simple ideas into something creative. If you can dream it up, we'll happily nerd out building it.",
-    button: 'About Us',
-    /* Shown in the empty frames until a scroll rolls the photos in. */
-    hint: 'Scroll Down'
+    button: 'About Us'
   },
   /* Space rocks drifting around the sketches — click one and it gets thrown. */
   rocks: 4

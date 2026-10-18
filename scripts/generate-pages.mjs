@@ -380,16 +380,11 @@ const mainPage = () => {
     .join('');
   const buttonChars = rollChars(main.about.button);
 
-  /* A square frame with corner brackets in each person's colour: empty but
-     for "Scroll down" until the first scroll cuts the photo in (Main.js),
-     and our name set under it (read out whole; the rolling letters are for
-     the eye only). */
+  /* A square frame with corner brackets in each person's colour: the photo
+     cuts in as it rises in (Main.js), and our name is set under it (read
+     out whole; the rolling letters are for the eye only). */
   const frame = (m, side) => `      <figure class="about-frame about-frame-${side}" data-frame="${m.id}" style="--neon: ${m.colour}">
         <div class="about-photos">
-          <span class="about-hint" aria-hidden="true">
-            <span class="about-hint-text">${esc(main.about.hint)}</span>
-            <svg class="about-hint-arrow" viewBox="0 0 16 10"><path d="M1 1.5 8 8.5l7-7" /></svg>
-          </span>
           <img class="about-photo" src="${m.photo}" alt="${esc(m.photoAlt)}" width="960" height="960" decoding="async" fetchpriority="low" />
           <span class="about-flash" aria-hidden="true"></span>
         </div>
@@ -409,6 +404,14 @@ const mainPage = () => {
     body: `<div class="page" id="main" data-page="main">
   <div class="page-content" id="page-content" tabindex="-1">
 ${header('main')}
+
+    <!-- Touch screens: a scroll cue at the foot of the screen until our
+         photos are in, its line filling as they near (Main.js). -->
+    <div class="journey-cue" aria-hidden="true">
+      <span class="journey-cue-track"><span class="journey-cue-fill"></span></span>
+      <svg class="scroll-cue-head" viewBox="0 0 16 10"><path d="M1 1.5 8 8.5l7-7" /></svg>
+      <span class="journey-cue-label">${esc(main.scrollLabel)}</span>
+    </div>
 
     <!-- One screen. The first scroll glides on to About and the rocks
          travel down with the viewer (see Main.js). -->

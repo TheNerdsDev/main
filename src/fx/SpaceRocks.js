@@ -118,10 +118,18 @@ export default class SpaceRocks {
     /* (Under the open phone menu: unseen.) */
     if (store.covered) return;
     const dt = Math.min(deltaMs / 1000, 1 / 30);
+    /* Touch screens: each rock redrawn every other frame, two one frame and
+       two the next. Copying a rock out of the shared renderer makes the CPU
+       wait on the GPU, four times a frame; at the rocks' slow tumble the
+       half rate doesn't show. (Spun up — rushing in to collide, or under
+       a finger — they're all drawn every frame.) */
+    this.frame = this.frame ? 0 : 1;
+    const halve = store.isTouch && this.frenzy < 0.02;
     for (const it of this.items) {
       it.boost += ((it.hovered ? 1 : 0) - it.boost) * Math.min(1, dt * 4);
       const speed = 1 + it.boost * 4 + this.frenzy * 16;
       it.rot.addScaledVector(it.spin, dt * speed);
+      if (halve && it.boost < 0.02 && (it.i + this.frame) % 2) continue;
 
       this.mesh.geometry = it.geo;
       this.material.userData.rock.uSeed.value = it.i * 4.3;
