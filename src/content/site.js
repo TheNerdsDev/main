@@ -27,7 +27,25 @@ export const studio = {
   social: [
     { label: 'Instagram', url: 'https://www.instagram.com/thenerds.dev/' },
     { label: 'LinkedIn', url: 'https://www.linkedin.com/company/145305179/' }
-  ]
+  ],
+  /* Each page's title, as search results and link previews show it
+     (Google shows about 60 characters): what the page is, then who we
+     are — "The Nerds" alongside Surat, so we aren't mistaken for the
+     other "nerd" sites. */
+  titles: {
+    home: 'The Nerds: Website & Software Developers in Surat, India',
+    work: 'Portfolio: Web Apps & AI Projects Built in Surat | The Nerds',
+    about: 'About The Nerds: Meet & Prem, Developers in Surat',
+    contact: 'Contact The Nerds: Start Your Website or App Project',
+    /* A project's: its name, then what it is (by its address). One not
+       listed here — a new one from the CMS — is "Name | The Nerds". */
+    projects: {
+      'css-arena': 'Live CSS Battles for Tech Fests',
+      'indus-brain': 'AI Assistant for Industrial Plants',
+      'mewar-sync': 'Voice AI Accounting for Artisans',
+      taskpilot: 'Offline Task Planner & Focus App'
+    }
+  }
 };
 
 /* The maintenance page (CMS → Maintenance). While `on`, the built site is

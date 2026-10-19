@@ -396,7 +396,7 @@ const mainPage = () => {
       </figure>`;
 
   return shell({
-    title: studio.name,
+    title: studio.titles.home,
     description: studio.description,
     pageId: 'main',
     path: '/',
@@ -495,7 +495,7 @@ const projectsPage = () => {
     .join('\n');
 
   return shell({
-    title: 'Work',
+    title: studio.titles.work,
     description: workIndex.description,
     pageId: 'projects',
     path: '/work/',
@@ -576,7 +576,9 @@ const workPage = (p) => {
       </figure>`;
 
   return shell({
-    title: `${studio.name} — ${p.name}`,
+    title: studio.titles.projects[p.slug]
+      ? `${p.name}: ${studio.titles.projects[p.slug]} | ${studio.name}`
+      : `${p.name} | ${studio.name}`,
     description: searchDescription(p),
     pageId: 'work',
     path: `/work/${p.slug}/`,
@@ -694,7 +696,7 @@ ${infoCard('work', title, `<ol class="info-card-list info-work-list">${rows}</ol
 };
 
 const infoPage = () => shell({
-  title: 'About',
+  title: studio.titles.about,
   description: info.description,
   pageId: 'info',
   path: '/info/',
@@ -785,7 +787,7 @@ const contactPage = () => {
     .join('');
 
   return shell({
-    title: studio.contactLabel,
+    title: studio.titles.contact,
     description: leadPlain,
     pageId: 'contact',
     path: '/contact/',
