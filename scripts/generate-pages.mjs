@@ -101,6 +101,7 @@ const shell = ({ title, description, pageId, body, bodyClass = '', path = '/', i
 <meta name="twitter:description" content="${esc(description)}" />
 <meta name="twitter:image" content="${esc(abs(image.src))}" />
 ${schema ? jsonLd(schema) : ''}
+<link rel="icon" href="/favicon.ico" sizes="any" />
 <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
 <link rel="icon" href="/favicon-48.png" type="image/png" sizes="48x48" />
 <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
@@ -869,6 +870,7 @@ const maintenancePage = () => {
 <meta property="og:title" content="${esc(title)}" />
 <meta property="og:description" content="${esc(description)}" />
 <meta property="og:site_name" content="${esc(studio.name)}" />
+<link rel="icon" href="/favicon.ico" sizes="any" />
 <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
 <link rel="icon" href="/favicon-48.png" type="image/png" sizes="48x48" />
 <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
@@ -917,6 +919,7 @@ const notFoundPage = () => {
 <title>Page not found — ${esc(studio.name)}</title>
 <meta name="robots" content="noindex" />
 <meta name="theme-color" content="#05060F" />
+<link rel="icon" href="/favicon.ico" sizes="any" />
 <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
 <link rel="icon" href="/favicon-48.png" type="image/png" sizes="48x48" />
 <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
