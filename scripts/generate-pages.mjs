@@ -49,11 +49,20 @@ const organization = {
   url: `${studio.url}/`,
   logo: abs('/icon-512.png'),
   image: abs(SHARE.src),
+  alternateName: studio.alternateNames,
   description: studio.description,
+  slogan: studio.tagline,
+  knowsAbout: studio.knowsAbout,
+  /* The services we offer — the About page's own list. */
+  hasOfferCatalog: {
+    '@type': 'OfferCatalog',
+    name: `${studio.name} services`,
+    itemListElement: info.offer.items.map((name) => ({ '@type': 'Offer', itemOffered: { '@type': 'Service', name, provider: { '@id': ORG_ID } } }))
+  },
   email: studio.email,
   ...(phones.length ? { telephone: phones[0] } : {}),
   address: { '@type': 'PostalAddress', addressLocality: 'Surat', addressRegion: 'Gujarat', addressCountry: 'IN' },
-  areaServed: 'Worldwide',
+  areaServed: [{ '@type': 'City', name: 'Surat' }, { '@type': 'Country', name: 'India' }, 'Worldwide'],
   founder: team.map((m) => ({ '@type': 'Person', name: `${m.name} ${m.surname}` })),
   sameAs: studio.social.map((s) => s.url)
 };
@@ -758,7 +767,6 @@ const contactPage = () => {
     .join('\n');
   /* **word** renders bold (the meta description gets it plain). */
   const lead = esc(contact.lead).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  const leadPlain = contact.lead.replace(/\*\*/g, '');
   const social = studio.social
     .map((s) => `<li><a class="text link" href="${esc(s.url)}" target="_blank" rel="noopener noreferrer"><span class="line-inner">${esc(s.label)} &nearr;</span></a></li>`)
     .join('');
@@ -788,7 +796,7 @@ const contactPage = () => {
 
   return shell({
     title: studio.titles.contact,
-    description: leadPlain,
+    description: contact.description,
     pageId: 'contact',
     path: '/contact/',
     schema: {
@@ -796,7 +804,7 @@ const contactPage = () => {
       '@id': abs('/contact/'),
       url: abs('/contact/'),
       name: `${studio.contactLabel} — ${studio.name}`,
-      description: leadPlain,
+      description: contact.description,
       isPartOf: { '@id': `${studio.url}/#website` },
       about: { '@id': ORG_ID }
     },
