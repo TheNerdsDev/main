@@ -12,7 +12,11 @@ import LoaderLogo from '../fx/LoaderLogo.js';
  * behind the curtain.
  */
 export default class Loader {
-  constructor() {
+  /**
+   * hold  don't start the logo's animation yet (begin): the page is built
+   *       and its GPU work done first, so nothing interrupts it (App.start)
+   */
+  constructor({ hold = false } = {}) {
     this.el = document.querySelector('.loader');
     this.percentage = this.el?.querySelector('.loader-progress');
     const host = this.el?.querySelector('.loader-logo');
@@ -27,6 +31,15 @@ export default class Loader {
     this.hardTimeout = 9000;
     this.startTime = performance.now();
 
+    this.held = hold;
+    if (!hold) this.logo?.intro();
+  }
+
+  /** Start the logo's animation, if it was held (the counter's pacing starts with it). */
+  begin() {
+    if (!this.held) return;
+    this.held = false;
+    this.startTime = performance.now();
     this.logo?.intro();
   }
 

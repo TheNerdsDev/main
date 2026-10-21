@@ -86,7 +86,8 @@ export default class App {
     this.bindLogo();
 
     this.world = new World(this.canvas);
-    this.loader = new Loader();
+    /* (Phones: its animation starts once the GPU's heavy work is done — start.) */
+    this.loader = new Loader({ hold: store.isPhone });
 
     this.bindEvents();
     this.bindCopyButtons(document);
@@ -147,6 +148,31 @@ export default class App {
       new Promise((r) => setTimeout(r, 2000))
     ]).catch(() => {});
 
+    /* Phones: the page built, and its GPU work done — the sky's shaders
+       and first frame, the floating rocks' shader and first draw — before
+       the loading screen starts to move. The logo animates on the
+       compositor, untouched by the main thread; but not by the GPU, and a
+       phone's GPU building a shader stops everything on screen until it's
+       done: the rocket froze in mid-flight for it. Here the screen is
+       still dark — a moment longer, at most 2s. (The page doesn't wait for
+       its photos to be built, only to be shown: firstImages, below.) */
+    let built = false;
+    if (this.loader.held) {
+      const later = (ms) => new Promise((r) => setTimeout(() => r(false), ms));
+      const ready = await Promise.race([Promise.all([pageCode, subtextFont]).then(() => true), later(1200)]).catch(() => false);
+      if (ready) {
+        this.page = buildPage(await pageCode, { el: this.pageEl, world: this.world, app: this });
+        this.world.media.create(this.pageEl, this.page.id);
+        await Promise.race([Promise.all([this.world.warm(), this.page.warmUp?.()]), later(800)]);
+        built = true;
+        /* …and, drawn once, nothing under the loading screen is drawn
+           again until it lifts (store.covered: the floating rocks, their
+           orbits) — hidden, they only took frames from it. */
+        store.covered = true;
+      }
+      this.loader.begin();
+    }
+
     await this.loader.preload([...new Set(urls)]);
     await firstImages;
     await pageCode;
@@ -155,11 +181,14 @@ export default class App {
     /* Build the page now, while the loader's rocket is still on its way:
        this is the heaviest stretch of work (a long block of the main
        thread), and the loader animates on the compositor, so it can't stall
-       it. The landing then plays on a quiet main thread. */
-    this.page = await createPage({ el: this.pageEl, world: this.world, app: this });
-    this.world.media.create(this.pageEl, this.page.id);
+       it. The landing then plays on a quiet main thread. (Built already on
+       a phone: above.) */
+    if (!built) {
+      this.page = await createPage({ el: this.pageEl, world: this.world, app: this });
+      this.world.media.create(this.pageEl, this.page.id);
+    }
     /* …and its shaders, in parallel, while the rocket comes in to land. */
-    const warmed = this.world.warm();
+    const warmed = built ? Promise.resolve() : this.world.warm();
 
     await this.loader.finish();
     await Promise.race([warmed, new Promise((r) => setTimeout(r, 600))]);
@@ -170,6 +199,7 @@ export default class App {
     store.html.classList.add('loaded');
     try { sessionStorage.removeItem('rescued'); } catch { /* storage off */ }
 
+    store.covered = false;
     this.world.reveal();
     await this.loader.out();
 

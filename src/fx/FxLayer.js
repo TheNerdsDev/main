@@ -27,7 +27,9 @@ export default class FxLayer {
   }
 
   resize() {
-    this.dpr = Math.min(store.fxDpr, 1.5);
+    /* (On a touch screen 1.5× however light the rest draws, with the
+       shattered rocks it goes with: RockStage.) */
+    this.dpr = store.isTouch ? Math.min(window.devicePixelRatio || 1, 1.5) : Math.min(store.fxDpr, 1.5);
     /* (The stable viewport, as tall as the canvas: core/Store.js.) */
     this.w = store.width;
     this.h = store.height;

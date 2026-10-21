@@ -80,6 +80,9 @@ export default class SpaceRocks {
        the rocks aren't drawn. (A renderer kept from the last visit has it
        built already.) */
     this.ready = !!reuse;
+    /* (Resolves once the rocks have been drawn: App.start waits for it on
+       a phone, before the loading screen starts to move.) */
+    this.drawn = new Promise((resolve) => { this.onDrawn = resolve; });
     if (!reuse) {
       const done = () => { this.ready = true; };
       try {
@@ -181,6 +184,8 @@ export default class SpaceRocks {
       it.ctx.clearRect(0, 0, n, n);
       it.ctx.drawImage(strip, it.slot * n, 0, n, n, 0, 0, n, n);
     }
+    this.onDrawn?.();
+    this.onDrawn = null;
   };
 
   destroy() {

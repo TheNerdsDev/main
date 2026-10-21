@@ -9,29 +9,29 @@ import store from '../core/Store.js';
 import { release, lean } from '../core/gpu.js';
 
 /* How finely the planets are drawn on a phone (device pixels to the CSS
-   pixel). At the 1.5 the other passing effects get (Store fxDpr), these
-   small, detailed bodies came out soft on a phone's dense screen; as they
-   were first made, 2. As finely as the phone can keep up with: it starts
-   from what the phone says of itself — 8 GB of memory or more (and every
-   iPhone, which doesn't say) 2, 4 GB 1.75, less 1.5 — and steps down a
-   notch whenever the planets miss frames there (PlanetShower watches),
-   remembered for its next visits. */
+   pixel). At the 1.5 the other passing effects got, these small, detailed
+   bodies came out soft on a phone's dense screen; as they were first
+   made, 2. As finely as the phone keeps up with: it starts from what the
+   phone says of itself — 8 GB of memory or more (and every iPhone, which
+   doesn't say) 2, 4 GB 1.75, less 1.5 — and steps down a notch if the
+   planets themselves keep missing frames (PlanetShower watches), for the
+   rest of the visit. Not with the rest of the site's quality
+   (store.quality): that steps down on any slow stretch — the rocks
+   colliding — and the planets kept paying for it. */
 const NOTCHES = [1.5, 1.75, 2];
-const SAVED = 'thenerds.planets';
 let notch = null;
 const startNotch = () => {
-  let saved = null;
-  try { saved = localStorage.getItem(SAVED); } catch { /* storage off */ }
+  /* (A step down used to be kept for later visits: one rough moment and
+     the planets stayed soft for good. Cleared.) */
+  try { localStorage.removeItem('thenerds.planets'); } catch { /* storage off */ }
   const mem = navigator.deviceMemory;
-  const fits = mem === undefined || mem >= 8 ? 2 : mem >= 4 ? 1 : 0;
-  return saved !== null && /^[0-2]$/.test(saved) ? Math.min(fits, +saved) : fits;
+  return mem === undefined || mem >= 8 ? 2 : mem >= 4 ? 1 : 0;
 };
 const planetDpr = () => {
   const device = window.devicePixelRatio || 1;
   if (!store.isTouch) return store.fxDpr;
-  /* (A tablet, or a phone the site already draws lighter — little memory,
-     or slow in use: store.quality — keeps 1.5.) */
-  if (!store.isPhone || store.quality > 0) return Math.min(device, NOTCHES[0]);
+  /* (A tablet keeps 1.5.) */
+  if (!store.isPhone) return Math.min(device, NOTCHES[0]);
   if (notch === null) notch = startNotch();
   return Math.min(device, NOTCHES[notch]);
 };
@@ -407,11 +407,10 @@ export default class PlanetScene {
   /** Drawn finer than the floor of 1.5 (a phone, while it keeps up: planetDpr) — there's a notch to step down. */
   get fine() { return planetDpr() > NOTCHES[0]; }
 
-  /** Too much for this phone: a notch coarser, from now on (and on its next visits). */
+  /** Too much for this phone: a notch coarser, for the rest of the visit. */
   coarsen() {
     if (notch === null) planetDpr();
     notch = Math.max(0, notch - 1);
-    try { localStorage.setItem(SAVED, String(notch)); } catch { /* storage off */ }
     if (this.w) this.resize(this.w, this.h);
   }
 

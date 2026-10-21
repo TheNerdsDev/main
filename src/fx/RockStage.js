@@ -123,6 +123,12 @@ export default class RockStage {
     const later = (fn) => ('requestIdleCallback' in window ? requestIdleCallback(fn, { timeout: 500 }) : setTimeout(fn, 50));
     const step = () => {
       if (this.destroyed || !geos.length) return;
+      /* (Not under the loading screen: GPU work there stalls its animation.
+         The first collision is a scroll away anyway.) */
+      if (!store.html.classList.contains('loaded')) {
+        later(step);
+        return;
+      }
       if (!this.running) {
         const g = geos.shift();
         const m = new Mesh(g, g === this.rockGeo ? this.rockMat : this.chunkMat);
@@ -145,8 +151,12 @@ export default class RockStage {
     this.w = store.width;
     this.h = store.height;
     /* Resized only when it has to be: every resize reallocates the
-       full-screen (antialiased) drawing buffer. */
-    const dpr = store.fxDpr;
+       full-screen (antialiased) drawing buffer. On a touch screen, 1.5×
+       however light the rest draws (store.setDpr), as the planets: the
+       thrown rock and the pieces it shatters into are small, sharp-edged
+       and close up, and below that they came out soft. (Drawn only while
+       something's in the air.) */
+    const dpr = store.isTouch ? Math.max(store.fxDpr, Math.min(window.devicePixelRatio || 1, 1.5)) : store.fxDpr;
     if (this.renderer.getPixelRatio() !== dpr || this.canvas.width !== Math.floor(this.w * dpr) || this.canvas.height !== Math.floor(this.h * dpr)) {
       this.renderer.setPixelRatio(dpr);
       this.renderer.setSize(this.w, this.h, false);

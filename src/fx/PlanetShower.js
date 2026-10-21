@@ -809,9 +809,10 @@ export default class PlanetShower {
    * Phones: whether this one keeps up with the planets drawn as finely as
    * they are there (PlanetScene planetDpr). Over each 40 of their frames
    * (two-thirds of a second), if more than one in five came late — a frame
-   * missed — they're drawn a notch coarser from then on: a little softer,
-   * never stuttering. (Only while they're falling or dragged, when every
-   * frame is drawn: see tick.)
+   * missed — twice running, they're drawn a notch coarser from then on: a
+   * little softer, never stuttering. (Twice: a single rough stretch — a
+   * scroll, the page busy for a moment — isn't the planets.) Only while
+   * they're falling or dragged, when every frame is drawn: see tick.
    */
   judge(now) {
     const last = this.drawnAt;
@@ -825,11 +826,17 @@ export default class PlanetShower {
     j.n++;
     if (now - last > want * 1.5) j.late++;
     if (j.n < 40) return;
-    if (j.late > j.n * 0.2) {
-      this.scene.coarsen();
-      console.info(`[planets] a notch coarser from now on: ${j.late} of ${j.n} frames came late`);
-    }
+    const bad = j.late > j.n * 0.2;
     this.judging = null;
+    if (!bad) {
+      this.badRuns = 0;
+      return;
+    }
+    this.badRuns = (this.badRuns || 0) + 1;
+    if (this.badRuns < 2) return;
+    this.badRuns = 0;
+    this.scene.coarsen();
+    console.info(`[planets] a notch coarser from now on: ${j.late} of ${j.n} frames came late, twice running`);
   }
 
   draw() {

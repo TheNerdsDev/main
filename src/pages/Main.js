@@ -1063,6 +1063,9 @@ export default class Main extends Page {
     if (motion) this.app?.cursor?.target(i !== -1 ? this.showCards[i] : this.showStage);
   }
 
+  /** The page's own GPU work done — the floating rocks drawn once (App.start, on a phone). */
+  warmUp() { return this.duo?.rocks?.drawn; }
+
   /* ----------------------------------------------------------- loop */
 
   loop() {
