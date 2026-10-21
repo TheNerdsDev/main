@@ -263,13 +263,14 @@ h1 {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 /* Touch screens: the frost is redrawn on every frame the sky moves behind
-   it, and a wide blur is costly for a phone's GPU — a lighter one, with a
-   little more of the background colour so nothing beneath can be read. */
+   it — on a phone's GPU, every frame of every scroll. There the bar is
+   simply the background colour, nearly opaque: on the dark sky it looks
+   the same, and nothing beneath can be read. */
 @media (hover: none) and (pointer: coarse) {
   .site-header {
-    background: rgba(var(--c-bg-rgb), 0.6);
-    -webkit-backdrop-filter: blur(14px);
-    backdrop-filter: blur(14px);
+    background: rgba(var(--c-bg-rgb), 0.9);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 }
 /* The logo (traced from the brand artwork, content/logo.js). The rocket

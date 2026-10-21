@@ -180,7 +180,10 @@ function apply(st) {
 function merge({ project, media }) {
   for (const copy of [S.saved, S.draft]) {
     const p = copy.projects.find((x) => x.slug === project.slug);
-    if (p) for (const k of ['shots', 'photos', 'video', 'screenshot']) p[k] = project[k];
+    if (!p) continue;
+    for (const k of ['shots', 'photos', 'video', 'screenshot']) p[k] = project[k];
+    /* (The hover stretch the server found for a new video.) */
+    for (const k of ['videoFrom', 'videoTo']) { if (project[k] > 0) p[k] = project[k]; else delete p[k]; }
   }
   S.media[project.slug] = media;
   S.v[project.slug] = Date.now();
@@ -520,16 +523,8 @@ function projectEditor(p) {
     const upload = (file) => {
       if (!S.ffmpeg) return toast('Video needs ffmpeg — install it with: winget install Gyan.FFmpeg, then restart the CMS.', 'error');
       if (!/^video\//.test(file.type) && !/\.(mp4|mov|m4v|webm|mkv|avi)$/i.test(file.name)) return toast('That isn’t a video this takes — use MP4, MOV or WebM.', 'error');
-      run(frame, 'Uploading…', (prog) => send(`/api/upload?slug=${slug}&kind=video&mode=${videoMode}`, file, prog)).then((r) => {
-        if (!r) return;
-        /* A new video: the old one's stretch would cut it in the wrong places. */
-        if (p.videoFrom || p.videoTo) {
-          delete p.videoFrom;
-          delete p.videoTo;
-          changed();
-        }
-        drawVideo();
-      });
+      /* (Its hover stretch comes back with it, found by the converter.) */
+      run(frame, 'Uploading…', (prog) => send(`/api/upload?slug=${slug}&kind=video&mode=${videoMode}`, file, prog)).then((r) => r && drawVideo());
     };
     const pageVideo = h('input', { type: 'checkbox', checked: !!p.pageVideo, onChange: (e) => { p.pageVideo = e.target.checked; changed(); } });
     /* The stretch a hover plays (seconds; blank: the start / the end). */
@@ -545,7 +540,7 @@ function projectEditor(p) {
     });
     const stretch = h('div', { class: 'field' }, h('span', { class: 'label' }, 'On hover, play'),
       h('div', { class: 'colour' }, 'from', secs('videoFrom'), 'to', secs('videoTo'), 's'),
-      h('span', { class: 'hint' }, 'Skip a title screen the thumbnail already shows: the card goes straight into the project. It loops just this part. Blank: the whole video.'));
+      h('span', { class: 'hint' }, 'Filled in for you when a video is added: past a still title it opens on, short of the title coming back. It loops just this part. Blank: the whole video.'));
     videoCard.append(
       h('div', { class: 'card-head' },
         h('div', {}, h('h2', {}, 'Video'), h('p', {}, 'Plays in its card on hover. Converted to the site’s format: 1440 × 1080 (1080p), sharp and smooth, no sound; longer than 90 seconds is cut.')),

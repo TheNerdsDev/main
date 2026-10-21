@@ -8,13 +8,20 @@
  * reminder while maintenance is on — and the maintenance page at
  * /maintenance/ to preview.
  */
-import { existsSync, mkdirSync, writeFileSync, readdirSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync, readdirSync, rmSync, readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { studio, maintenance, main, team, workIndex, info, contact, showcase, finale, projects, redirects, getNext, getPrev } from '../src/content/site.js';
 import { logoSvg } from '../src/content/logo.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+/* The tab icons' fingerprint, on their addresses: browsers keep a tab icon
+   long after the page (and past a reload) — a new icon is a new address,
+   so it shows at once, everywhere. */
+const ICON_V = createHash('md5')
+  .update(['favicon-32.png', 'favicon-48.png', 'favicon.ico', 'icon-192.png', 'apple-touch-icon.png'].map((f) => readFileSync(join(root, 'public', f))).reduce((a, b) => Buffer.concat([a, b])))
+  .digest('hex').slice(0, 8);
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const BUILD = process.argv.includes('--build');
 
@@ -101,11 +108,14 @@ const shell = ({ title, description, pageId, body, bodyClass = '', path = '/', i
 <meta name="twitter:description" content="${esc(description)}" />
 <meta name="twitter:image" content="${esc(abs(image.src))}" />
 ${schema ? jsonLd(schema) : ''}
-<link rel="icon" href="/favicon.ico" sizes="any" />
-<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
-<link rel="icon" href="/favicon-48.png" type="image/png" sizes="48x48" />
-<link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
-<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<!-- The tab icon, the logo on space (public/). ?v= changes with the files,
+     so a browser drops one it has kept from before. -->
+<link rel="icon" href="/favicon.ico?v=${ICON_V}" sizes="any" />
+<link rel="icon" href="/favicon-32.png?v=${ICON_V}" type="image/png" sizes="32x32" />
+<link rel="icon" href="/favicon-48.png?v=${ICON_V}" type="image/png" sizes="48x48" />
+<link rel="icon" href="/icon-192.png?v=${ICON_V}" type="image/png" sizes="192x192" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=${ICON_V}" />
+<link rel="manifest" href="/site.webmanifest?v=${ICON_V}" />
 <!-- The first paint, before the stylesheet arrives (in dev it's injected by
      script): dark, with the loader covering the page. The loader's contents
      stay hidden until base.css sets --styled, so nothing shows unstyled. -->
@@ -870,11 +880,14 @@ const maintenancePage = () => {
 <meta property="og:title" content="${esc(title)}" />
 <meta property="og:description" content="${esc(description)}" />
 <meta property="og:site_name" content="${esc(studio.name)}" />
-<link rel="icon" href="/favicon.ico" sizes="any" />
-<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
-<link rel="icon" href="/favicon-48.png" type="image/png" sizes="48x48" />
-<link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
-<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<!-- The tab icon, the logo on space (public/). ?v= changes with the files,
+     so a browser drops one it has kept from before. -->
+<link rel="icon" href="/favicon.ico?v=${ICON_V}" sizes="any" />
+<link rel="icon" href="/favicon-32.png?v=${ICON_V}" type="image/png" sizes="32x32" />
+<link rel="icon" href="/favicon-48.png?v=${ICON_V}" type="image/png" sizes="48x48" />
+<link rel="icon" href="/icon-192.png?v=${ICON_V}" type="image/png" sizes="192x192" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=${ICON_V}" />
+<link rel="manifest" href="/site.webmanifest?v=${ICON_V}" />
 <style>html { background: #05060F; color-scheme: dark; }</style>
 </head>
 <body class="maint">
@@ -1058,6 +1071,6 @@ writeFileSync(
 console.log('  ✓ public/_redirects');
 
 /* The tab icon is the logo on space, as files in public/ (favicon-32.png,
-   favicon-48.png, icon-192.png, icon-512.png, apple-touch-icon.png) — not
-   made here. */
+   favicon-48.png, favicon.ico made from favicon-48, icon-192.png,
+   icon-512.png, apple-touch-icon.png, site.webmanifest) — not made here. */
 console.log(`Done — ${projects.length + 4} pages.`);

@@ -464,34 +464,69 @@ export default class App {
 
   bindEvents() {
     let t;
+    /* Everything re-measured and redrawn for the viewport and resolution
+       in the store (a resize, or a step down in quality: watch). */
+    this.refit = () => {
+      this.world.resize();
+      this.scroll.resize();
+      this.page?.resize();
+      this.world.media.resize();
+    };
     this.onResize = () => {
       clearTimeout(t);
       t = setTimeout(() => {
         /* On a phone, most resizes are just the address bar sliding in or
            out: the viewport the site draws against doesn't change (Store),
            so nothing is re-measured, re-split or reallocated mid-scroll. */
-        if (!store.resize()) return;
-        this.world.resize();
-        this.scroll.resize();
-        this.page?.resize();
-        this.world.media.resize();
+        if (store.resize()) this.refit();
       }, 150);
     };
     window.addEventListener('resize', this.onResize);
     window.addEventListener('orientationchange', this.onResize);
   }
 
+<<<<<<< HEAD
   /* (The sky at a steady 60 fps on a phone with a faster screen: core/pace.js.) */
   skyPace = pacer();
 
   loop = (time, delta) => {
+=======
+  loop = (time, deltaMs) => {
+>>>>>>> a98e88c5f3edccc955384b2f02bd10918e0a6cbd
     /* Hidden under the open phone menu: nothing to draw. */
     if (store.covered) return;
     /* The page moves the carousel's DOM boxes; the world reads them.
        Order matters — swap these and the planes lag a frame behind. */
     this.page?.loop();
+<<<<<<< HEAD
     if (this.skyPace(delta)) this.world.loop(time);
+=======
+    this.world.loop(time);
+    this.watch(deltaMs);
+>>>>>>> a98e88c5f3edccc955384b2f02bd10918e0a6cbd
   };
+
+  /**
+   * A device that can't keep up steps down to drawing lighter (fewer
+   * pixels in every canvas: store.setDpr) — and, if that's not enough,
+   * once more. Judged on the typical frame over two seconds or so: when a
+   * third of them miss the screen's refresh, it's slow. Hitches (a page
+   * being built, a tab coming back) don't count, nor anything while the
+   * page is hidden or changing.
+   */
+  watch(dt) {
+    if (store.quality >= 2 || document.hidden || store.isTransitioning || !(dt < 100)) return;
+    const f = (this.frames ||= []);
+    f.push(dt);
+    if (f.length < 120) return;
+    f.sort((a, b) => a - b);
+    const slow = f[80] > 21;
+    f.length = 0;
+    if (!slow) return;
+    store.quality += 1;
+    store.setDpr();
+    this.refit();
+  }
 
   destroy() {
     gsap.ticker.remove(this.loop);

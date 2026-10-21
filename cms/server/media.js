@@ -142,7 +142,7 @@ export function ffmpegVersion() {
 /** Length and size of a video, from ffmpeg's own report. */
 export function inspectVideo(file) {
   return new Promise((resolve, reject) => {
-    execFile(FFMPEG, ['-hide_banner', '-i', file], (err, stdout, stderr) => {
+    execFile(FFMPEG, ['-hide_banner', '-nostdin', '-i', file], (err, stdout, stderr) => {
       const text = String(stderr);
       const dur = text.match(/Duration:\s*(\d+):(\d+):([\d.]+)/);
       const vid = text.match(/Stream #[^\n]*Video:[^\n]*?(\d{2,5})x(\d{2,5})/);
@@ -150,7 +150,10 @@ export function inspectVideo(file) {
       const seconds = dur ? Number(dur[1]) * 3600 + Number(dur[2]) * 60 + Number(dur[3]) : 0;
       /* (A still picture reads as a "video" with no length.) */
       if (seconds < 0.5) return reject(Object.assign(new Error('That isn’t a video — it has no length. Use MP4, MOV or WebM.'), { status: 415 }));
-      resolve({ width: Number(vid[1]), height: Number(vid[2]), seconds });
+      /* HDR (a phone's recording, mostly): its colours need bringing down
+         to the screen's range, or they come out washed out. */
+      const hdr = /Video:[^\n]*(smpte2084|arib-std-b67)/.test(text);
+      resolve({ width: Number(vid[1]), height: Number(vid[2]), seconds, hdr });
     });
   });
 }
@@ -158,26 +161,53 @@ export function inspectVideo(file) {
 /**
  * Re-encode to the site's video: 1440 × 1080 H.264, 30 fps, no sound,
  * faststart. fit keeps the whole frame over a blurred, darkened copy of
- * itself; fill crops to 4:3. Longer than maxSeconds is cut there.
+ * itself; fill crops to 4:3. Longer than maxSeconds is cut there. An HDR
+ * recording is tone-mapped to ordinary (BT.709) colour first, and every
+ * video is tagged BT.709, so each browser shows the same colours.
  * onProgress gets 0..1.
  */
-export function encodeVideo(input, output, mode, seconds, onProgress) {
+export async function encodeVideo(input, output, mode, seconds, onProgress, { hdr = false } = {}) {
+  if (!hdr) return encode(input, output, mode, seconds, onProgress, false);
+  /* An HDR file missing part of its colour description can't be tone-mapped:
+     then it's converted as it is rather than not at all. */
+  try {
+    return await encode(input, output, mode, seconds, onProgress, true);
+  } catch {
+    return encode(input, output, mode, seconds, onProgress, false);
+  }
+}
+
+/* (Every frame labelled as ordinary web colour, so browsers agree on it.) */
+const BT709 = 'setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709:range=tv';
+
+function encode(input, output, mode, seconds, onProgress, hdr) {
   const { w, h, fps, maxSeconds } = SIZES.video;
   const length = Math.min(seconds || maxSeconds, maxSeconds);
+  const tone = hdr
+    ? 'zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=mobius:param=0.3:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p,'
+    : '';
+  /* (The HDR tone-map runs after the picture is down to size: a phone's
+     4K frame is five times the pixels.) */
+  const toneEnd = tone ? `,${tone.slice(0, -1)}` : '';
   const filter = mode === 'fit'
-    ? `[0:v]scale=${w / 4}:${h / 4}:force_original_aspect_ratio=increase,crop=${w / 4}:${h / 4},boxblur=10:2,scale=${w}:${h},setsar=1,eq=brightness=-0.18:saturation=0.85[bg];`
-      + `[0:v]scale=${w}:${h}:force_original_aspect_ratio=decrease,setsar=1[fg];`
-      + `[bg][fg]overlay=(W-w)/2:(H-h)/2,fps=${fps},format=yuv420p[v]`
-    : `[0:v]scale=${w}:${h}:force_original_aspect_ratio=increase,crop=${w}:${h},setsar=1,fps=${fps},format=yuv420p[v]`;
+    ? `[0:v]split[src1][src2];`
+      + `[src1]scale=${w / 4}:${h / 4}:force_original_aspect_ratio=increase,crop=${w / 4}:${h / 4},${tone}boxblur=10:2,scale=${w}:${h},setsar=1,eq=brightness=-0.18:saturation=0.85[bg];`
+      + `[src2]scale=${w}:${h}:force_original_aspect_ratio=decrease,setsar=1${toneEnd}[fg];`
+      + `[bg][fg]overlay=(W-w)/2:(H-h)/2,fps=${fps},${BT709},format=yuv420p[v]`
+    : `[0:v]scale=${w}:${h}:force_original_aspect_ratio=increase,crop=${w}:${h},setsar=1,${tone}fps=${fps},${BT709},format=yuv420p[v]`;
   const args = [
-    '-hide_banner', '-y', '-i', input, '-t', String(length),
+    '-hide_banner', '-nostdin', '-y', '-i', input, '-t', String(length),
     '-filter_complex', filter, '-map', '[v]', '-an',
     '-c:v', 'libx264', '-preset', 'slow', '-crf', '21', '-profile:v', 'high',
     '-maxrate', '5000k', '-bufsize', '10000k', '-pix_fmt', 'yuv420p',
+    '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-color_range', 'tv',
     '-movflags', '+faststart', '-progress', 'pipe:1', '-nostats', output
   ];
   return new Promise((resolve, reject) => {
-    const run = spawn(FFMPEG, args, { windowsHide: true });
+    /* (No keyboard input — '-nostdin', and stdin not even opened. Started
+       from Node with an open stdin, ffmpeg kept polling it for commands and
+       ran ~30x slower: 168 s for a clip it does in 5.) */
+    const run = spawn(FFMPEG, args, { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
     let err = '';
     run.stdout.on('data', (chunk) => {
       const m = String(chunk).match(/out_time_us=(\d+)/g);
@@ -186,5 +216,63 @@ export function encodeVideo(input, output, mode, seconds, onProgress) {
     run.stderr.on('data', (chunk) => { err = (err + chunk).slice(-4000); });
     run.on('error', () => reject(new Error('ffmpeg isn’t installed, so videos can’t be converted. Install it with: winget install Gyan.FFmpeg')));
     run.on('close', (code) => (code === 0 ? resolve() : reject(new Error(`The video couldn’t be converted. ${err.split('\n').filter(Boolean).slice(-2).join(' ')}`))));
+  });
+}
+
+/* How long a title's fade into (or out of) the app usually takes, s. */
+const FADE_IN = 0.8;
+const FADE_OUT = 0.6;
+
+/** One frame at time t, tiny and grey, for telling two frames apart. */
+function frameAt(file, t) {
+  return new Promise((resolve) => {
+    execFile(FFMPEG, ['-hide_banner', '-nostdin', '-v', 'error', '-ss', String(Math.max(0, t)), '-i', file, '-frames:v', '1', '-vf', 'scale=64:48', '-f', 'rawvideo', '-pix_fmt', 'gray', '-'],
+      { encoding: 'buffer', maxBuffer: 1 << 20, windowsHide: true }, (err, out) => resolve(err ? null : out));
+  });
+}
+
+/**
+ * The stretch of a converted video its card should play on hover (the
+ * site's videoFrom / videoTo): past a still title screen it opens on — the
+ * thumbnail already shows that — and short of the same title if it comes
+ * back at the end. Found by ffmpeg's freezedetect (frames that don't change
+ * for 0.6 s or more), with room for a fade either side. A still ending
+ * that isn't the title (a last screen of the app) is kept a moment, then
+ * it loops. { from, to } in seconds, either left out when there's nothing
+ * to skip; {} when it can't tell.
+ */
+export async function detectStretch(file, seconds) {
+  const found = await freezes(file);
+  const round = (v) => Math.round(v * 10) / 10;
+  const out = {};
+  const opening = found.length && found[0].start <= 0.05 && found[0].end != null ? found[0] : null;
+  if (opening && opening.end + FADE_IN < seconds - 3) out.from = round(opening.end + FADE_IN);
+  const close = found[found.length - 1];
+  if (close && close !== opening && close.start > 0.05 && (close.end == null || close.end >= seconds - 0.15)) {
+    /* The title back again? (the same picture it opened on) */
+    const [a, b] = opening ? await Promise.all([frameAt(file, opening.start + 0.1), frameAt(file, Math.min(seconds - 0.1, close.start + 0.3))]) : [];
+    let same = false;
+    if (a && b && a.length === b.length) {
+      let d = 0;
+      for (let i = 0; i < a.length; i++) d += Math.abs(a[i] - b[i]);
+      same = d / a.length < 6;
+    }
+    const to = same ? close.start - FADE_OUT : close.start + 1;
+    if (to > (out.from || 0) + 3 && to < seconds - 0.2) out.to = round(to);
+  }
+  return out;
+}
+
+/** freezedetect's stills: [{ start, end }] (end null when it runs to the end). */
+function freezes(file) {
+  return new Promise((resolve) => {
+    execFile(FFMPEG, ['-hide_banner', '-nostdin', '-nostats', '-i', file, '-vf', 'scale=320:-2,freezedetect=n=-50dB:d=0.6', '-an', '-f', 'null', '-'],
+      { maxBuffer: 1 << 24, windowsHide: true }, (err, stdout, stderr) => {
+        if (err) return resolve([]);
+        const text = String(stderr);
+        const starts = [...text.matchAll(/freeze_start: ([\d.]+)/g)].map((m) => Number(m[1]));
+        const ends = [...text.matchAll(/freeze_end: ([\d.]+)/g)].map((m) => Number(m[1]));
+        resolve(starts.map((start, i) => ({ start, end: ends[i] ?? null })));
+      });
   });
 }

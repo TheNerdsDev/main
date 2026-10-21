@@ -39,7 +39,10 @@ read or write it. Only the function can.
 ### 3. Resend (the email)
 
 1. Sign up at <https://resend.com> (the account is under
-   thenerds2k25@gmail.com), then create an **API key** (Sending access).
+   thenerds2k25@gmail.com), then create an **API key** with **Full access**.
+   (A Sending-access key sends fine, but can't look up whether the
+   thank-you was delivered or bounced, so fake addresses aren't caught —
+   step 4b.)
 2. Until a domain is verified, Resend sends **only to the address the account
    is under**, from `onboarding@resend.dev`, and there's no thank-you.
 3. **Verify thenerds.dev:** Resend → **Domains** → **Add domain** →
@@ -94,6 +97,33 @@ npx supabase functions deploy contact --no-verify-jwt
 
 Its URL is `https://YOUR-PROJECT-REF.supabase.co/functions/v1/contact`.
 
+### 4b. Inbox for real enquiries, Spam for fake addresses
+
+The thank-you goes to the visitor first; whether it's **delivered** or
+**bounces** decides how the enquiry reaches you (usually 2–3 seconds later,
+never more than about 12 — past that it's sent as a normal enquiry). This
+needs the Resend key to have **Full access** (step 3); with a Sending-access
+key every enquiry comes as a normal one, straight away.
+
+- delivered (the address is real) → from **enquiries@thenerds.dev**
+- bounced (no such address) → from **unverified@thenerds.dev**, subject
+  starting `[Unverified]`, a warning at the top
+
+Neither is `getintouch@` itself: mail claiming to be from your own address
+but arriving from outside (Resend) is what your mail host's filter sends to
+Spam, however real. No mailboxes needed for these two — they only send.
+
+Once, in your mailbox (Hostinger Mail, or wherever `getintouch@` is read):
+
+1. **Allow `enquiries@thenerds.dev`**: add it to the spam filter's allowed
+   senders / allowlist (or your contacts), or open one of its emails in Spam
+   and mark it **Not spam**. Real enquiries then land in the Inbox.
+2. **Send `unverified@thenerds.dev` to Spam**: a filter / rule — "from
+   unverified@thenerds.dev → move to Spam (Junk)" — or add it to the
+   blocklist.
+
+(Different addresses: `CONTACT_NOTIFY_FROM` / `CONTACT_UNVERIFIED_FROM`.)
+
 ### 5. Point the site at it
 
 Copy `.env.example` to `.env` and put that URL in `VITE_CONTACT_ENDPOINT`.
@@ -108,9 +138,13 @@ domain to `ALLOWED_ORIGINS` and run the `secrets set` command again.
 - **Read enquiries:** Supabase dashboard → Table Editor → `enquiries`.
   `emailed = false` means it saved but the email didn't go out. Check the
   function's logs (Edge Functions → contact → Logs).
+- **An enquiry in Spam marked `[Unverified]`:** the address they gave
+  bounced — it doesn't exist. (A real one there instead: allow
+  `enquiries@thenerds.dev`, step 4b.)
 - **Change the form's wording:** `contact.form` in `src/content/site.js`.
 - **Add or rename a field:** it has to change in three places together: the
   form (`site.js`), the function (`FIELDS` in `index.ts`), and a new column
   on the table.
 - **Spam limits:** `MIN_FILL_MS`, `LIMIT` and `WINDOW_MIN` at the top of the
-  function.
+  function. Testing it yourself: past 5 enquiries in 10 minutes from one
+  connection, the form shows its error and nothing is sent.

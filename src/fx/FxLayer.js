@@ -27,7 +27,7 @@ export default class FxLayer {
   }
 
   resize() {
-    this.dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    this.dpr = Math.min(store.fxDpr, 1.5);
     /* (The stable viewport, as tall as the canvas: core/Store.js.) */
     this.w = store.width;
     this.h = store.height;

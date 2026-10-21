@@ -34,14 +34,19 @@ export default class Cursor {
     this.speed = 1;
 
     this.x = this.y = this.rx = this.ry = -100;
-    this.seen = false;
+    this.shown = false;
     document.documentElement.classList.add('has-cursor');
 
+    /* Any movement over the page shows it — the first, and every one after
+       the pointer has been off the window and come back. (Not left to an
+       "enter" event: not every browser sends one to the document, and with
+       the system arrow hidden the visitor was left with no pointer at all.)
+       Coming back, the ring starts where the pointer is, not where it left. */
     this.onMove = (e) => {
       this.x = e.clientX;
       this.y = e.clientY;
-      if (!this.seen) {
-        this.seen = true;
+      if (!this.shown) {
+        this.shown = true;
         this.rx = this.x;
         this.ry = this.y;
         this.el.classList.add('is-visible');
@@ -50,17 +55,20 @@ export default class Cursor {
     this.onOver = (e) => this.target(e.target);
     this.onDown = () => this.el.classList.add('is-down');
     this.onUp = () => this.el.classList.remove('is-down');
-    this.onLeave = (e) => {
-      if (!e.relatedTarget) this.el.classList.remove('is-visible');
+    /* Off the window (out to nothing, or the window losing focus): hidden. */
+    this.hide = () => {
+      if (!this.shown) return;
+      this.shown = false;
+      this.el.classList.remove('is-visible', 'is-down');
     };
-    this.onEnter = () => { if (this.seen) this.el.classList.add('is-visible'); };
+    this.onLeave = (e) => { if (!e.relatedTarget) this.hide(); };
 
     window.addEventListener('pointermove', this.onMove, { passive: true });
     document.addEventListener('pointerover', this.onOver, { passive: true });
     window.addEventListener('pointerdown', this.onDown, { passive: true });
     window.addEventListener('pointerup', this.onUp, { passive: true });
     document.addEventListener('pointerout', this.onLeave, { passive: true });
-    document.addEventListener('pointerenter', this.onEnter, { passive: true });
+    window.addEventListener('blur', this.hide);
 
     gsap.ticker.add(this.tick);
   }
@@ -100,7 +108,7 @@ export default class Cursor {
     window.removeEventListener('pointerdown', this.onDown);
     window.removeEventListener('pointerup', this.onUp);
     document.removeEventListener('pointerout', this.onLeave);
-    document.removeEventListener('pointerenter', this.onEnter);
+    window.removeEventListener('blur', this.hide);
     document.documentElement.classList.remove('has-cursor');
     this.el.remove();
   }

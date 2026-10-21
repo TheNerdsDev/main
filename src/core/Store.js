@@ -12,6 +12,15 @@ const detectWebGL = () => {
 
 const reduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+/* Weak hardware, known before anything is drawn: little memory (Chrome
+   tells), or a phone with a 720p-class screen — a budget phone, whose GPU
+   is a fraction of a laptop's. Starts a step lighter (see setDpr). */
+const weak = (touch) => {
+  const memory = navigator.deviceMemory;
+  const short = Math.min(window.screen?.width || 0, window.screen?.height || 0) * (window.devicePixelRatio || 1);
+  return (memory > 0 && memory <= 4) || (touch && short > 0 && short <= 760);
+};
+
 /* The tallest the viewport gets — on a phone, with the browser's address
    bar slid away (100lvh; 100vh where lvh isn't known, which in Chrome and
    Safari on phones is the same thing). Read off a hidden fixed box. */
@@ -48,6 +57,10 @@ class Store {
     this.isMobile = this.width < 768;
     this.isTablet = this.width < 1100 || (this.width < 1366 && this.isTouch);
     this.isDesktop = !this.isTablet;
+    /* How lightly everything draws: 0 full, 1 lighter, 2 lightest. Weak
+       hardware starts at 1; a device that turns out slow in use steps down
+       from there (App.watch). */
+    this.quality = weak(this.isTouch) ? 1 : 0;
     this.setDpr();
 
     /* live values written by Scroll / pointer */
@@ -97,17 +110,27 @@ class Store {
   }
 
   /**
-   * How finely the canvases draw. A touch screen (a phone, a tablet) gets
-   * 1.5 device pixels to the CSS pixel: on its small, dense screen that
-   * still reads as sharp, and it's half the pixels of 2× (over a third
-   * fewer than 1.75×) to fill every frame — phone GPUs choke on fill
-   * long before anything else. `dpr` is the world's; `fxDpr` the layers
-   * that come and go over it (the thrown rock, the planets).
+   * How finely the canvases draw, by `quality` (full, lighter, lightest).
+   * Phone and tablet GPUs choke on fill long before anything else, so a
+   * touch screen draws fewer device pixels to the CSS pixel than its own:
+   * there the world is only the sky (the pictures are the browser's own,
+   * sharp at the screen's resolution — gl/Media.js), soft enough not to
+   * show it. `dpr` is the world's; `fxDpr` the layers that come and go
+   * over it (the rocks, the planets).
    */
   setDpr() {
     const device = window.devicePixelRatio || 1;
-    this.dpr = Math.min(device, this.isTouch ? 1.5 : 1.75);
-    this.fxDpr = Math.min(device, this.isTouch ? 1.5 : 2);
+    const q = Math.min(this.quality, 2);
+    /* (A phone either way up: turned sideways it's wider than a tablet's
+       portrait, but no bigger.) */
+    const phone = this.isTouch && Math.min(this.width, this.height) < 600;
+    const [world, fx] = phone
+      ? [[1.25, 1, 0.8], [1.25, 1, 0.8]]
+      : this.isTouch
+        ? [[1.5, 1.15, 0.9], [1.5, 1.15, 0.9]]
+        : [[1.75, 1.25, 1], [2, 1.5, 1]];
+    this.dpr = Math.min(device, world[q]);
+    this.fxDpr = Math.min(device, fx[q]);
   }
 }
 

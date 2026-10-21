@@ -342,7 +342,13 @@ export default class Projects extends Page {
     const baseY = this.pinned ? item.cy : item.cy - store.scroll;
     const tx = s.cx - item.cx;
     const ty = s.cy - baseY;
-    const blur = s.blur > 0.05 ? `blur(${s.blur.toFixed(2)}px)` : 'none';
+    /* Shown by the browser (touch screens: gl/Media.js), the picture's
+       black and white away from the focus is the card's to do. */
+    const grey = store.isTouch ? 1 - s.colour : 0;
+    const blur = [
+      s.blur > 0.05 ? `blur(${s.blur.toFixed(2)}px)` : '',
+      grey > 0.01 ? `grayscale(${grey.toFixed(2)})` : ''
+    ].filter(Boolean).join(' ') || 'none';
     /* CSS rotates clockwise, GL counter-clockwise. */
     const key = `translate3d(${tx.toFixed(2)}px, ${ty.toFixed(2)}px, 0) rotate(${(-s.rotZ / DEG).toFixed(3)}deg) scale(${s.scale.toFixed(4)})|${s.opacity.toFixed(3)}|${blur}|${s.order}`;
     if (key === item.last) return;
