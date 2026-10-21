@@ -485,25 +485,17 @@ export default class App {
     window.addEventListener('orientationchange', this.onResize);
   }
 
-<<<<<<< HEAD
   /* (The sky at a steady 60 fps on a phone with a faster screen: core/pace.js.) */
   skyPace = pacer();
 
-  loop = (time, delta) => {
-=======
   loop = (time, deltaMs) => {
->>>>>>> a98e88c5f3edccc955384b2f02bd10918e0a6cbd
     /* Hidden under the open phone menu: nothing to draw. */
     if (store.covered) return;
     /* The page moves the carousel's DOM boxes; the world reads them.
        Order matters — swap these and the planes lag a frame behind. */
     this.page?.loop();
-<<<<<<< HEAD
-    if (this.skyPace(delta)) this.world.loop(time);
-=======
-    this.world.loop(time);
+    if (this.skyPace(deltaMs)) this.world.loop(time);
     this.watch(deltaMs);
->>>>>>> a98e88c5f3edccc955384b2f02bd10918e0a6cbd
   };
 
   /**

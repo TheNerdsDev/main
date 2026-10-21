@@ -27,9 +27,13 @@ const startNotch = () => {
   return saved !== null && /^[0-2]$/.test(saved) ? Math.min(fits, +saved) : fits;
 };
 const planetDpr = () => {
-  if (!store.isPhone) return store.fxDpr;
+  const device = window.devicePixelRatio || 1;
+  if (!store.isTouch) return store.fxDpr;
+  /* (A tablet, or a phone the site already draws lighter — little memory,
+     or slow in use: store.quality — keeps 1.5.) */
+  if (!store.isPhone || store.quality > 0) return Math.min(device, NOTCHES[0]);
   if (notch === null) notch = startNotch();
-  return Math.min(window.devicePixelRatio || 1, NOTCHES[notch]);
+  return Math.min(device, NOTCHES[notch]);
 };
 
 /*
@@ -400,8 +404,8 @@ export default class PlanetScene {
     this.geometries.push(ringGeo, uRingGeo);
   }
 
-  /** Drawn finer than the other effects (a phone, while it keeps up: planetDpr). */
-  get fine() { return planetDpr() > store.fxDpr; }
+  /** Drawn finer than the floor of 1.5 (a phone, while it keeps up: planetDpr) — there's a notch to step down. */
+  get fine() { return planetDpr() > NOTCHES[0]; }
 
   /** Too much for this phone: a notch coarser, from now on (and on its next visits). */
   coarsen() {
@@ -414,14 +418,11 @@ export default class PlanetScene {
   resize(w, h) {
     this.w = w;
     this.h = h;
-<<<<<<< HEAD
+    /* Hard edges and fine maps: on a touch screen the planets keep at least
+       1.5× however light the rest draws (store.setDpr) — a settled pile is
+       only redrawn every third frame there (PlanetShower), so it's still
+       cheap. A phone that keeps up draws them finer still: planetDpr. */
     this.renderer.setPixelRatio(planetDpr());
-=======
-    /* Hard edges and fine maps: on a touch screen the planets keep 1.5×
-       however light the rest draws (store.setDpr) — a settled pile is only
-       redrawn every third frame there (PlanetShower), so it's still cheap. */
-    this.renderer.setPixelRatio(store.isTouch ? Math.min(window.devicePixelRatio || 1, 1.5) : store.fxDpr);
->>>>>>> a98e88c5f3edccc955384b2f02bd10918e0a6cbd
     this.renderer.setSize(w, h, false);
     const c = this.camera;
     c.left = 0;

@@ -792,27 +792,17 @@ export default class PlanetShower {
         if (!this.awake) break;
       }
     }
-<<<<<<< HEAD
     /* (Drawn at a steady 60 fps on a phone with a faster screen:
-       core/pace.js. The falling itself is worked out every frame.) Once
-       the pile has come to rest, every other frame: the planets only turn
-       on their axes then, slowly — well under a pixel a frame — and it
-       looks the same, for half the GPU's work. */
-    if (this.visible && this.pace(delta)) {
-      this.calm = !this.awake && !this.drag && !this.calm;
-      if (!this.calm) {
-        this.draw();
-        this.judge(now);
-      }
-    }
-=======
-    /* At rest, the pile only turns slowly on its axes: a touch screen
-       redraws it every third frame then (the biggest canvas on the page,
-       and the dearest to draw) — every frame while anything falls or is
-       pushed. */
+       core/pace.js. The falling itself is worked out every frame.) At
+       rest, the pile only turns slowly on its axes: a touch screen
+       redraws it every third of those frames then (the biggest canvas on
+       the page, and the dearest to draw) — every one while anything falls
+       or is pushed. */
     this.rest = this.awake || this.drag ? 0 : (this.rest || 0) + 1;
-    if (this.visible && (!store.isTouch || this.rest % 3 === 0)) this.draw();
->>>>>>> a98e88c5f3edccc955384b2f02bd10918e0a6cbd
+    if (this.visible && this.pace(delta) && (!store.isTouch || this.rest % 3 === 0)) {
+      this.draw();
+      this.judge(now);
+    }
   };
 
   /**
