@@ -6,6 +6,7 @@ import { makeAsteroid, prebuildAsteroids, rockMaterial } from './asteroid.js';
 import { rand } from './particles.js';
 import store from '../core/Store.js';
 import gpu from '../core/gpu.js';
+import { pacer } from '../core/pace.js';
 
 /* The last page's offscreen renderer and material, kept when it goes (as
    RockStage keeps its own), so coming back doesn't build them again. */
@@ -39,6 +40,7 @@ export default class SpaceRocks {
     this.items.forEach((it, k) => { it.slot = k; });
     /* 0 → 1 as the rocks rush into each other: they spin up hard. */
     this.frenzy = 0;
+    this.pace = pacer();
 
     kept?.claim();
     const reuse = kept && !kept.renderer.getContext().isContextLost();
@@ -46,7 +48,7 @@ export default class SpaceRocks {
       ({ renderer: this.renderer, material: this.material, untrack: this.untrack } = kept);
     } else {
       if (kept) SpaceRocks.release(kept);
-      this.renderer = new WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'low-power' });
+      this.renderer = gpu.lean(new WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'low-power' }));
       this.renderer.setClearColor(0x000000, 0);
       this.material = rockMaterial(false, { bump: 1.2 });
       /* (three.js takes a lost context back by itself; meanwhile the rocks
@@ -69,6 +71,25 @@ export default class SpaceRocks {
 
     this.mesh = new Mesh(this.items[0]?.geo, this.material);
     this.scene.add(this.mesh);
+
+    /* The rock shader, built before the first frame — in the background,
+       where the browser can (compileAsync). Left to the first draw, it was
+       built there and then, holding up the GPU for a third of a second
+       (measured, on a laptop; longer on a phone) — while the loading
+       screen was still animating, which froze for it. Until it's ready
+       the rocks aren't drawn. (A renderer kept from the last visit has it
+       built already.) */
+    this.ready = !!reuse;
+    if (!reuse) {
+      const done = () => { this.ready = true; };
+      try {
+        const p = this.renderer.compileAsync?.(this.scene, this.camera);
+        if (p) p.then(done, done);
+        else done();
+      } catch {
+        done();
+      }
+    }
 
     this.handlers = this.items.map((it) => {
       const on = () => { it.hovered = true; };
@@ -124,9 +145,17 @@ export default class SpaceRocks {
   tick = (time, deltaMs) => {
     /* (Under the open phone menu: unseen.) */
     if (store.covered) return;
-    /* (Context lost: each rock holds its last frame until it's back.) */
-    if (this.gl.isContextLost()) return;
+    /* (Context lost: each rock holds its last frame until it's back. Its
+       shader still being built: not drawn yet — see the constructor.) */
+    if (this.gl.isContextLost() || !this.ready) return;
     const dt = Math.min(deltaMs / 1000, 1 / 30);
+    for (const it of this.items) {
+      it.boost += ((it.hovered ? 1 : 0) - it.boost) * Math.min(1, dt * 4);
+      const speed = 1 + it.boost * 4 + this.frenzy * 16;
+      it.rot.addScaledVector(it.spin, dt * speed);
+    }
+    /* (Drawn at a steady 60 fps on a phone with a faster screen: core/pace.js.) */
+    if (!this.pace(deltaMs)) return;
     /* Every rock, every frame — a tumble redrawn every other frame
        juddered — all drawn side by side into one strip, then each copied
        out to its own button. Copying out of the renderer makes the CPU
@@ -139,10 +168,6 @@ export default class SpaceRocks {
     r.clear();
     r.setScissorTest(true);
     for (const it of this.items) {
-      it.boost += ((it.hovered ? 1 : 0) - it.boost) * Math.min(1, dt * 4);
-      const speed = 1 + it.boost * 4 + this.frenzy * 16;
-      it.rot.addScaledVector(it.spin, dt * speed);
-
       this.mesh.geometry = it.geo;
       this.material.userData.rock.uSeed.value = it.i * 4.3;
       this.mesh.rotation.set(it.rot.x, it.rot.y, it.rot.z);

@@ -914,14 +914,14 @@ html .media-wrapper.is-empty {
       radial-gradient(90% 70% at 100% 100%, rgba(10, 205, 136, 0.09), transparent 60%),
       linear-gradient(160deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.01) 50%, rgba(255, 255, 255, 0.025)),
       rgba(var(--c-bg-rgb), 0.5);
-    /* Without the widest of its shadows (a 10rem blur round the whole
-       form), which on a phone held up the page's arrival. */
+    /* Only the crisp highlights along the top and left edges. The blurred
+       shadows (dark ones under the form, a faint glow inside it) barely
+       show against the night sky, but drawing them — the GPU's first
+       time, on a visitor's first trip here — held up the page's arrival
+       on a phone. */
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.3),
-      inset 1px 0 0 rgba(255, 255, 255, 0.06),
-      inset 0 0 3.2rem rgba(140, 180, 255, 0.05),
-      0 0.2rem 0.4rem rgba(0, 0, 0, 0.22),
-      0 2rem 4rem -1.2rem rgba(0, 0, 0, 0.45);
+      inset 1px 0 0 rgba(255, 255, 255, 0.06);
   }
 }
 #contact .contact-form::before {
@@ -952,6 +952,21 @@ html .media-wrapper.is-empty {
     linear-gradient(118deg, rgba(255, 255, 255, 0.11) 0%, rgba(255, 255, 255, 0.04) 22%, transparent 34%),
     radial-gradient(55% 18% at 32% 0%, rgba(255, 255, 255, 0.08), transparent 70%);
   pointer-events: none;
+}
+/* Touch screens: the hairline edge as a plain border — catching the light
+   at the top, fading down the left, the site's green along the bottom and
+   right, as the gradient above does. Cut out of a full-size gradient with
+   a mask, it took the GPU a whole extra pass over the form, and building
+   that the first time made the page's arrival stutter on a phone. */
+@media (hover: none) and (pointer: coarse) {
+  #contact .contact-form::before {
+    padding: 0;
+    border: 1px solid;
+    border-color: rgba(255, 255, 255, 0.42) rgba(10, 205, 136, 0.17) rgba(10, 205, 136, 0.26) rgba(255, 255, 255, 0.16);
+    background: none;
+    -webkit-mask: none;
+    mask: none;
+  }
 }
 #contact .field { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
 #contact .field-wide,

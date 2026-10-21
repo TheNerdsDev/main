@@ -1,6 +1,7 @@
 import gsap from 'gsap';
 import store from '../core/Store.js';
 import gpu from '../core/gpu.js';
+import { pacer, drawInterval } from '../core/pace.js';
 import PlanetSprites from './PlanetSprites.js';
 import PlanetScene, { ringShape, MERCURY, VENUS, EARTH, MOON, MARS, JUPITER, SATURN, URANUS, NEPTUNE } from './PlanetScene.js';
 
@@ -106,6 +107,7 @@ function closest(p1x, p1y, q1x, q1y, p2x, p2y, q2x, q2y) {
 const GRAVITY = 2300;   // px/s²
 const ITERATIONS = 6;   // constraint passes per substep
 const STEP = 1 / 240;   // physics time step, s
+const CATCH_UP = 5;     // most steps in one frame (a 60 fps frame takes 4)
 const SHOWER = 2.1;     // seconds over which the bodies are let go
 
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -156,6 +158,7 @@ export default class PlanetShower {
     this.onShower = onShower;
     this.bodies = [];
     this.order = [];
+    this.pace = pacer();
     this.armed = true;
     this.awake = false;
     this.time = 0;
@@ -601,66 +604,80 @@ export default class PlanetShower {
       order[j + 1] = b;
     }
 
+    /* The pairs that might touch during this step, found once and reused
+       by every pass: those whose spans overlap across (the sweep above),
+       and down too. In a deep pile, each body shares its column with
+       dozens of others far above or below it, and every pass used to test
+       each of those again. (A little slack either way: everyone shifts
+       slightly over the passes.) */
     const n = order.length;
+    const pairs = this.pairs || (this.pairs = []);
+    let np = 0;
+    for (let i = 0; i < n; i++) {
+      const a = order[i];
+      if (!a.live) break;
+      const right = a.x + a.r + 8;
+      for (let j = i + 1; j < n; j++) {
+        const b = order[j];
+        if (b.lo > right) break;
+        if (Math.abs(b.y - a.y) > a.r + b.r + 8) continue;
+        pairs[np++] = a;
+        pairs[np++] = b;
+      }
+    }
     for (let it = 0; it < ITERATIONS; it++) {
-      for (let i = 0; i < n; i++) {
-        const a = order[i];
-        if (!a.live) break;
-        /* (A little slack: everyone shifts slightly over the passes.) */
-        const right = a.x + a.r + 4;
-        for (let j = i + 1; j < n; j++) {
-          const b = order[j];
-          if (b.lo > right) break;
-          const dx = b.x - a.x;
-          const dy = b.y - a.y;
-          const reach = a.r + b.r;
-          const d2 = dx * dx + dy * dy;
-          if (d2 >= reach * reach) continue;
-          /* The deepest overlap between their capsules, and its direction. */
-          let depth = -Infinity, nx = 0, ny = 0;
-          if (a.prims.length === 1 && b.prims.length === 1) {
-            /* Two plain planets: circles, the common case. */
-            const d = Math.sqrt(d2);
-            depth = reach - d;
-            if (d > 1e-6) {
-              nx = dx / d;
-              ny = dy / d;
-            } else ny = 1;
-          } else for (const pa of a.prims) {
-            for (const pb of b.prims) {
-              closest(a.x + pa[0], a.y + pa[1], a.x + pa[2], a.y + pa[3],
-                b.x + pb[0], b.y + pb[1], b.x + pb[2], b.y + pb[3]);
-              let ex = OUT[2] - OUT[0];
-              let ey = OUT[3] - OUT[1];
-              let e = Math.hypot(ex, ey);
-              const over = pa[4] + pb[4] - e;
-              if (over <= depth) continue;
-              if (e < 1e-6) {
-                /* Centred on each other: part them along the line between centres, or straight up. */
-                e = Math.hypot(dx, dy);
-                ex = e > 1e-6 ? dx : 0;
-                ey = e > 1e-6 ? dy : 1;
-                e = e > 1e-6 ? e : 1;
-              }
-              depth = over;
-              nx = ex / e;
-              ny = ey / e;
+      for (let k = 0; k < np; k += 2) {
+        const a = pairs[k];
+        const b = pairs[k + 1];
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const reach = a.r + b.r;
+        const d2 = dx * dx + dy * dy;
+        if (d2 >= reach * reach) continue;
+        /* The deepest overlap between their capsules, and its direction. */
+        let depth = -Infinity, nx = 0, ny = 0;
+        if (a.prims.length === 1 && b.prims.length === 1) {
+          /* Two plain planets: circles, the common case. */
+          const d = Math.sqrt(d2);
+          depth = reach - d;
+          if (d > 1e-6) {
+            nx = dx / d;
+            ny = dy / d;
+          } else ny = 1;
+        } else for (const pa of a.prims) {
+          for (const pb of b.prims) {
+            closest(a.x + pa[0], a.y + pa[1], a.x + pa[2], a.y + pa[3],
+              b.x + pb[0], b.y + pb[1], b.x + pb[2], b.y + pb[3]);
+            let ex = OUT[2] - OUT[0];
+            let ey = OUT[3] - OUT[1];
+            let e = Math.hypot(ex, ey);
+            const over = pa[4] + pb[4] - e;
+            if (over <= depth) continue;
+            if (e < 1e-6) {
+              /* Centred on each other: part them along the line between centres, or straight up. */
+              e = Math.hypot(dx, dy);
+              ex = e > 1e-6 ? dx : 0;
+              ey = e > 1e-6 ? dy : 1;
+              e = e > 1e-6 ? e : 1;
             }
+            depth = over;
+            nx = ex / e;
+            ny = ey / e;
           }
-          const wa = 1 / a.m;
-          const wb = 1 / b.m;
-          if (depth > 0) {
-            const corr = depth / (wa + wb);
-            a.x -= nx * corr * wa;
-            a.y -= ny * corr * wa;
-            b.x += nx * corr * wb;
-            b.y += ny * corr * wb;
-          }
-          /* Resting on something: the upper of the two is supported. */
-          if (depth > -0.5) {
-            if (ny > 0.3) a.rest = true;
-            else if (ny < -0.3) b.rest = true;
-          }
+        }
+        const wa = 1 / a.m;
+        const wb = 1 / b.m;
+        if (depth > 0) {
+          const corr = depth / (wa + wb);
+          a.x -= nx * corr * wa;
+          a.y -= ny * corr * wa;
+          b.x += nx * corr * wb;
+          b.y += ny * corr * wb;
+        }
+        /* Resting on something: the upper of the two is supported. */
+        if (depth > -0.5) {
+          if (ny > 0.3) a.rest = true;
+          else if (ny < -0.3) b.rest = true;
         }
       }
       for (const b of bodies) {
@@ -737,7 +754,8 @@ export default class PlanetShower {
     /* (Under the open phone menu: unseen.) */
     if (this.dead || store.covered) return;
     const now = performance.now();
-    const dt = Math.min((now - this.last) / 1000, 1 / 30);
+    const delta = now - this.last;
+    const dt = Math.min(delta / 1000, 1 / 30);
     this.last = now;
     this.time += dt;
 
@@ -756,7 +774,17 @@ export default class PlanetShower {
          so an uneven step would feed jitter into the pile and keep it from
          ever resting. Leftover time carries over to the next frame. */
       this.acc = Math.min((this.acc || 0) + dt, STEP * 16);
+      /* Never more than CATCH_UP steps in one frame: a slow frame (a busy
+         phone) used to be followed by one doing twice the work to catch
+         up — slow again, so the next did as much — and the fall stuttered
+         on. The time beyond that is let go instead: for a moment the
+         planets fall a touch slower, but every frame shows. */
+      let steps = 0;
       while (this.acc >= STEP) {
+        if (++steps > CATCH_UP) {
+          this.acc = 0;
+          break;
+        }
         this.acc -= STEP;
         this.clock += STEP;
         this.step(STEP);
@@ -764,8 +792,46 @@ export default class PlanetShower {
         if (!this.awake) break;
       }
     }
-    if (this.visible) this.draw();
+    /* (Drawn at a steady 60 fps on a phone with a faster screen:
+       core/pace.js. The falling itself is worked out every frame.) Once
+       the pile has come to rest, every other frame: the planets only turn
+       on their axes then, slowly — well under a pixel a frame — and it
+       looks the same, for half the GPU's work. */
+    if (this.visible && this.pace(delta)) {
+      this.calm = !this.awake && !this.drag && !this.calm;
+      if (!this.calm) {
+        this.draw();
+        this.judge(now);
+      }
+    }
   };
+
+  /**
+   * Phones: whether this one keeps up with the planets drawn as finely as
+   * they are there (PlanetScene planetDpr). Over each 40 of their frames
+   * (two-thirds of a second), if more than one in five came late — a frame
+   * missed — they're drawn a notch coarser from then on: a little softer,
+   * never stuttering. (Only while they're falling or dragged, when every
+   * frame is drawn: see tick.)
+   */
+  judge(now) {
+    const last = this.drawnAt;
+    this.drawnAt = now;
+    if (this.flat || !this.scene?.fine || this.scene.blank || !this.awake || !last || now - last > 250) {
+      this.judging = null;
+      return;
+    }
+    const want = drawInterval();
+    const j = this.judging || (this.judging = { n: 0, late: 0 });
+    j.n++;
+    if (now - last > want * 1.5) j.late++;
+    if (j.n < 40) return;
+    if (j.late > j.n * 0.2) {
+      this.scene.coarsen();
+      console.info(`[planets] a notch coarser from now on: ${j.late} of ${j.n} frames came late`);
+    }
+    this.judging = null;
+  }
 
   draw() {
     /* (`awake`: a pile at rest needn't be redrawn in 2D. The 3D planets

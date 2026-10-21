@@ -6,7 +6,31 @@ import {
   DoubleSide, BackSide, AdditiveBlending, DynamicDrawUsage
 } from 'three';
 import store from '../core/Store.js';
-import { release } from '../core/gpu.js';
+import { release, lean } from '../core/gpu.js';
+
+/* How finely the planets are drawn on a phone (device pixels to the CSS
+   pixel). At the 1.5 the other passing effects get (Store fxDpr), these
+   small, detailed bodies came out soft on a phone's dense screen; as they
+   were first made, 2. As finely as the phone can keep up with: it starts
+   from what the phone says of itself — 8 GB of memory or more (and every
+   iPhone, which doesn't say) 2, 4 GB 1.75, less 1.5 — and steps down a
+   notch whenever the planets miss frames there (PlanetShower watches),
+   remembered for its next visits. */
+const NOTCHES = [1.5, 1.75, 2];
+const SAVED = 'thenerds.planets';
+let notch = null;
+const startNotch = () => {
+  let saved = null;
+  try { saved = localStorage.getItem(SAVED); } catch { /* storage off */ }
+  const mem = navigator.deviceMemory;
+  const fits = mem === undefined || mem >= 8 ? 2 : mem >= 4 ? 1 : 0;
+  return saved !== null && /^[0-2]$/.test(saved) ? Math.min(fits, +saved) : fits;
+};
+const planetDpr = () => {
+  if (!store.isPhone) return store.fxDpr;
+  if (notch === null) notch = startNotch();
+  return Math.min(window.devicePixelRatio || 1, NOTCHES[notch]);
+};
 
 /*
  * The planets of the closing shower, drawn with three.js.
@@ -238,7 +262,7 @@ export default class PlanetScene {
    */
   constructor(canvas, { small = false } = {}) {
     this.small = small;
-    this.renderer = new WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'high-performance' });
+    this.renderer = lean(new WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'high-performance' }));
     this.renderer.setClearColor(0x000000, 0);
     this.renderer.outputColorSpace = SRGBColorSpace;
     this.renderer.toneMapping = ACESFilmicToneMapping;
@@ -376,10 +400,21 @@ export default class PlanetScene {
     this.geometries.push(ringGeo, uRingGeo);
   }
 
+  /** Drawn finer than the other effects (a phone, while it keeps up: planetDpr). */
+  get fine() { return planetDpr() > store.fxDpr; }
+
+  /** Too much for this phone: a notch coarser, from now on (and on its next visits). */
+  coarsen() {
+    if (notch === null) planetDpr();
+    notch = Math.max(0, notch - 1);
+    try { localStorage.setItem(SAVED, String(notch)); } catch { /* storage off */ }
+    if (this.w) this.resize(this.w, this.h);
+  }
+
   resize(w, h) {
     this.w = w;
     this.h = h;
-    this.renderer.setPixelRatio(store.fxDpr);
+    this.renderer.setPixelRatio(planetDpr());
     this.renderer.setSize(w, h, false);
     const c = this.camera;
     c.left = 0;

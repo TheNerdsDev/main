@@ -10,6 +10,7 @@ import LogoRocket from '../fx/LogoRocket.js';
 import ContactForm from './ContactForm.js';
 import gpu from './gpu.js';
 import plainSite from './plain.js';
+import { pacer } from './pace.js';
 import { buildPage, createPage, loadPage, warmPages } from '../pages/index.js';
 import { projects } from '../content/site.js';
 
@@ -480,13 +481,16 @@ export default class App {
     window.addEventListener('orientationchange', this.onResize);
   }
 
-  loop = (time) => {
+  /* (The sky at a steady 60 fps on a phone with a faster screen: core/pace.js.) */
+  skyPace = pacer();
+
+  loop = (time, delta) => {
     /* Hidden under the open phone menu: nothing to draw. */
     if (store.covered) return;
     /* The page moves the carousel's DOM boxes; the world reads them.
        Order matters — swap these and the planes lag a frame behind. */
     this.page?.loop();
-    this.world.loop(time);
+    if (this.skyPace(delta)) this.world.loop(time);
   };
 
   destroy() {

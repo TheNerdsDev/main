@@ -107,6 +107,10 @@ export default class InkTrail {
   }
 
   loop() {
+    /* No pointer has moved yet — and on a phone, where a finger scrolls
+       rather than stirs (World.js), none ever will: nothing to carry on.
+       (The trail's image starts empty, as the composite expects.) */
+    if (!this.seeded) return;
     this.prev.copy(this.mouse);
     /* Lag the pointer slightly so the stroke has weight. */
     this.mouse.lerp(this.target, 0.22);

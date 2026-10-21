@@ -43,7 +43,7 @@ export default class RockStage {
       this.canvas = document.createElement('canvas');
       this.canvas.className = 'rock-canvas';
       this.canvas.setAttribute('aria-hidden', 'true');
-      this.renderer = new WebGLRenderer({ canvas: this.canvas, alpha: true, antialias: true, powerPreference: 'high-performance' });
+      this.renderer = gpu.lean(new WebGLRenderer({ canvas: this.canvas, alpha: true, antialias: true, powerPreference: 'high-performance' }));
       this.renderer.setClearColor(0x000000, 0);
       this.rockMat = rockMaterial(false, { bump: 1.4, seed: 3.7 });
       this.chunkMat = rockMaterial(true, { bump: 1.1, seed: 9.1 });
@@ -95,16 +95,21 @@ export default class RockStage {
     const temp = [new Mesh(this.rockGeo, this.rockMat), new Mesh(this.chunkGeos[0], this.chunkMat)];
     temp.forEach((m) => { m.position.z = -5000; this.scene.add(m); });
     const done = () => temp.forEach((m) => this.scene.remove(m));
-    try {
-      const p = this.renderer.compileAsync ? this.renderer.compileAsync(this.scene, this.camera) : null;
-      if (p) p.then(done, done);
-      else {
-        this.renderer.compile(this.scene, this.camera);
-        done();
+    /* (prime() waits for it: a draw while it's still being built would
+       wait for it there and then, holding up the GPU.) */
+    this.compiled = new Promise((resolve) => {
+      const end = () => { done(); resolve(); };
+      try {
+        const p = this.renderer.compileAsync ? this.renderer.compileAsync(this.scene, this.camera) : null;
+        if (p) p.then(end, end);
+        else {
+          this.renderer.compile(this.scene, this.camera);
+          end();
+        }
+      } catch {
+        end();
       }
-    } catch {
-      done();
-    }
+    });
   }
 
   /**
@@ -130,7 +135,7 @@ export default class RockStage {
       }
       later(step);
     };
-    later(step);
+    this.compiled.then(() => later(step));
   }
 
   resize() {

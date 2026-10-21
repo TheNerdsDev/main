@@ -57,10 +57,13 @@ export default class SplitText {
       rows[rows.length - 1].push(w.innerHTML);
     });
 
-    /* 3 — rebuild as masked lines */
+    /* 3 — rebuild as masked lines. (A space between them: the lines are
+       blocks, so it takes no room on screen — but the text, as search
+       engines and screen readers read it, would otherwise run the last
+       word of one line into the first of the next: "curiousdevelopers".) */
     this.el.innerHTML = rows
       .map((r) => `<span class="line"><span class="line-inner">${r.join(' ')}</span></span>`)
-      .join('');
+      .join(' ');
 
     this.lines = [...this.el.querySelectorAll('.line-inner')];
   }

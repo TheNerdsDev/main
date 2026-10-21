@@ -56,6 +56,19 @@ export const track = (name, canvas, { onLost, onRestored } = {}) => {
   };
 };
 
+/**
+ * A three.js renderer as the site uses it: without its check of each
+ * shader's compile log on first use (outside development). Reading the log
+ * makes the page wait for the GPU to finish everything it was given — on a
+ * phone, a freeze each time a new shader is first drawn with (the loading
+ * screen, the first planets). It only ever reports a broken shader, which
+ * development would show first.
+ */
+export const lean = (renderer) => {
+  renderer.debug.checkShaderErrors = !!import.meta.env.DEV;
+  return renderer;
+};
+
 /** Let a three.js renderer's context go now, not whenever it's collected. */
 export const release = (renderer) => {
   if (!renderer) return;
@@ -102,4 +115,4 @@ export const changing = () => {
   };
 };
 
-export default { warn, track, release, live, keep, changing };
+export default { warn, track, lean, release, live, keep, changing };

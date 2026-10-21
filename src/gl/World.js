@@ -7,7 +7,7 @@ import {
 import gsap from 'gsap';
 import store from '../core/Store.js';
 import assets from '../core/Assets.js';
-import { track } from '../core/gpu.js';
+import { track, lean } from '../core/gpu.js';
 import Stars from './Stars.js';
 import InkTrail from './InkTrail.js';
 import Media from './Media.js';
@@ -57,6 +57,7 @@ export default class World {
       stencil: false,
       depth: true
     });
+    lean(this.renderer);
     this.renderer.setPixelRatio(store.dpr);
     this.renderer.setSize(store.width, store.height, false);
     this.renderer.outputColorSpace = SRGBColorSpace;
