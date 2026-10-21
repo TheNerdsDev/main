@@ -34,6 +34,9 @@ export const HEADER = `/*
  *   shots         how many detail shots it has (01.webp, 02.webp, …);
  *                 photos: false shows empty frames instead
  *   certificates  (optional) pinned either side of its page's video
- *   role, excerpt, deliverables — kept, not shown on the site at present
+ *   searchDescription  (optional) the short text under its link in Google
+ *                 (up to 160 characters; not shown on the site); empty: the
+ *                 first sentence of its description
+ *   role          kept, not shown on the site at present
  */
 `;

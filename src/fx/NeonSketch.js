@@ -12,6 +12,7 @@
  *
  * The SVG stays in the page as the fallback; it's hidden once this is ready.
  */
+import { track, warn } from '../core/gpu.js';
 
 /* The glow spills past the drawing; the canvas covers the same margin the
    SVG filter region did (12% each side). */
@@ -80,7 +81,7 @@ const load = (src) => new Promise((resolve, reject) => {
   const img = new Image();
   img.decoding = 'async';
   img.onload = () => resolve(img);
-  img.onerror = reject;
+  img.onerror = () => reject(new Error(`couldn't load ${src}`));
   img.src = src;
 });
 
@@ -133,13 +134,22 @@ export default class NeonSketch {
     const gl = this.canvas.getContext('webgl', { alpha: true, premultipliedAlpha: true, antialias: false });
     if (!gl || !this.build(gl)) return;
     this.gl = gl;
-    this.canvas.addEventListener('webglcontextlost', (e) => {
-      e.preventDefault();
-      this.ready = false;
-      this.host.classList.remove('is-gl');
+    /* Lost, the SVG drawing shows instead (it's still there, underneath);
+       given back, everything goes up again from the images still in hand. */
+    this.untrack = track('neon sketch (NeonSketch)', this.canvas, {
+      onLost: (e) => {
+        e.preventDefault();
+        this.ready = false;
+        this.host.classList.remove('is-gl');
+      },
+      onRestored: () => {
+        if (this.gone || !this.images || !this.build(gl)) return;
+        this.w = this.h = 0;
+        this.upload();
+      }
     });
     this.ready = false;
-    this.init().catch(() => {});
+    this.init().catch((err) => warn('neon sketch: images failed, showing the SVG', err));
   }
 
   build(gl) {
@@ -197,8 +207,15 @@ export default class NeonSketch {
     const [sketch, eye, hurt, angry, sad] = await Promise.all([
       load(src), load(maps.eye), load(maps.hurt), load(maps.angry), load(maps.sad)
     ]);
-    this.images = { sketch };
+    if (this.gone) return;
+    this.images = { sketch, eye, hurt, angry, sad };
+    this.upload();
+  }
+
+  /** Everything onto the GPU (again, after a lost context) and shown. */
+  upload() {
     const gl = this.gl;
+    const { eye, hurt, angry, sad } = this.images;
     this.tex = {
       eye: this.texture(3, eye),
       hurt: this.texture(4, hurt),
@@ -314,7 +331,9 @@ export default class NeonSketch {
   }
 
   destroy() {
+    this.gone = true;
     this.ready = false;
+    this.untrack?.();
     this.gl?.getExtension('WEBGL_lose_context')?.loseContext();
     this.canvas.remove();
     this.host.classList.remove('is-gl');

@@ -447,7 +447,9 @@ function projectEditor(p) {
         text('Year', 'year', { max: 4, check: (v) => /^\d{4}$/.test(v), hint: 'Four digits, like 2026.' }),
         text('GitHub link', 'github', { placeholder: 'https://github.com/you/repo', check: (v) => !v || /^https:\/\/github\.com\/[\w.-]+(\/[\w.-]+)?\/?$/i.test(v), hint: 'Leave empty to hide the “Code — GitHub” link.' }),
         h('div', { class: 'field' }, h('label', {}, 'Accent colour'), h('div', { class: 'colour' }, colour, hex), h('span', { class: 'hint' }, 'The glow on its page and card.'))),
-      h('div', {}, text('Description', 'description', { area: true, max: 600, hint: 'Two or three sentences under the video on its page.' })))));
+      h('div', {},
+        text('Description', 'description', { area: true, max: 600, hint: 'Two or three sentences under the video on its page.' }),
+        text('Search description', 'searchDescription', { area: true, max: 160, hint: 'Only for Google: the short text under its link in search results (up to 160 characters). Not shown on the site. Empty: the first sentence of the description.' })))));
 
   /* Media. */
   const thumbCard = h('div', { class: 'card' });

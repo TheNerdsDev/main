@@ -10,19 +10,52 @@ import cms from './cms.js';
 export const studio = {
   name: 'The Nerds',
   wordmark: 'The Nerds',
+  /* The site's one official address (https, with www) — what the sitemap,
+     robots.txt and search engines are given. No trailing slash. */
+  url: 'https://www.thenerds.dev',
   tagline: 'Creative Development Studio',
+  /* The home page's description for search results (Google shows about
+     160 characters). */
   description:
-    'A two-person studio building websites, software and automation for businesses that deserve better than a template.',
+    'The Nerds are web developers in Surat, India. We build websites, custom software, AI tools and business automation for startups and growing businesses.',
   email: 'getintouch@thenerds.dev',
   /* The header's way to the contact page. */
   contactLabel: 'Contact Us',
   location: 'Surat, IN — working remotely',
   available: 'January 2027',
   year: '2026',
+  /* Other ways the studio is named and found, for search engines (the
+     structured data in generate-pages.mjs): so "The Nerds", "TheNerds.dev"
+     and "The Nerds Surat" are known to be one studio. */
+  alternateNames: ['TheNerds.dev', 'The Nerds Dev', 'The Nerds Surat'],
+  /* What the studio is known for (structured data). The services it
+     offers come from the About page's own list (the CMS). */
+  knowsAbout: [
+    'Web development', 'Full stack development', 'Custom software development', 'Web applications',
+    'AI solutions', 'Business automation', 'UI/UX design', 'Search engine optimization', 'E-commerce websites'
+  ],
   social: [
     { label: 'Instagram', url: 'https://www.instagram.com/thenerds.dev/' },
     { label: 'LinkedIn', url: 'https://www.linkedin.com/company/145305179/' }
-  ]
+  ],
+  /* Each page's title, as search results and link previews show it
+     (Google shows about 60 characters): what the page is, then who we
+     are — "The Nerds" alongside Surat, so we aren't mistaken for the
+     other "nerd" sites. */
+  titles: {
+    home: 'The Nerds: Website & Software Developers in Surat, India',
+    work: 'Portfolio: Web Apps & AI Projects Built in Surat | The Nerds',
+    about: 'About The Nerds: Meet & Prem, Developers in Surat',
+    contact: 'Contact The Nerds: Start Your Website or App Project',
+    /* A project's: its name, then what it is (by its address). One not
+       listed here — a new one from the CMS — is "Name | The Nerds". */
+    projects: {
+      'css-arena': 'Live CSS Battles for Tech Fests',
+      'indus-brain': 'AI Assistant for Industrial Plants',
+      'mewar-sync': 'Voice AI Accounting for Artisans',
+      taskpilot: 'Offline Task Planner & Focus App'
+    }
+  }
 };
 
 /* The maintenance page (CMS → Maintenance). While `on`, the built site is
@@ -50,9 +83,7 @@ export const main = {
   about: {
     text:
       "Hi, we're Meet and Prem, two curious developers who love turning simple ideas into something creative. If you can dream it up, we'll happily nerd out building it.",
-    button: 'About Us',
-    /* Shown in the empty frames until a scroll rolls the photos in. */
-    hint: 'Scroll Down'
+    button: 'About Us'
   },
   /* Space rocks drifting around the sketches — click one and it gets thrown. */
   rocks: 4
@@ -119,6 +150,9 @@ export const team = [
 /* Contact page at `/contact/`. */
 export const contact = {
   title: ['Got an idea?', "Let's talk."],
+  /* For search results (not shown on the page). */
+  description:
+    'Looking for web developers in Surat? Tell The Nerds about your website, app or automation idea and hear back within 24 hours.',
   /* **word** renders bold. */
   lead:
     "We build **websites**, **custom software** and **automation** that work as hard as you do. Tell us what you have in mind, and you'll hear back within 24 hours.",
@@ -193,12 +227,18 @@ export const workIndex = {
      beside the card stack that's about ten letters. */
   title: ['Heavy on', 'ideas.', 'Light on', 'boring.'],
   intro:
-    'We turn wild ideas into websites, clever software, and digital experiences worth showing off. Take a peek at what happens when nerds get creative.'
+    'We turn wild ideas into websites, clever software, and digital experiences worth showing off. Take a peek at what happens when nerds get creative.',
+  /* For search results (not shown on the page). */
+  description:
+    'Web apps, AI platforms and custom software built by The Nerds in Surat: CSS Arena, Indus Brain, Mewar Sync and TaskPilot. See what we can build for you.'
 };
 
 export const info = {
   /* Each line must fit on one row — it is revealed behind its own mask. */
   title: ['A little', 'about us'],
+  /* For search results (not shown on the page; the lead is too long for one). */
+  description:
+    'Meet Raval and Prem Kajiwala are the web developers behind The Nerds in Surat, India: full-stack development, AI solutions, UI/UX, SEO and automation.',
   lead:
     'We’re The Nerds, two devs from Surat, India, who love cooking up cool stuff for the web. From slick websites to custom software and crazy useful automations, we build things that just work. No corporate BS, no middlemen, just two nerds turning your ideas into something awesome.',
   /* The two boxes in their own section under the heading and photo

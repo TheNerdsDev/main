@@ -12,10 +12,9 @@
   width: 100%; height: 100%;
   object-fit: cover;
 }
-/* (Touch screens show the image itself: phones — html.flat-media, core/
-   Store.js isPhone — and tablets, html.dom-media, gl/Media.js.) */
-html.webgl:not(.flat-media):not(.dom-media) .media { visibility: hidden; }
-html.webgl:not(.flat-media):not(.dom-media) .media-wrapper { background: none; }
+/* (Phones show the image itself — html.flat-media, core/Store.js isPhone.) */
+html.webgl:not(.flat-media) .media { visibility: hidden; }
+html.webgl:not(.flat-media) .media-wrapper { background: none; }
 /* A frame still waiting for its photo (scripts/generate-pages.mjs). */
 html .media-wrapper.is-empty {
   background: rgba(var(--c-ink-rgb), 0.04);
@@ -729,6 +728,15 @@ html .media-wrapper.is-empty {
   0% { scale: 0.4; opacity: 0.9; }
   70%, 100% { scale: 1.6; opacity: 0; }
 }
+/* Touch screens: a few rounds of each, then still. Endless, they had a
+   phone redrawing the page on every frame for as long as it was open — a
+   frame in three dropped while scrolling it, measured (the nudge changes
+   colour, which only the main thread can paint). By then the box has been
+   seen. */
+@media (hover: none) and (pointer: coarse) {
+  #info .info-cards.is-in .info-work:not(.was-opened) .info-work-plus { animation-iteration-count: 3; }
+  #info .info-work-hint-ping::after { animation-iteration-count: 7; }
+}
 /* (Tap on a touch screen; a narrow window with a mouse, click.) */
 #info .info-work-hint-click { display: none; }
 @media (hover: hover) and (pointer: fine) {
@@ -889,13 +897,31 @@ html .media-wrapper.is-empty {
     0 2rem 4rem -1.2rem rgba(0, 0, 0, 0.45),
     0 5rem 10rem -3rem rgba(20, 60, 140, 0.3);
 }
-/* Touch screens: no frost (redrawn every frame the sky moves behind it —
-   a whole screen of it here, on a phone), more of the dark glass instead. */
+/* Touch screens: no live blur. Over the sky, which is redrawn every
+   frame, the glass had to be blurred afresh every frame too, the whole
+   height of the form; on a phone's GPU — busy, short of memory — it
+   couldn't always keep up, and the form flickered (worst while it faded
+   in, and with the keyboard coming and going). The stars it blurred are
+   only faint smudges at that size anyway: a little more of the
+   background colour in the tint gives the same frosted pane. */
 @media (hover: none) and (pointer: coarse) {
   #contact .contact-form {
-    background-color: rgba(var(--c-bg-rgb), 0.62);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
+    background:
+      radial-gradient(120% 80% at 0% 0%, rgba(120, 170, 255, 0.13), transparent 55%),
+      radial-gradient(70% 60% at 90% 8%, rgba(146, 89, 238, 0.08), transparent 60%),
+      radial-gradient(90% 70% at 100% 100%, rgba(10, 205, 136, 0.09), transparent 60%),
+      linear-gradient(160deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.01) 50%, rgba(255, 255, 255, 0.025)),
+      rgba(var(--c-bg-rgb), 0.5);
+    /* Without the widest of its shadows (a 10rem blur round the whole
+       form), which on a phone held up the page's arrival. */
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.3),
+      inset 1px 0 0 rgba(255, 255, 255, 0.06),
+      inset 0 0 3.2rem rgba(140, 180, 255, 0.05),
+      0 0.2rem 0.4rem rgba(0, 0, 0, 0.22),
+      0 2rem 4rem -1.2rem rgba(0, 0, 0, 0.45);
   }
 }
 #contact .contact-form::before {

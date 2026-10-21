@@ -55,11 +55,27 @@ export default class Router {
     window.addEventListener('popstate', this.onPop);
   }
 
+  /**
+   * The page's HTML (null if it can't be had: go() then loads the page in
+   * full). Given 8s at most — on a phone with a poor connection a fetch
+   * can hang far longer, and the site would sit waiting with every click
+   * turned off. A failure isn't remembered: the next try asks again.
+   */
   async prefetch(path) {
     if (this.cache.has(path)) return this.cache.get(path);
-    const promise = fetch(path, { credentials: 'same-origin' })
+    const abort = 'AbortController' in window ? new AbortController() : null;
+    const late = setTimeout(() => abort?.abort(), 8000);
+    const promise = fetch(path, { credentials: 'same-origin', signal: abort?.signal })
       .then((r) => (r.ok ? r.text() : null))
-      .catch(() => null);
+      .catch(() => null)
+      .then((html) => {
+        clearTimeout(late);
+        if (html === null) {
+          console.warn(`[router] couldn't fetch ${path}, it will load in full`);
+          if (this.cache.get(path) === promise) this.cache.delete(path);
+        }
+        return html;
+      });
     this.cache.set(path, promise);
     return promise;
   }

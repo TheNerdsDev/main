@@ -436,7 +436,10 @@ export default class Duo {
       h.shown = on;
       h.el.classList.toggle('is-on', on);
     }
-    if (!a) return;
+    /* (Hidden — or fading out where it was — it isn't placed: that was
+       the label's room worked out and two transforms written every frame,
+       through the whole trip down the page.) */
+    if (!a || !on) return;
 
     /* The label on whichever side of the rock is clear, moving round only
        when another side is clearly better, and gliding there. */
@@ -822,14 +825,6 @@ export default class Duo {
        the other side of a face. With nothing scrolled it's the header's
        edge, as before. */
     const ceil = this.ceiling + (box.top - this.homeTop);
-    /* Their layer rides with the page (main-page.css): shift it back to the
-       screen's corner, so a scroll the browser makes before this runs again
-       carries the rocks along with the faces instead of leaving them behind. */
-    if (this.actionsEl && (box.left !== this.layerX || box.top !== this.layerY)) {
-      this.layerX = box.left;
-      this.layerY = box.top;
-      this.actionsEl.style.transform = `translate3d(${(-box.left).toFixed(2)}px, ${(-box.top).toFixed(2)}px, 0)`;
-    }
     const hx = box.left + (a.cx + b.cx) / 2;
     const hy = box.top + (a.cy + b.cy) / 2;
     const hTilt = Math.atan2(b.cy - a.cy, b.cx - a.cx);
@@ -950,6 +945,31 @@ export default class Duo {
     /* How far out a figure pushes a passing rock (in its own radii): a
        wide berth where there's room, a close shave on a phone. */
     const berth = stacked ? 1.3 : 2;
+
+    /* Their layer rides with the page (main-page.css): shift it back to the
+       screen's corner, so a scroll the browser makes before this runs again
+       carries the rocks along with the faces instead of leaving them behind.
+       (Written only now, after every measurement above: a style written
+       before them made the browser work the page's styles out again for
+       each one, several times a frame.) */
+    /* Touch screens, once the rocks are more on their way round the
+       screen than round the faces: their layer is pinned to the screen
+       instead. There the browser scrolls the page itself, a step ahead of
+       this — and a layer riding with the page was carried along by each
+       step, then pulled back here: every frame of the trip down, the rocks
+       jumped and snapped back. Pinned, they move only as they're placed. */
+    const pinned = store.isTouch && fe >= 0.5;
+    if (this.actionsEl && pinned !== this.layerPinned) {
+      this.layerPinned = pinned;
+      this.actionsEl.classList.toggle('is-pinned', pinned);
+      this.layerX = this.layerY = null;
+      if (pinned) this.actionsEl.style.transform = '';
+    }
+    if (this.actionsEl && !pinned && (box.left !== this.layerX || box.top !== this.layerY)) {
+      this.layerX = box.left;
+      this.layerY = box.top;
+      this.actionsEl.style.transform = `translate3d(${(-box.left).toFixed(2)}px, ${(-box.top).toFixed(2)}px, 0)`;
+    }
 
     /* The group's place round the loop, in loops. Every rock keeps its own
        place relative to it — their starting spread (ORBITS, uneven on

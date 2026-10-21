@@ -47,11 +47,16 @@ export default class Finale {
       plain();
       return;
     }
-    import('./PlanetShower.js').then(({ default: PlanetShower }) => {
-      if (this.destroyed) return;
-      if (PlanetShower.supported()) this.planets = new PlanetShower(section, canvas, { onShower: reveal });
-      if (!this.planets || this.planets.dead) plain();
-    }).catch(plain);
+    import('./PlanetShower.js')
+      .then(({ default: PlanetShower }) => {
+        if (this.destroyed) return;
+        if (PlanetShower.supported()) this.planets = new PlanetShower(section, canvas, { onShower: reveal });
+        if (!this.planets || this.planets.dead) plain();
+      })
+      .catch((err) => {
+        console.warn('[gpu] planets: their code failed to load, showing the text alone', err);
+        plain();
+      });
   }
 
   resize() { this.planets?.resize(); }

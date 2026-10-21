@@ -8,6 +8,8 @@ import World from '../gl/World.js';
 import Cursor from './Cursor.js';
 import LogoRocket from '../fx/LogoRocket.js';
 import ContactForm from './ContactForm.js';
+import gpu from './gpu.js';
+import plainSite from './plain.js';
 import { buildPage, createPage, loadPage, warmPages } from '../pages/index.js';
 import { projects } from '../content/site.js';
 
@@ -37,6 +39,19 @@ const copyText = async (text) => {
  * The page's photos on its first screen and a half, fetched now (not
  * lazily) and decoded — never waited on for more than 4s.
  */
+/*
+ * A page's own code (pages/index.js). If it doesn't come — a dropped
+ * connection on a phone, or a new release has replaced its file — on a
+ * page change the router loads the page in full instead (Router.go); at
+ * boot the page is reloaded once, and failing that runs as plain HTML
+ * (App.rescue). (Not simply asked for again: the browser remembers a
+ * module that failed, and hands back the same failure.)
+ */
+const pageCodeFor = (id) => loadPage(id).catch((err) => {
+  gpu.warn(`page code for "${id}" failed to load`, err);
+  throw err;
+});
+
 const decodeFirst = (root) => {
   const near = window.innerHeight * 1.5;
   /* (Shown ones only: one in a hidden box — the desktop index rail's
@@ -47,7 +62,9 @@ const decodeFirst = (root) => {
   });
   imgs.forEach((img) => { img.loading = 'eager'; });
   return Promise.race([
-    Promise.all(imgs.map((img) => img.decode().catch(() => {}))),
+    Promise.all(imgs.map((img) => img.decode().catch(() => {
+      if (img.complete && !img.naturalWidth) gpu.warn(`image failed to load: ${img.currentSrc || img.src}`);
+    }))),
     new Promise((r) => setTimeout(r, 4000))
   ]);
 };
@@ -75,7 +92,37 @@ export default class App {
     this.bindForms(document);
     if (Cursor.supported()) this.cursor = new Cursor();
 
-    this.start();
+    /* Whatever goes wrong on the way up, never a page stuck behind the loader. */
+    this.start().catch((err) => this.rescue(err));
+  }
+
+  /**
+   * The site couldn't start. Reload once (a release may have replaced the
+   * files this copy of the page asks for); if it fails again, the page as
+   * plain HTML — readable, its links working.
+   */
+  rescue(err) {
+    console.error('[app] start failed', err);
+    let again = false;
+    try {
+      again = sessionStorage.getItem('rescued') === location.pathname;
+      sessionStorage.setItem('rescued', location.pathname);
+    } catch { again = true; }
+    if (!again) {
+      location.reload();
+      return;
+    }
+    gsap.ticker.remove(this.loop);
+    try { this.scroll.destroy(); } catch { /* not started */ }
+    try { this.world.destroy(); } catch { /* not started */ }
+    /* (Undo the entrance's starting point: text and photos hidden, waiting for it.) */
+    document.querySelectorAll('.page [style]').forEach((el) => {
+      el.style.removeProperty('opacity');
+      el.style.removeProperty('transform');
+      el.style.removeProperty('translate');
+      el.style.removeProperty('visibility');
+    });
+    plainSite();
   }
 
   /* ------------------------------------------------------------ boot */
@@ -90,7 +137,7 @@ export default class App {
     const urls = store.isPhone ? [] : assets.collectFromDOM(document);
     const firstImages = store.isPhone ? decodeFirst(document) : Promise.resolve();
     /* This page's code, fetched while the loader loads its pictures. */
-    const pageCode = loadPage(this.pageEl.dataset.page);
+    const pageCode = pageCodeFor(this.pageEl.dataset.page);
     /* …and the subtext's font: the page measures its lines when it's built,
        so they must break where the real font breaks them. (Never waited on
        for more than 2s — a font that won't come leaves the fallback.) */
@@ -120,6 +167,7 @@ export default class App {
 
     store.html.classList.remove('is-transitioning');
     store.html.classList.add('loaded');
+    try { sessionStorage.removeItem('rescued'); } catch { /* storage off */ }
 
     this.world.reveal();
     await this.loader.out();
@@ -135,8 +183,11 @@ export default class App {
        (decoded and on the GPU already) — without the loader waiting on them. */
     /* (Phones: the images they actually show — the thumbnails' 960px WebP —
        fetched and decoded, not made into textures.) */
+    /* (Phones also get the menu's moons decoded ahead: left to the first
+       tap, decoding them held up the first frame of its opening.) */
+    const moons = [1, 2, 3, 4].map((i) => `/media/menu/moon-${i}.webp`);
     const thumbs = store.isPhone
-      ? ['/media/studio/portrait.jpg', ...projects.map((p) => `/media/${p.slug}/featured-960.webp`)]
+      ? [...moons, '/media/studio/portrait.jpg', ...projects.map((p) => `/media/${p.slug}/featured-960.webp`)]
       : ['/media/studio/portrait.jpg', ...projects.map((p) => `/media/${p.slug}/featured.jpg`)];
     const warm = (url) => {
       if (!store.isPhone) return assets.load(url, { srgb: true });
@@ -158,12 +209,20 @@ export default class App {
 
   async transition(nextPageEl, title) {
     const outgoing = this.page;
+    /* (Renderers the old page keeps for later are let go, on a phone, if
+       the next page hasn't taken them up after a while there: gpu.js. Not
+       at once: straight back to the page that had them, they're taken up
+       again — no new renderer and shaders to build mid page change.) */
+    const settle = gpu.changing();
 
     /* 1 — pull the current page apart, and meanwhile fetch the next page's
        code: it has to be in hand before its markup goes in, or the markup
        shows raw (text at full opacity, nothing hidden for its entrance)
        while the code is still on the way. */
-    const code = loadPage(nextPageEl.dataset.page);
+    const code = pageCodeFor(nextPageEl.dataset.page);
+    /* (Not here at all: Router.go loads the page in full. Caught for now,
+       so it isn't reported as unhandled while the exit plays.) */
+    code.catch(() => {});
     /* Followed from the phone menu, the panel is over the page: there's no
        exit to see, so none is waited for — straight to the next page, and
        the panel opens onto it (step 3). */
@@ -211,6 +270,7 @@ export default class App {
     if (covered) this.setMenu?.(false);
     this.world.fadeTo(1, 0.7);
     this.page.enter();
+    setTimeout(settle, 12000);
   }
 
   /** A link to the page already showing: back to its top, the page's own way. */
@@ -300,28 +360,43 @@ export default class App {
         nav.style.setProperty('--iris-y', `${y}px`);
         nav.style.setProperty('--iris-r', `${Math.ceil(r) + 24}px`);
       }
-      /* Once the iris has opened over everything, stop drawing the sky,
-         the rocks and the page beneath it (store.covered); closing, they
-         draw again from the first frame, before any of them shows. */
+      /* From the tap, the sky, the rocks and the page beneath stop being
+         drawn (store.covered): each canvas holds its last frame, so what
+         shows round the opening iris is the page as it was, still for the
+         moment it takes — and the phone has nothing to do but open the
+         menu (whose own movement all runs on the compositor: base.css).
+         Closing, they draw again from the first frame. The page is shut
+         off once the iris is fully open (lock): turning the whole page
+         inert and stopping its scroll (a class on <html>) made the browser
+         restyle and lay out every element on the page — at the tap, frames
+         lost just as the iris began to open. (Meanwhile the panel itself
+         doesn't pass a drag on to the page: base.css.) */
       clearTimeout(this.menuCovering);
-      if (open) this.menuCovering = setTimeout(() => { store.covered = true; }, 900);
-      else store.covered = false;
+      if (open) {
+        store.covered = true;
+        this.menuCovering = setTimeout(() => lock(true), 900);
+      } else {
+        store.covered = false;
+        lock(false);
+      }
       /* Closing, the moons keep flying until the iris has shut over them. */
       clearTimeout(this.menuClosing);
       header.classList.toggle('is-closing', !open);
       if (!open) this.menuClosing = setTimeout(() => header.classList.remove('is-closing'), 600);
       header.classList.toggle('is-open', open);
-      /* The page under the panel can't be reached — not by Tab, not by a
-         screen reader — while it's covered; the header (logo, button,
-         links) is all there is. Escape or the button closes it. */
-      if (this.pageEl) this.pageEl.inert = open;
       btn.setAttribute('aria-expanded', String(open));
       btn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
-      /* Only hand scrolling back if the menu was what stopped it. */
-      if (open && store.html.classList.contains('loaded')) {
+    };
+    /* The page under the panel can't be reached — not by Tab, not by a
+       screen reader — while it's covered; the header (logo, button, links)
+       is all there is. Escape or the button closes it. And it doesn't
+       scroll. (Only hand scrolling back if the menu was what stopped it.) */
+    const lock = (on) => {
+      if (this.pageEl && this.pageEl.inert !== on) this.pageEl.inert = on;
+      if (on && store.html.classList.contains('loaded') && !this.menuHeldScroll) {
         this.scroll.stop();
         this.menuHeldScroll = true;
-      } else if (!open && this.menuHeldScroll) {
+      } else if (!on && this.menuHeldScroll) {
         this.menuHeldScroll = false;
         this.scroll.start();
       }

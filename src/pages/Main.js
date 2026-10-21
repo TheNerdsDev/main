@@ -65,10 +65,11 @@ const SCATTERED = 0.42;
 /* The first scroll doesn't stop at About: the page carries itself on.
    The rocks start closing in LEAD s before the glide lands (no settling
    in first), are drawn in (DRAW_IN s) and collide, the pieces burst out
-   (BURST s), a beat, then the two frames rise in, empty, with "Scroll
-   down" in them (FRAMES s). The scroll is handed back there; the next one
-   plays the rest of About (TEXT_IN s). Going back, each plays in reverse
-   at the same pace — the way home is the way in, backwards. */
+   (BURST s), a beat, then the two frames rise in with our photos in them
+   (FRAMES s). The scroll is handed back there; the next one plays the
+   rest of About (TEXT_IN s, at the pace it always had: buildAbout's
+   textIn). Going back, each plays in reverse at the same pace — the way
+   home is the way in, backwards. */
 const LEAD = 0.35;
 const DRAW_IN = 0.5;
 const BURST = 0.55;
@@ -85,10 +86,14 @@ const TURN = 24;
 const journeyEase = gsap.parseEase('power2.inOut');
 
 /* The About brief's own clock (timeline seconds, scrubbed by the scroll):
-   the frames are in, empty, by HAND_BACK; the photos cut in from REVEAL,
-   and settle for a moment before the text follows. */
+   the photos cut in from REVEAL as their frames rise in, and the two are
+   in, named, by HAND_BACK; the text follows from TEXT_AT. (The frames used
+   to rise in empty, with "Scroll down" in them, and the photos came on
+   the next scroll — TEXT_SHIFT later on this clock than the text now.) */
 const HAND_BACK = 1;
-const REVEAL = 1.1;
+const REVEAL = 0.2;
+const TEXT_AT = HAND_BACK + 0.2;
+const TEXT_SHIFT = 1.1;
 
 /**
  * Arriving from another page: build the rocks' shapes in idle moments
@@ -115,6 +120,9 @@ export default class Main extends Page {
     /* Decoded ahead, so a photo never cuts in half-drawn. */
     this.frames.forEach((f) => f.querySelector('.about-photo')?.decode?.().catch(() => {}));
     this.button = q('.about-button');
+    /* (Touch screens' scroll cue: see loop.) */
+    this.cue2 = q('.journey-cue');
+    this.cue2Line = q('.journey-cue-fill');
     this.finale = q('.finale');
     this.finaleButton = q('.finale-button');
     this.buttonWrap = q('.about-cta');
@@ -323,8 +331,8 @@ export default class Main extends Page {
     return clamp((y - this.aboutTop) / Math.max(1, this.aboutH - store.height), 0, 1);
   }
 
-  /** About's progress with the frames in, still empty: the scroll is handed
-      back there, the first time. */
+  /** About's progress with the frames and our photos in: the scroll is
+      handed back there, the first time. */
   get photosP() {
     return SCATTERED + (1 - SCATTERED) * this.briefAuto;
   }
@@ -416,7 +424,7 @@ export default class Main extends Page {
       return;
     }
     const from = this.rockP;
-    const duration = TEXT_IN * clamp((1 - from) / Math.max(0.001, 1 - this.photosP), 0.2, 1);
+    const duration = this.textIn * clamp((1 - from) / Math.max(0.001, 1 - this.photosP), 0.2, 1);
     this.autoplay(from, [{ p: 1, duration }], {
       state: 'toText',
       done: () => this.settle('text', this.aboutAt(1))
@@ -429,7 +437,7 @@ export default class Main extends Page {
     if (!this.lenis) return;
     this.moveDir = -1;
     const from = this.rockP;
-    const duration = TEXT_IN * clamp((from - this.photosP) / Math.max(0.001, 1 - this.photosP), 0.2, 1);
+    const duration = this.textIn * clamp((from - this.photosP) / Math.max(0.001, 1 - this.photosP), 0.2, 1);
     this.autoplay(from, [{ p: this.photosP, duration }], {
       state: 'toPhotos',
       done: () => this.settle('about', this.handBack)
@@ -747,28 +755,25 @@ export default class Main extends Page {
     this.frames.forEach((f, fi) => {
       tl.fromTo(f, { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: 0.7, ease: 'power2.out' }, fi * 0.1);
     });
-    const hints = this.frames.map((f) => f.querySelector('.about-hint')).filter(Boolean);
-    tl.fromTo(hints, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power2.out' }, 0.5)
-      /* …held until the scroll comes, then gone as the photos arrive. */
-      .to(hints, { opacity: 0, y: -10, duration: 0.25, ease: 'power2.in' }, HAND_BACK + 0.02);
 
+    /* The photos cut in as their frames rise. */
     this.frames.forEach((f, fi) => {
       const photo = f.querySelector('.about-photo');
       const flash = f.querySelector('.about-flash');
       if (!photo) return;
       const at = REVEAL + fi * 0.08;
       tl.fromTo(photo, { clipPath: 'inset(100% 0% 0% 0%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 0.55, ease: 'power2.out' }, at)
-        .fromTo(photo, { scale: 1.14 }, { scale: 1, duration: 1.3, ease: 'power2.out' }, at);
+        .fromTo(photo, { scale: 1.14 }, { scale: 1, duration: 0.8, ease: 'power2.out' }, at);
       if (flash) {
         tl.fromTo(flash, { opacity: 0 }, { opacity: 0.45, duration: 0.08, ease: 'none', immediateRender: false }, at)
           .fromTo(flash, { opacity: 0.45 }, { opacity: 0, duration: 0.35, ease: 'power2.out', immediateRender: false }, at + 0.08);
       }
       /* …and the name rises in under it once the photo's there. */
       const who = f.querySelector('.about-who');
-      if (who) tl.fromTo(who, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out' }, at + 0.45);
+      if (who) tl.fromTo(who, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.45, ease: 'power2.out' }, at + 0.3);
     });
 
-    const textAt = REVEAL + 1.2;
+    const textAt = TEXT_AT;
     const lines = this.aboutSplit?.lines || [];
     const LINE_STEP = 0.42;
     if (lines.length) {
@@ -795,8 +800,12 @@ export default class Main extends Page {
     /* A short hold so the finished section sits still before the page moves on. */
     tl.to({}, { duration: 0.6 });
 
-    /* Up to the empty frames, it plays on its own (see smash). */
+    /* Up to the frames and photos, it plays on its own (see smash). */
     this.briefAuto = HAND_BACK / tl.duration();
+    /* The rest — the text — in TEXT_IN scaled to what's left of it, so it
+       plays at the pace it always had. */
+    const rest = tl.duration() - HAND_BACK;
+    this.textIn = TEXT_IN * (rest / (rest + TEXT_SHIFT));
 
     tl.progress(this.aboutP);
     this.aboutTl = tl;
@@ -1135,11 +1144,19 @@ export default class Main extends Page {
     /* The reel (or the page) moved under the pointer: still on the same card? */
     if (this.reelPtr && this.reelGeo) this.updateHot(true);
 
-    /* The "Scroll down" arrows' bob rests while About is out of sight. */
-    const away = scroll < this.aboutTop - vh || scroll > this.aboutTop + this.aboutH;
-    if (away !== this.aboutAway) {
-      this.aboutAway = away;
-      this.about?.classList.toggle('is-away', away);
+    /* Touch screens: the scroll cue, on from the welcome until our photos
+       are in, its line filled as far as the way there. */
+    if (this.cue2 && this.free) {
+      const on = this.entered && !this.pullTl && this.rockP < this.photosP - 0.005;
+      if (on !== this.cue2On) {
+        this.cue2On = on;
+        this.cue2.classList.toggle('is-on', on);
+      }
+      const fill = Math.round(clamp(scroll / Math.max(1, this.handBack), 0, 1) * 200) / 200;
+      if (fill !== this.cue2Fill) {
+        this.cue2Fill = fill;
+        this.cue2Line.style.transform = `scaleY(${fill})`;
+      }
     }
   }
 

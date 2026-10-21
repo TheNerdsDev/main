@@ -50,12 +50,12 @@ class Assets {
         },
         undefined,
         () => {
-          /* Never let a missing file stall the loader — hand back a 1px stand-in. */
+          /* Never let a missing file stall the loader — hand back a 1px
+             stand-in. Not kept: the next page that wants it asks again. */
+          console.warn(`[gpu] texture failed to load: ${url}`);
           const fallback = new Texture();
           this.configure(fallback, opts);
-          const entry = { texture: fallback, width: 1, height: 1, failed: true };
-          this.cache.set(url, entry);
-          resolve(entry);
+          resolve({ texture: fallback, width: 1, height: 1, failed: true });
         }
       );
     });

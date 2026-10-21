@@ -37,19 +37,77 @@ const maintenanceNote = !BUILD && maintenance.on
 
 /* ---------------------------------------------------------------- shell */
 
-const shell = ({ title, description, pageId, body, bodyClass = '' }) => `<!doctype html>
+/* -------------------------------------------------------------- search */
+
+/* What a link to the site shows when it's shared (WhatsApp, LinkedIn, X…):
+   the logo on space, 1200 × 630 — or a project's own thumbnail. */
+const SHARE = { src: '/media/share/the-nerds.jpg', width: 1200, height: 630, alt: `${studio.name} — logo on a starfield` };
+const abs = (path) => `${studio.url}${path}`;
+
+/* Who we are, for search engines (schema.org JSON-LD): the studio, the two
+   of us, where we are and how to reach us. Every page points back to it
+   by its @id; the home page carries it in full. */
+const ORG_ID = `${studio.url}/#studio`;
+const phones = (contact.details.find((d) => d.lines)?.lines || []).map((l) => l.href.replace(/^tel:/, ''));
+const organization = {
+  '@type': 'ProfessionalService',
+  '@id': ORG_ID,
+  name: studio.name,
+  url: `${studio.url}/`,
+  logo: abs('/icon-512.png'),
+  image: abs(SHARE.src),
+  alternateName: studio.alternateNames,
+  description: studio.description,
+  slogan: studio.tagline,
+  knowsAbout: studio.knowsAbout,
+  /* The services we offer — the About page's own list. */
+  hasOfferCatalog: {
+    '@type': 'OfferCatalog',
+    name: `${studio.name} services`,
+    itemListElement: info.offer.items.map((name) => ({ '@type': 'Offer', itemOffered: { '@type': 'Service', name, provider: { '@id': ORG_ID } } }))
+  },
+  email: studio.email,
+  ...(phones.length ? { telephone: phones[0] } : {}),
+  address: { '@type': 'PostalAddress', addressLocality: 'Surat', addressRegion: 'Gujarat', addressCountry: 'IN' },
+  areaServed: [{ '@type': 'City', name: 'Surat' }, { '@type': 'Country', name: 'India' }, 'Worldwide'],
+  founder: team.map((m) => ({ '@type': 'Person', name: `${m.name} ${m.surname}` })),
+  sameAs: studio.social.map((s) => s.url)
+};
+const website = { '@type': 'WebSite', '@id': `${studio.url}/#website`, name: studio.name, url: `${studio.url}/`, publisher: { '@id': ORG_ID } };
+/* One script per page, safe inside HTML (a "</" can't close it early). */
+const jsonLd = (graph) => `<script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@graph': [].concat(graph) }).replace(/</g, '\\u003c')}</script>`;
+
+/**
+ * path     the page's own address (from the root, with its trailing slash):
+ *          its canonical — the one official address, https with www,
+ *          whichever address it was reached at
+ * image    what a share of it shows (SHARE unless it has its own)
+ * schema   its structured data (jsonLd)
+ */
+const shell = ({ title, description, pageId, body, bodyClass = '', path = '/', image = SHARE, schema = null }) => `<!doctype html>
 <html lang="en" class="is-transitioning">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(description)}" />
+<link rel="canonical" href="${esc(abs(path))}" />
 <meta name="author" content="${esc(studio.name)}" />
 <meta name="theme-color" content="#05060F" />
 <meta property="og:type" content="website" />
+<meta property="og:url" content="${esc(abs(path))}" />
 <meta property="og:title" content="${esc(title)}" />
 <meta property="og:description" content="${esc(description)}" />
 <meta property="og:site_name" content="${esc(studio.name)}" />
+<meta property="og:image" content="${esc(abs(image.src))}" />
+<meta property="og:image:width" content="${image.width}" />
+<meta property="og:image:height" content="${image.height}" />
+<meta property="og:image:alt" content="${esc(image.alt)}" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="${esc(title)}" />
+<meta name="twitter:description" content="${esc(description)}" />
+<meta name="twitter:image" content="${esc(abs(image.src))}" />
+${schema ? jsonLd(schema) : ''}
 <!-- The tab icon, the logo on space (public/). ?v= changes with the files,
      so a browser drops one it has kept from before. -->
 <link rel="icon" href="/favicon-32.png?v=${ICON_V}" type="image/png" sizes="32x32" />
@@ -175,6 +233,11 @@ const mediaBlock = (src, alt, extra = '') => {
 const WORK_PHOTOS = false;
 const workMedia = (p, src, alt, extra = '') =>
   WORK_PHOTOS || p.photos ? mediaBlock(src, alt, extra) : '<div class="media-wrapper is-empty" aria-hidden="true"></div>';
+
+/* What Google shows under a project's link: its search description (CMS),
+   or else the first sentence of its description. */
+const searchDescription = (p) => (p.searchDescription || '').trim()
+  || (String(p.description || '').match(/^.*?[.!?](?=\s|$)/) || [p.description || ''])[0].trim();
 
 const splitTitle = (lines) =>
   lines.map((l) => `<span class="line"><span class="line-inner">${esc(l)}</span></span>`).join('\n        ');
@@ -337,16 +400,11 @@ const mainPage = () => {
     .join('');
   const buttonChars = rollChars(main.about.button);
 
-  /* A square frame with corner brackets in each person's colour: empty but
-     for "Scroll down" until the first scroll cuts the photo in (Main.js),
-     and our name set under it (read out whole; the rolling letters are for
-     the eye only). */
+  /* A square frame with corner brackets in each person's colour: the photo
+     cuts in as it rises in (Main.js), and our name is set under it (read
+     out whole; the rolling letters are for the eye only). */
   const frame = (m, side) => `      <figure class="about-frame about-frame-${side}" data-frame="${m.id}" style="--neon: ${m.colour}">
         <div class="about-photos">
-          <span class="about-hint" aria-hidden="true">
-            <span class="about-hint-text">${esc(main.about.hint)}</span>
-            <svg class="about-hint-arrow" viewBox="0 0 16 10"><path d="M1 1.5 8 8.5l7-7" /></svg>
-          </span>
           <img class="about-photo" src="${m.photo}" alt="${esc(m.photoAlt)}" width="960" height="960" decoding="async" fetchpriority="low" />
           <span class="about-flash" aria-hidden="true"></span>
         </div>
@@ -358,12 +416,22 @@ const mainPage = () => {
       </figure>`;
 
   return shell({
-    title: studio.name,
+    title: studio.titles.home,
     description: studio.description,
     pageId: 'main',
+    path: '/',
+    schema: [organization, website],
     body: `<div class="page" id="main" data-page="main">
   <div class="page-content" id="page-content" tabindex="-1">
 ${header('main')}
+
+    <!-- Touch screens: a scroll cue at the foot of the screen until our
+         photos are in, its line filling as they near (Main.js). -->
+    <div class="journey-cue" aria-hidden="true">
+      <span class="journey-cue-track"><span class="journey-cue-fill"></span></span>
+      <svg class="scroll-cue-head" viewBox="0 0 16 10"><path d="M1 1.5 8 8.5l7-7" /></svg>
+      <span class="journey-cue-label">${esc(main.scrollLabel)}</span>
+    </div>
 
     <!-- One screen. The first scroll glides on to About and the rocks
          travel down with the viewer (see Main.js). -->
@@ -447,9 +515,20 @@ const projectsPage = () => {
     .join('\n');
 
   return shell({
-    title: 'Work',
-    description: studio.description,
+    title: studio.titles.work,
+    description: workIndex.description,
     pageId: 'projects',
+    path: '/work/',
+    schema: {
+      '@type': 'CollectionPage',
+      '@id': abs('/work/'),
+      url: abs('/work/'),
+      name: `Work — ${studio.name}`,
+      description: workIndex.description,
+      isPartOf: { '@id': `${studio.url}/#website` },
+      about: { '@id': ORG_ID },
+      hasPart: projects.map((p) => ({ '@type': 'CreativeWork', name: p.name, url: abs(`/work/${p.slug}/`) }))
+    },
     body: `<div class="page" id="projects" data-page="projects">
   <div class="page-content" id="page-content" tabindex="-1">
 ${header('projects')}
@@ -483,6 +562,13 @@ ${previews}
 
 /* ----------------------------------------------------------------- work */
 
+/* What a project's film shows until its first frame is in (on a phone,
+   a second or more of black otherwise): its thumbnail, the same 4:3 —
+   the small one if there is one (on a phone it's already been fetched). */
+const filmPoster = (p) => (existsSync(join(root, 'public', 'media', p.slug, 'featured-960.webp'))
+  ? `/media/${p.slug}/featured-960.webp`
+  : `/media/${p.slug}/featured.jpg`);
+
 const workPage = (p) => {
   const next = getNext(p.slug);
   const prev = getPrev(p.slug);
@@ -510,9 +596,26 @@ const workPage = (p) => {
       </figure>`;
 
   return shell({
-    title: `${studio.name} — ${p.name}`,
-    description: p.description,
+    title: studio.titles.projects[p.slug]
+      ? `${p.name}: ${studio.titles.projects[p.slug]} | ${studio.name}`
+      : `${p.name} | ${studio.name}`,
+    description: searchDescription(p),
     pageId: 'work',
+    path: `/work/${p.slug}/`,
+    /* Shared, it shows its own thumbnail (4:3). */
+    image: { src: `/media/${p.slug}/featured.jpg`, width: 1600, height: 1200, alt: p.name },
+    schema: {
+      '@type': 'CreativeWork',
+      '@id': abs(`/work/${p.slug}/`),
+      url: abs(`/work/${p.slug}/`),
+      name: p.name,
+      description: p.description,
+      image: abs(`/media/${p.slug}/featured.jpg`),
+      ...(p.year ? { dateCreated: String(p.year) } : {}),
+      creator: { '@id': ORG_ID },
+      isPartOf: { '@id': `${studio.url}/#website` },
+      ...(p.github ? { sameAs: p.github } : {})
+    },
     body: `<div class="page" id="work" data-page="work" data-slug="${p.slug}" data-accent="${p.accent}">
   <div class="page-content" id="page-content" tabindex="-1">
 ${header('projects', true)}
@@ -526,7 +629,7 @@ ${header('projects', true)}
     <div class="hero-media${certs.length ? ' has-certs' : ''}">
       ${certs[0] ? cert(certs[0], 'left') : ''}
       ${p.pageVideo && p.video
-        ? `<div class="work-film"><video class="work-film-video" src="${esc(p.video)}" autoplay muted loop playsinline preload="auto" aria-label="${esc(p.name)}, a walkthrough"></video></div>`
+        ? `<div class="work-film"><video class="work-film-video" src="${esc(p.video)}" poster="${filmPoster(p)}" autoplay muted loop playsinline preload="auto" aria-label="${esc(p.name)}, a walkthrough"></video></div>`
         : workMedia(p, `/media/${p.slug}/featured.jpg`, p.name, focusAttr(p).trim())}
       ${certs[1] ? cert(certs[1], 'right') : ''}
     </div>
@@ -613,9 +716,20 @@ ${infoCard('work', title, `<ol class="info-card-list info-work-list">${rows}</ol
 };
 
 const infoPage = () => shell({
-  title: 'About',
-  description: info.lead,
+  title: studio.titles.about,
+  description: info.description,
   pageId: 'info',
+  path: '/info/',
+  schema: {
+    '@type': 'AboutPage',
+    '@id': abs('/info/'),
+    url: abs('/info/'),
+    name: `About — ${studio.name}`,
+    description: info.description,
+    isPartOf: { '@id': `${studio.url}/#website` },
+    about: { '@id': ORG_ID },
+    mainEntity: organization
+  },
   body: `<div class="page" id="info" data-page="info">
   <div class="page-content" id="page-content" tabindex="-1">
 ${header('info')}
@@ -664,7 +778,6 @@ const contactPage = () => {
     .join('\n');
   /* **word** renders bold (the meta description gets it plain). */
   const lead = esc(contact.lead).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  const leadPlain = contact.lead.replace(/\*\*/g, '');
   const social = studio.social
     .map((s) => `<li><a class="text link" href="${esc(s.url)}" target="_blank" rel="noopener noreferrer"><span class="line-inner">${esc(s.label)} &nearr;</span></a></li>`)
     .join('');
@@ -693,9 +806,19 @@ const contactPage = () => {
     .join('');
 
   return shell({
-    title: studio.contactLabel,
-    description: leadPlain,
+    title: studio.titles.contact,
+    description: contact.description,
     pageId: 'contact',
+    path: '/contact/',
+    schema: {
+      '@type': 'ContactPage',
+      '@id': abs('/contact/'),
+      url: abs('/contact/'),
+      name: `${studio.contactLabel} — ${studio.name}`,
+      description: contact.description,
+      isPartOf: { '@id': `${studio.url}/#website` },
+      about: { '@id': ORG_ID }
+    },
     body: `<div class="page" id="contact" data-page="contact">
   <div class="page-content" id="page-content" tabindex="-1">
 ${header('contact')}
@@ -910,6 +1033,41 @@ ${redirects.map((r) => `RedirectMatch 301 ^${r.from.replace(/\/$/, '').replace(/
 `;
 writeFileSync(join(root, 'public', '.htaccess'), htaccess, 'utf8');
 console.log('  ✓ public/.htaccess');
+
+/* For search engines. robots.txt: every crawler may visit every page, and
+   here's the list of them. sitemap.xml: that list — every page there is to
+   find, at its official address (studio.url), the projects included as they
+   come and go in the CMS. (Hidden projects, the 404 page and the
+   maintenance preview aren't pages to find.) */
+const pagesToFind = ['/', '/work/', '/info/', '/contact/', ...projects.map((p) => `/work/${p.slug}/`)];
+writeFileSync(join(root, 'public', 'robots.txt'), `# Written by \`npm run pages\` (scripts/generate-pages.mjs).
+# Every crawler may visit every page; the list of them is in the sitemap.
+User-agent: *
+Allow: /
+
+Sitemap: ${studio.url}/sitemap.xml
+`, 'utf8');
+writeFileSync(join(root, 'public', 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>
+<!-- Written by \`npm run pages\` (scripts/generate-pages.mjs): every page there is to find. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${pagesToFind.map((path) => `  <url><loc>${esc(studio.url + path)}</loc></url>`).join('\n')}
+</urlset>
+`, 'utf8');
+console.log('  ✓ public/robots.txt, public/sitemap.xml');
+
+/* The same moved addresses for Cloudflare (Workers static assets read a
+   `_redirects` file from the build): "<from> <to> 301", with and without the
+   trailing slash. The 404 page is set in wrangler.jsonc (not_found_handling). */
+const cfRedirects = redirects.flatMap((r) => {
+  const bare = r.from.replace(/\/$/, '');
+  return [`${bare} ${r.to} 301`, `${bare}/ ${r.to} 301`];
+});
+writeFileSync(
+  join(root, 'public', '_redirects'),
+  `# Written by \`npm run pages\` (scripts/generate-pages.mjs) — edit it there.\n${cfRedirects.join('\n')}\n`,
+  'utf8'
+);
+console.log('  ✓ public/_redirects');
 
 /* The tab icon is the logo on space, as files in public/ (favicon-32.png,
    favicon-48.png, favicon.ico made from favicon-48, icon-192.png,
