@@ -110,10 +110,10 @@ const shell = ({ title, description, pageId, body, bodyClass = '', path = '/', i
 ${schema ? jsonLd(schema) : ''}
 <!-- The tab icon, the logo on space (public/). ?v= changes with the files,
      so a browser drops one it has kept from before. -->
+<link rel="icon" href="/favicon.ico?v=${ICON_V}" sizes="any" />
 <link rel="icon" href="/favicon-32.png?v=${ICON_V}" type="image/png" sizes="32x32" />
 <link rel="icon" href="/favicon-48.png?v=${ICON_V}" type="image/png" sizes="48x48" />
 <link rel="icon" href="/icon-192.png?v=${ICON_V}" type="image/png" sizes="192x192" />
-<link rel="icon" href="/favicon.ico?v=${ICON_V}" sizes="16x16 32x32 48x48" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=${ICON_V}" />
 <link rel="manifest" href="/site.webmanifest?v=${ICON_V}" />
 <!-- The first paint, before the stylesheet arrives (in dev it's injected by
@@ -882,10 +882,10 @@ const maintenancePage = () => {
 <meta property="og:site_name" content="${esc(studio.name)}" />
 <!-- The tab icon, the logo on space (public/). ?v= changes with the files,
      so a browser drops one it has kept from before. -->
+<link rel="icon" href="/favicon.ico?v=${ICON_V}" sizes="any" />
 <link rel="icon" href="/favicon-32.png?v=${ICON_V}" type="image/png" sizes="32x32" />
 <link rel="icon" href="/favicon-48.png?v=${ICON_V}" type="image/png" sizes="48x48" />
 <link rel="icon" href="/icon-192.png?v=${ICON_V}" type="image/png" sizes="192x192" />
-<link rel="icon" href="/favicon.ico?v=${ICON_V}" sizes="16x16 32x32 48x48" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=${ICON_V}" />
 <link rel="manifest" href="/site.webmanifest?v=${ICON_V}" />
 <style>html { background: #05060F; color-scheme: dark; }</style>
@@ -932,6 +932,7 @@ const notFoundPage = () => {
 <title>Page not found — ${esc(studio.name)}</title>
 <meta name="robots" content="noindex" />
 <meta name="theme-color" content="#05060F" />
+<link rel="icon" href="/favicon.ico" sizes="any" />
 <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
 <link rel="icon" href="/favicon-48.png" type="image/png" sizes="48x48" />
 <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
