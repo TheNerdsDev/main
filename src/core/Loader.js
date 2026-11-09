@@ -32,7 +32,13 @@ export default class Loader {
     this.startTime = performance.now();
 
     this.held = hold;
-    if (!hold) this.logo?.intro();
+    /* Held, the logo isn't shown at all: before its animation has started,
+       its layers sit as they're drawn — the trail laid out and the rocket
+       parked at its end, with no letters — and on a phone that showed for
+       a second, looking like a loading screen frozen half-drawn. It
+       appears with its animation's first frame instead (begin). */
+    if (hold) host?.style.setProperty('visibility', 'hidden');
+    else this.logo?.intro();
   }
 
   /** Start the logo's animation, if it was held (the counter's pacing starts with it). */
@@ -41,6 +47,7 @@ export default class Loader {
     this.held = false;
     this.startTime = performance.now();
     this.logo?.intro();
+    this.logo?.host.style.removeProperty('visibility');
   }
 
   track(promise) {
